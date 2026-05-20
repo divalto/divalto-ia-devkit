@@ -1,0 +1,19 @@
+{% set hints = seeds.type_5.hints %}
+{% if hints | length > 0 %}
+<details>
+<summary>Pistes complementaires ({{ hints | length }})</summary>
+
+{% for h in hints %}
+**{{ h.intent }}**
+```
+{{ h.command }}
+```
+{% if h.expected %}
+_Attendu : {{ h.expected }}_
+{% endif %}
+
+{% endfor %}
+
+</details>
+
+{% endif %}

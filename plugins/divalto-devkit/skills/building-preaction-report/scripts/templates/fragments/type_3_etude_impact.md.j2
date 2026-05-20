@@ -1,0 +1,19 @@
+{% set callers = seeds.type_3.callers %}
+{% set prop = seeds.type_3.propagation_sites %}
+{# Type 3 est deplie dans la chaine d'appels pour un ticket. Ici, juste la propagation eventuelle. #}
+{% if prop | length > 0 %}
+<details>
+<summary>Sites de propagation detectes ({{ prop | length }})</summary>
+
+Litteraux metier trouves dans du code executable (affectations suspectes) :
+{% for p in prop[:8] %}
+- [{{ p.file }}:{{ p.line }}]({{ p.file_uri }}) -- `{{ p.pattern }}`
+{% endfor %}
+{% if prop | length > 8 %}
+
+_... {{ prop | length - 8 }} autres sites._
+{% endif %}
+
+</details>
+
+{% endif %}

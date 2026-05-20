@@ -1,0 +1,77 @@
+{
+  "skill": "searching-erp-sources",
+  "description": "Scenarios de validation du workflow de verification X.13.",
+  "scenarios": [
+    {
+      "id": "verify-program-confirmed",
+      "description": "Un program candidat Neo4j doit etre retrouve dans X.13 (Retail/rttzfamrglt_sql.dhsp).",
+      "candidates": {
+        "neo4j_status": "ok",
+        "disclaimers": ["Snapshot X.12 du standard ERP -- ne reflete pas X.13"],
+        "programs": [{"name": "rttzfamrglt_sql", "domain": "Retail", "score": 2,
+                      "source": "diva-mcp-x12", "status": "X.12"}],
+        "functions": [],
+        "tables": [], "entities": [], "relations": {"callers_of": [], "accesses": []},
+        "query_trace": []
+      },
+      "request": {
+        "type": "feature", "titre": "x", "resume": "x",
+        "acteurs": [], "donnees": [], "domaine_pressenti": "RT_",
+        "keywords_techniques": [], "keywords_metier": [],
+        "ca_detectes": [], "message_erreur": null, "needs_clarification": false
+      },
+      "expected": {
+        "confirmed_count_min": 1,
+        "confirmed_contains": "rttzfamrglt_sql",
+        "confirmed_file_contains": "Retail"
+      }
+    },
+    {
+      "id": "verify-program-disappeared",
+      "description": "Un program inexistant doit passer en DISPARU X.13.",
+      "candidates": {
+        "neo4j_status": "ok",
+        "disclaimers": [],
+        "programs": [{"name": "rttxghostprogram", "domain": "Retail",
+                      "source": "diva-mcp-x12", "status": "X.12"}],
+        "functions": [], "tables": [], "entities": [],
+        "relations": {"callers_of": [], "accesses": []}, "query_trace": []
+      },
+      "request": {
+        "type": "feature", "titre": "x", "resume": "x",
+        "acteurs": [], "donnees": [], "domaine_pressenti": "RT_",
+        "keywords_techniques": [], "keywords_metier": [],
+        "ca_detectes": [], "message_erreur": null, "needs_clarification": false
+      },
+      "expected": {
+        "disappeared_count_min": 1,
+        "disappeared_contains": "rttxghostprogram"
+      }
+    },
+    {
+      "id": "verify-direct-mode",
+      "description": "Mode direct (Neo4j unavailable) : recherche keyword uniquement.",
+      "candidates": {
+        "neo4j_status": "unavailable",
+        "disclaimers": ["Neo4j inaccessible"],
+        "programs": [], "functions": [], "tables": [], "entities": [],
+        "relations": {"callers_of": [], "accesses": []}, "query_trace": []
+      },
+      "request": {
+        "type": "feature", "titre": "x", "resume": "x",
+        "acteurs": [], "donnees": [],
+        "domaine_pressenti": "RT_",
+        "keywords_techniques": ["FamRglt"],
+        "keywords_metier": [],
+        "ca_detectes": [], "message_erreur": null, "needs_clarification": false
+      },
+      "expected": {
+        "new_findings_count_min": 1,
+        "new_findings_pattern": "FamRglt"
+      }
+    }
+  ],
+  "execution": {
+    "command": "py .claude/skills/searching-erp-sources/scripts/verify_x13.py --candidates c.json --request r.json --erp-root \"C:/Developpements harmony/Standard/Version X.13\""
+  }
+}

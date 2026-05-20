@@ -1,0 +1,65 @@
+{
+  "_skeleton_name": "zoom-relation-client-19",
+  "_description": "Zoom relation client / CRM : pattern X.12 a 19 tables, 93 RSQL. Tables canoniques : ACTIONREL, RECACTIONDET, CLI, TIA, VRP, MUSER + lookups.",
+  "_source_x13": "Patterns CRM module Relation-Tiers (GRT).",
+  "_signature_nb_tables": 19,
+  "_note": "Squelette avec 7 jointures typiques d'un zoom CRM / action relationnelle.",
+  "joined_tables": [
+    {
+      "table_sql": "CLI",
+      "alias": "CLI",
+      "join_type": "left_join",
+      "join_condition": "CLI.Dos = MZ.Dos AND CLI.CliCod = {MAIN}.CliCod",
+      "columns_selected": ["CLI.CliLib"]
+    },
+    {
+      "table_sql": "TIA",
+      "alias": "TIA",
+      "join_type": "left_join",
+      "join_condition": "TIA.Dos = MZ.Dos AND TIA.Ticod = {MAIN}.Ticod",
+      "columns_selected": ["TIA.TiaLib", "TIA.TiaMail"]
+    },
+    {
+      "table_sql": "VRP",
+      "alias": "VRP",
+      "join_type": "left_join",
+      "join_condition": "VRP.Dos = MZ.Dos AND VRP.VrpCod = {MAIN}.VrpCod",
+      "columns_selected": ["VRP.VrpLib"]
+    },
+    {
+      "table_sql": "MUSER",
+      "alias": "MUSER",
+      "join_type": "left_join",
+      "join_condition": "MUSER.Dos = MZ.Dos AND MUSER.UserCod = {MAIN}.UserCod",
+      "columns_selected": ["MUSER.UserLib"]
+    },
+    {
+      "table_sql": "ACTIONREL",
+      "alias": "ACTIONREL",
+      "join_type": "left_join",
+      "join_condition": "ACTIONREL.Dos = MZ.Dos AND ACTIONREL.ActionCod = {MAIN}.ActionCod",
+      "columns_selected": ["ACTIONREL.ActionLib"]
+    },
+    {
+      "table_sql": "T006",
+      "alias": "T006",
+      "join_type": "left_join",
+      "join_condition": "T006.Dos = MZ.Dos AND T006.Code = {MAIN}.StatutAct",
+      "columns_selected": ["T006.Lib"]
+    },
+    {
+      "table_sql": "T007",
+      "alias": "T007",
+      "join_type": "left_join",
+      "join_condition": "T007.Dos = MZ.Dos AND T007.Code = {MAIN}.TypeAct",
+      "columns_selected": ["T007.Lib"]
+    }
+  ],
+  "additional_cases": [
+    {"name": "Equal_CliCod", "field": "CliCod", "type": "equal", "param": "char"},
+    {"name": "Equal_VrpCod", "field": "VrpCod", "type": "equal", "param": "char"},
+    {"name": "Equal_UserCod", "field": "UserCod", "type": "equal", "param": "char"},
+    {"name": "Between_DateAct", "field": "DateAct", "type": "between", "param": "date"},
+    {"name": "Like_Sujet", "field": "Sujet", "type": "like", "param": "char"}
+  ]
+}

@@ -1,0 +1,78 @@
+{% set call_chain_claims = claims | selectattr("kind", "equalto", "call_chain") | list %}
+{% set action_site_claims = claims | selectattr("kind", "equalto", "action_site") | list %}
+{% set example_claims = claims | selectattr("kind", "equalto", "example") | list %}
+{% set verification_claims = claims | selectattr("kind", "equalto", "verification") | list %}
+{% set impact_caller_claims = claims | selectattr("kind", "equalto", "impact_caller") | list %}
+{% set hint_claims = claims | selectattr("kind", "equalto", "hint") | list %}
+{% set has_tactical = call_chain_claims or action_site_claims or example_claims or verification_claims or impact_caller_claims or hint_claims %}
+{% if has_tactical %}
+## Tactique
+
+> Lecture : 15 minutes. Public : developpeur implementeur.
+{% if call_chain_claims %}
+
+### Chaine d'appels
+
+```mermaid
+flowchart TD
+{% for node in call_chain_claims[0].nodes -%}
+{% if node.kind == "ui" %}    {{ node.id }}(["{{ node.label | replace('"', '') }}"])
+{% elif node.kind == "fn" %}    {{ node.id }}["{{ node.name }}"]
+{% elif node.kind == "fn_noline" %}    {{ node.id }}["{{ node.name }}"]
+{% elif node.kind == "action_const" %}    {{ node.id }}(["{{ node.const }}"])
+{% elif node.kind == "gap" %}    {{ node.id }}["{{ node.label | replace('"', '') }}"]
+{% endif -%}
+{% endfor -%}
+{% for edge in call_chain_claims[0].edges %}    {{ edge[0] }} --> {{ edge[1] }}
+{% endfor -%}
+```
+
+{{ call_chain_claims[0].claim }}
+{% endif %}
+{% if action_site_claims %}
+
+### Plan d'action
+
+{% for c in action_site_claims %}
+**Proposition {{ loop.index }}.** {{ c.claim }}{{ c.ref_text or "" }}
+
+{% endfor %}
+{% endif %}
+{% if example_claims %}
+
+### Exemples a etudier
+
+{% for c in example_claims %}
+- {{ c.claim }}{{ c.ref_text or "" }}
+{% endfor %}
+{% endif %}
+{% if verification_claims %}
+
+### Commandes de verification
+
+{% for c in verification_claims %}
+**{{ loop.index }}.** {{ c.claim }}{{ c.ref_text or "" }}
+
+{% endfor %}
+{% endif %}
+{% if impact_caller_claims %}
+
+### Etude d'impact
+
+Autres sites qui consomment la meme chaine d'appels :
+
+{% for c in impact_caller_claims %}
+- {{ c.claim }}{{ c.ref_text or "" }}
+{% endfor %}
+{% endif %}
+{% if hint_claims %}
+
+### Pistes d'exploration complementaires
+
+{% for c in hint_claims %}
+- {{ c.claim }}{{ c.ref_text or "" }}
+{% endfor %}
+{% endif %}
+
+---
+{% endif %}

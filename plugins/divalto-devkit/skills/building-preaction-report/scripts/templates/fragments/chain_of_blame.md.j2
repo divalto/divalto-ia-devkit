@@ -1,0 +1,68 @@
+{% if seeds.chain_of_blame.available %}
+## Chaine d'appels
+
+```mermaid
+flowchart TD
+{% for node in seeds.chain_of_blame.nodes %}
+{% set nid = 'N' ~ loop.index0 %}
+{% if node.kind == 'ui' %}
+    {{ nid }}["UI : {{ node.label | truncate(55) | replace('"', '') }}"]
+{% elif node.kind == 'fn' %}
+    {{ nid }}["{{ node.name }}<br/>{{ node.file }}:{{ node.line }}"]
+{% elif node.kind == 'fn_noline' %}
+    {{ nid }}["{{ node.name }}<br/>{{ node.file }} (ligne ?)"]
+{% elif node.kind == 'action' %}
+{% if node.file and node.line %}
+    {{ nid }}["A5_Action_Generer_Action({{ node.const }})<br/>{{ node.file }}:{{ node.line }}"]
+{% else %}
+    {{ nid }}["A5_Action_Generer_Action({{ node.const }})<br/>(emplacement dans le callee)"]
+{% endif %}
+{% elif node.kind == 'gap' %}
+    {{ nid }}(["{{ node.label | replace('`', '') | replace('"', '') }}"])
+    style {{ nid }} fill:#f96,stroke:#333,stroke-width:3px,color:#000
+{% endif %}
+{% if not loop.first %}
+    N{{ loop.index0 - 1 }} --> {{ nid }}
+{% endif %}
+{% endfor %}
+```
+
+{% set linkable = seeds.chain_of_blame.nodes | selectattr('file_uri') | list %}
+{% if linkable %}
+
+**Ouvrir les fichiers** :
+
+{% for node in linkable %}
+- [{{ node.file }}]({{ node.file_uri }}){% if node.line and node.line not in ('?', 0, '0', None) %} -- a la ligne {{ node.line }}{% endif %}
+
+{% endfor %}
+{% endif %}
+
+<details>
+<summary>Version texte de la chaine (si le rendu Mermaid est indisponible)</summary>
+
+```
+{% for node in seeds.chain_of_blame.nodes %}
+{% set indent = '  ' * loop.index0 %}
+{% if node.kind == 'ui' %}
+{{ indent }}[UI] "{{ node.label }}"
+{% elif node.kind == 'fn' %}
+{{ indent }}-> {{ node.file }}:{{ node.line }} {{ node.name }}
+{% elif node.kind == 'fn_noline' %}
+{{ indent }}-> {{ node.file }} {{ node.name }} (ligne a identifier)
+{% elif node.kind == 'action' %}
+{% if node.file and node.line %}
+{{ indent }}-> {{ node.name }}   ({{ node.file }}:{{ node.line }})
+{% else %}
+{{ indent }}-> {{ node.name }}   (dans le corps du callee, emplacement exact a identifier)
+{% endif %}
+{% elif node.kind == 'gap' %}
+{{ indent }}-> **[{{ node.label }}]**
+{% endif %}
+{% endfor %}
+```
+
+</details>
+
+---
+{% endif %}

@@ -1,0 +1,28 @@
+{
+    "Dictionnaire": "a5dd.dhsd",
+    "Table": "M0",
+    "Base": "Xmenuf",
+    "PhysicalFile": "g3f.dhfi",
+    "PhysicalPath": "<module>\\fichier\\",
+    "TailleEnreg": 508,
+    "Ce": 0,
+    "Description": "Parametres generaux du domaine menu (un seul enreg M0 par fichier g3f.dhfi = header du domaine). En ecriture typique : un seul M0 initial a la creation d'un domaine menu. Modifications ulterieures (Lib, Enchain...) via update. Piege : un scan M2 sans filtre 'Ce=2' inclura l'enreg M0 decode avec les offsets M2 -> valeurs aberrantes.",
+    "Keys": {
+        "Index_A": {"Letter": "A", "Fields": ["Ce"]}
+    },
+    "Structure": [
+        {"Nom": "Ce",         "Offset": 0,   "Taille": 1,  "Description": "Code enregistrement (toujours 0 pour M0)"},
+        {"Nom": "Filler1",    "Offset": 1,   "Taille": 16, "Description": "Reserve"},
+        {"Nom": "Lib",        "Offset": 17,  "Taille": 50, "Description": "Libelle du domaine (titre affiche dans l'ERP)"},
+        {"Nom": "Enchain",    "Offset": 67,  "Taille": 75, "Description": "Chaines d'enchainement par defaut"},
+        {"Nom": "ModImp",     "Offset": 142, "Taille": 6,  "Description": "Modele d'impression"},
+        {"Nom": "FicAide",    "Offset": 148, "Taille": 32, "Description": "Fichier d'aide associe au domaine"},
+        {"Nom": "FicConf",    "Offset": 180, "Taille": 32, "Description": "Fichier de configuration"},
+        {"Nom": "Ap",         "Offset": 212, "Taille": 8,  "Description": "Code application (ex DAV, DCPT, DGRM)"},
+        {"Nom": "Bitmap",     "Offset": 220, "Taille": 10, "Description": "Ressource bitmap (icone du domaine)"},
+        {"Nom": "ZoomUser",   "Offset": 230, "Taille": 5,  "Description": "Zoom utilisateur par defaut"},
+        {"Nom": "Conf",       "Offset": 235, "Taille": 4,  "Description": "Configuration"},
+        {"Nom": "BitmapLong", "Offset": 239, "Taille": 32, "Description": "Chemin long de la bitmap"},
+        {"Nom": "Lib2",       "Offset": 271, "Taille": 50, "Description": "Libelle secondaire / traduit"}
+    ]
+}

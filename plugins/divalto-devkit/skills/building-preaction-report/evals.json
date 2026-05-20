@@ -1,0 +1,74 @@
+{
+  "skill": "building-preaction-report",
+  "description": "Scenarios de validation du generateur de rapport final.",
+  "scenarios": [
+    {
+      "id": "rapport-forte-confiance",
+      "description": "Rapport avec 3+ confirmes et 5+ fonctions = confiance forte.",
+      "input_files": {
+        "request": "fixtures/request_famrglt.json",
+        "candidates": "fixtures/candidates_x12_famrglt.json",
+        "evidence": "fixtures/evidence_x13_famrglt.json"
+      },
+      "expected": {
+        "markdown_sections_min": 7,
+        "confiance_globale": "forte",
+        "couverture_neo4j": "disponible",
+        "metrics_field_exists": ["confirmed_x13", "disappeared_x13", "new_x13"]
+      }
+    },
+    {
+      "id": "rapport-confiance-faible",
+      "description": "Rapport sans confirmes X.13 = confiance faible + encadre ATTENTION.",
+      "input_inline": true,
+      "request": {"type": "feature", "titre": "Test faible", "resume": "x",
+                  "acteurs": [], "donnees": [], "domaine_pressenti": null,
+                  "keywords_techniques": [], "keywords_metier": [], "ca_detectes": [],
+                  "message_erreur": null, "needs_clarification": false},
+      "candidates": {"neo4j_status": "ok", "disclaimers": [],
+                     "programs": [], "functions": [], "tables": [], "entities": [],
+                     "relations": {"callers_of": [], "accesses": []}, "query_trace": []},
+      "evidence": {"scope": {"erp_root": "x", "domains_searched": [],
+                             "files_examined": 0, "matches_truncated": false,
+                             "duration_seconds": 0, "neo4j_status_upstream": "ok"},
+                   "confirmed": [], "disappeared": [], "new_findings": [],
+                   "impact": {"callers": []}},
+      "expected": {
+        "confiance_globale": "faible",
+        "markdown_contains": "ATTENTION",
+        "confirmed_x13": 0
+      }
+    },
+    {
+      "id": "rapport-neo4j-absente",
+      "description": "Mode direct (Neo4j indispo) = couverture_neo4j = absente.",
+      "input_inline": true,
+      "request": {"type": "feature", "titre": "test", "resume": "x",
+                  "acteurs": [], "donnees": [], "domaine_pressenti": "RT_",
+                  "keywords_techniques": ["famrglt"], "keywords_metier": [],
+                  "ca_detectes": [], "message_erreur": null, "needs_clarification": false},
+      "candidates": {"neo4j_status": "unavailable",
+                     "disclaimers": ["Neo4j inaccessible"],
+                     "programs": [], "functions": [], "tables": [], "entities": [],
+                     "relations": {"callers_of": [], "accesses": []}, "query_trace": []},
+      "evidence": {"scope": {"erp_root": "x", "domains_searched": [],
+                             "files_examined": 5, "matches_truncated": false,
+                             "duration_seconds": 1, "neo4j_status_upstream": "unavailable"},
+                   "confirmed": [],
+                   "disappeared": [],
+                   "new_findings": [
+                     {"file_path": "x.dhsp", "line_range": [1, 10],
+                      "pattern": "famrglt", "status": "NOUVEAU X.13",
+                      "context_sample": null}
+                   ],
+                   "impact": {"callers": []}},
+      "expected": {
+        "couverture_neo4j": "absente",
+        "new_x13_min": 1
+      }
+    }
+  ],
+  "execution": {
+    "command": "py .claude/skills/building-preaction-report/scripts/build_report.py --request r.json --candidates c.json --evidence e.json --output-dir output"
+  }
+}

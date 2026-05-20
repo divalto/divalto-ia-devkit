@@ -1,0 +1,11 @@
+{
+    "Fichier": "C:\\Developpements harmony\\Standard\\Version X.13\\TestClaude\\isam-exercice\\g3f.dhfi",
+    "Structure": "structure_xmenuf_m2.json",
+    "Key": "A",
+    "KeyFields": ["Ce", "Reg", "Ordre"],
+    "Donnees": {
+        "Ce": "2",
+        "Reg": "ZZZTEST",
+        "Ordre": "      10"
+    }
+}

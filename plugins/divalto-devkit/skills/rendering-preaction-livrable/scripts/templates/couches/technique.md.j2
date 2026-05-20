@@ -1,0 +1,57 @@
+{% set literal_table_claims = claims | selectattr("kind", "equalto", "literal_table") | list %}
+{% set dossier_param_claims = claims | selectattr("kind", "equalto", "dossier_param") | list %}
+{% set function_claims = claims | selectattr("kind", "equalto", "function") | list %}
+{% set overwrite_warning_claims = claims | selectattr("kind", "equalto", "overwrite_warning") | list %}
+{% set has_technical = literal_table_claims or dossier_param_claims or function_claims or overwrite_warning_claims %}
+{% if has_technical %}
+## Technique
+
+> Lecture : 30 minutes. Public : auditeur, specialiste du domaine.
+{% if literal_table_claims %}
+
+### Constantes et codes metier
+
+{% for c in literal_table_claims %}
+{{ c.claim }}{{ c.ref_text or "" }}
+
+{% endfor %}
+{% endif %}
+{% if dossier_param_claims %}
+
+### Parametrage dossier
+
+{% for c in dossier_param_claims %}
+{{ c.claim }}{{ c.ref_text or "" }}
+
+{% endfor %}
+{% endif %}
+{% if function_claims %}
+
+### Fonctions du langage DIVA a connaitre
+
+{% for c in function_claims %}
+- {{ c.claim }}{{ c.ref_text or "" }}
+{% endfor %}
+{% endif %}
+{% if overwrite_warning_claims %}
+
+### Points d'attention
+
+{% for c in overwrite_warning_claims %}
+- {{ c.claim }}{{ c.ref_text or "" }}
+{% endfor %}
+{% endif %}
+{% if audience == "interne" and full_sources %}
+
+### Sources consultees (audit interne)
+
+Les references ci-dessous sont extraites du `facts.json` et permettent a un auditeur
+de retrouver chaque affirmation dans le code X.13.
+
+{% for c in full_sources -%}
+- **{{ c.id }}** ({{ c.kind }}) -- {{ c.claim[:120] }}{% if c.claim|length > 120 %}...{% endif +%}
+{% for s in c.sources %}    - `{{ s.path }}`{% if s.line %}:{{ s.line }}{% endif %} -- [{{ s.status | replace('_', ' ') }}]{% if s.enclosing %} -- procedure `{{ s.enclosing }}`{% endif +%}
+{% endfor %}
+{% endfor %}
+{% endif %}
+{% endif %}

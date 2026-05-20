@@ -1,0 +1,30 @@
+{% set examples = seeds.type_1.examples[:3] %}
+{% if examples | length > 0 %}
+<details>
+<summary>Code source consulte ({{ examples | length }} exemple{% if examples | length > 1 %}s{% endif %})</summary>
+
+{% set first = examples[0] %}
+### {{ first.name }}{% if first.targeted_symbol %} -- `{{ first.targeted_symbol }}`{% endif %}
+
+[{{ first.file }}:{{ first.line_range[0] }}]({{ first.file_uri }}) -- bloc `{{ first.enclosing.name if first.enclosing else '(racine fichier)' }}`{% if first.enclosing %} ({{ first.enclosing.kind }}, lignes {{ first.enclosing.decl_line }}-{{ first.enclosing.end_line }}){% endif %}
+{% if first.svn_last_commit %}
+
+_Derniere modification SVN : r{{ first.svn_last_commit.revision }} par `{{ first.svn_last_commit.author }}`{% if first.svn_last_commit.date %} le {{ first.svn_last_commit.date }}{% endif %}{% if first.svn_last_commit.message_excerpt %} -- {{ first.svn_last_commit.message_excerpt }}{% endif %}_
+{% endif %}
+
+```diva
+{{ first.snippet | trim }}
+```
+
+{% if examples | length > 1 %}
+
+**Autres fichiers consultes** :
+{% for ex in examples[1:] %}
+
+- [{{ ex.file }}:{{ ex.line_range[0] }}]({{ ex.file_uri }}){% if ex.targeted_symbol %} -- `{{ ex.targeted_symbol }}`{% endif %}{% if ex.enclosing %} (bloc `{{ ex.enclosing.name }}`){% endif %}
+{% endfor %}
+{% endif %}
+
+</details>
+
+{% endif %}

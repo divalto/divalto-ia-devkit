@@ -1,0 +1,50 @@
+{
+  "skill": "writing-diva-files",
+  "description": "Scenarios d'evaluation de writing-diva-files.",
+  "scenarios": [
+    {
+      "id": "case-1",
+      "skills": [
+        "writing-diva-files"
+      ],
+      "query": "Cree un fichier DIVA test.dhsp contenant une procedure simple sans accents",
+      "files": [],
+      "expected_behavior": [
+        "Utilise write_file.py pour creer le fichier",
+        "Le fichier est en ISO-8859-1 + CRLF",
+        "Verifie avec verify_encoding.py apres ecriture",
+        "verify_encoding retourne valid: true"
+      ]
+    },
+    {
+      "id": "case-2",
+      "skills": [
+        "writing-diva-files"
+      ],
+      "query": "Cree un fichier DIVA commentaire.dhsp contenant un commentaire avec des accents francais (developpement, reference, genere)",
+      "files": [],
+      "expected_behavior": [
+        "Utilise write_file.py avec --stdin pour gerer les accents",
+        "Le fichier est en ISO-8859-1 + CRLF",
+        "Les accents sont correctement encodes (0xe9, pas 0xc3a9)",
+        "Verifie avec verify_encoding.py apres ecriture"
+      ]
+    },
+    {
+      "id": "case-3",
+      "skills": [
+        "writing-diva-files"
+      ],
+      "query": "Le fichier corrompu.dhsp a ete modifie par un editeur et est maintenant en UTF-8 avec des fins de ligne LF. Corrige-le.",
+      "files": [
+        "corrompu.dhsp"
+      ],
+      "expected_behavior": [
+        "Detecte les problemes avec verify_encoding.py (UTF-8 + LF)",
+        "Utilise convert_file.py pour corriger",
+        "Cree un backup .bak avant conversion",
+        "Verifie le resultat : ISO-8859-1 + CRLF, valid: true"
+      ]
+    }
+  ]
+}

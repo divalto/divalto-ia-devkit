@@ -1,0 +1,36 @@
+{
+  "category": "E3",
+  "generated_at": "2026-04-22T18:46:53.084621+00:00",
+  "items": [
+    {
+      "entity": "BAD",
+      "severity": "info",
+      "title": "Source .dhsd introuvable",
+      "yaml_path": "technical.dictionary_source",
+      "excerpt_deliverable": "",
+      "excerpt_source": "",
+      "source_ref": "<aucun fichier .dhsd trouve sous erp-root pour table BAD>",
+      "challenge": "Le relecteur n'a pas pu localiser le dictionnaire source pour cette entite (essaye : Gttbad.dhsd, Gttbad.dhsd, baddd.dhsd). Detection E3 partielle."
+    },
+    {
+      "entity": "OKK",
+      "severity": "erreur",
+      "title": "Champ Telephone absent du livrable",
+      "yaml_path": "technical.fields",
+      "excerpt_deliverable": "technical.fields ne contient pas 'Telephone'",
+      "excerpt_source": "[CHAMPS] Nom=Telephone...",
+      "source_ref": "Gttokk.dhsd",
+      "challenge": "Champ 'Telephone' declare dans le dictionnaire source mais absent de technical.fields du livrable, sans justification dans meta.a_verifier."
+    },
+    {
+      "entity": "OKK",
+      "severity": "erreur",
+      "title": "Index IdxTel absent du livrable",
+      "yaml_path": "technical.indexes",
+      "excerpt_deliverable": "technical.indexes ne contient pas 'IdxTel'",
+      "excerpt_source": "[INDEX] Nom=IdxTel...",
+      "source_ref": "Gttokk.dhsd",
+      "challenge": "Index 'IdxTel' declare dans le dictionnaire source mais absent de technical.indexes du livrable, sans justification dans meta.a_verifier."
+    }
+  ]
+}

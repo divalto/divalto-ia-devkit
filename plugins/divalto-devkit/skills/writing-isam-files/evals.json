@@ -1,0 +1,50 @@
+{
+  "skill": "writing-isam-files",
+  "description": "Scenarios d'evaluation de writing-isam-files.",
+  "scenarios": [
+    {
+      "id": "case-1",
+      "skills": [
+        "writing-isam-files"
+      ],
+      "query": "Ecris un enregistrement zoom M4 dans le fichier a5f.dhfi avec les champs Ce=4, ZoomNum=22111, Lib=Race de chien, ZoomEnr=RaceChien, ZoomFic=ZOOMSQL",
+      "files": [],
+      "expected_behavior": [
+        "Prepare un fichier data JSON avec les champs fournis et le chemin vers a5f.dhfi",
+        "Utilise la structure structure_m4.json",
+        "Execute write_isam.py avec --params-file",
+        "Sortie JSON avec success=true, written=1, errors=[]",
+        "Exit code 0"
+      ]
+    },
+    {
+      "id": "case-2",
+      "skills": [
+        "writing-isam-files"
+      ],
+      "query": "Ecris 3 enregistrements zoom en lot dans a5f.dhfi : Consommation (22109), Cave a vin (22110), Race de chien (22111)",
+      "files": [],
+      "expected_behavior": [
+        "Prepare un fichier data JSON au format batch (Donnees = tableau)",
+        "Execute write_isam.py avec --params-file",
+        "Sortie JSON avec total=3",
+        "Si un enregistrement existe deja (code 9), le compte dans skipped et continue",
+        "Affiche les erreurs individuelles dans errors[]"
+      ]
+    },
+    {
+      "id": "case-3",
+      "skills": [
+        "writing-isam-files"
+      ],
+      "query": "Valide le fichier de structure structure_m4.json avant d'ecrire",
+      "files": [],
+      "expected_behavior": [
+        "Execute validate_structure.py --path structure_m4.json",
+        "Verifie que tous les champs ont Nom, Offset, Taille",
+        "Verifie qu'aucun champ ne depasse TailleEnreg",
+        "Sortie JSON avec valid=true, fields=44, record_size=1000"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+; Gttokk.dhsd -- Dictionnaire fictif de l'entite OKK
+; Fixture de test pour reviewing-erp-doc / detect_omissions (E3)
+;
+[TABLE]
+Nom=OKK,Entite OKK
+Taille=120,0
+CE=Bloque,0
+[CHAMPS]
+Nom=OKK_ID,1,20,1,1,1,0,0
+Nom=Nom,21,40,1,1,1,0,0
+Nom=Bloque,61,1,1,1,1,0,0
+Nom=DateCre,62,8,1,1,1,0,0
+Nom=Telephone,70,20,1,1,1,0,0
+Nom=Ce1,90,4,1,1,1,0,0
+Nom=Dos,74,4,1,1,1,0,0
+Nom=UserCr,78,20,1,1,1,0,0
+Nom=UserMo,98,20,1,1,1,0,0
+[/CHAMPS]
+[INDEX]
+Nom=IdxOKK_ID,Ce1,Dos,OKK_ID
+Nom=IdxNom,Ce2,Dos,Nom
+Nom=IdxDateCre,Ce3,Dos,DateCre
+Nom=IdxTel,Ce4,Dos,Telephone
+[/INDEX]

@@ -1,0 +1,46 @@
+{
+  "skill": "syncing-diva-sql",
+  "description": "Scenarios d'evaluation de syncing-diva-sql.",
+  "scenarios": [
+    {
+      "name": "synchro-ok",
+      "description": "Synchronisation SQL reussie apres buildall sans erreur",
+      "prompt": "J'ai compile mon projet 'divalto achat-vente.dhpt' avec le profil 'développement' et j'ai 0 erreur. Lance la synchronisation SQL et verifie le resultat.",
+      "expected": {
+        "actions": [
+          "Verifier que la compilation buildall precedente a 0 erreur",
+          "Se placer dans C:\\divalto\\sys avant l'appel",
+          "Lancer xwin7 -action synchroauto avec les memes parametres projet/profil",
+          "Parser le rapport avec parse_synchro.py",
+          "Confirmer [TOTAL_ERRORS]0"
+        ]
+      }
+    },
+    {
+      "name": "synchro-erreurs",
+      "description": "Synchronisation SQL avec erreurs a diagnostiquer",
+      "prompt": "La synchronisation SQL a produit des erreurs. Le rapport est dans C:/Dev/Log/Synchro.txt. Analyse-le et dis-moi ce qui ne va pas.",
+      "expected": {
+        "actions": [
+          "Lancer parse_synchro.py --path sur le rapport",
+          "Extraire le nombre d'erreurs depuis [TOTAL_ERRORS]",
+          "Lister les erreurs avec contexte",
+          "Proposer des solutions pour chaque erreur"
+        ]
+      }
+    },
+    {
+      "name": "synchro-prerequis-non-rempli",
+      "description": "Tentative de synchro alors que buildall a des erreurs",
+      "prompt": "Lance la synchronisation SQL sur mon projet 'divalto consommation.dhpt'.",
+      "expected": {
+        "actions": [
+          "Demander si buildall a ete execute avec 0 erreur",
+          "Refuser de lancer synchroauto si compilation en erreur",
+          "Rappeler le prerequis : compilation buildall avec 0 erreur obligatoire",
+          "Suggerer de recompiler d'abord avec compiling-diva-projects"
+        ]
+      }
+    }
+  ]
+}

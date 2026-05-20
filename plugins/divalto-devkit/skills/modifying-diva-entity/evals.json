@@ -1,0 +1,79 @@
+{
+  "skill": "modifying-diva-entity",
+  "description": "Scenarios d'evaluation de modifying-diva-entity.",
+  "scenarios": [
+    {
+      "id": "case-1",
+      "skills": [
+        "modifying-diva-entity"
+      ],
+      "query": "Ajoute le champ NbPages (Nature 11,0) a la table Livre dans le dictionnaire gtfdd.dhsd. Place-le apres le champ Libelle.",
+      "files": [],
+      "expected_behavior": [
+        "Appelle list-fields pour montrer l'etat actuel de la table Livre",
+        "Analyse l'impact : taille augmente de 11 octets, champs apres Libelle decales",
+        "Presente le checkpoint CP1 avec l'impact avant d'agir",
+        "Appelle add-field avec --name NbPages --nature 11,0 --after Libelle --backup",
+        "Bloc [CHAMP] NbPages cree si nouveau (insertion alphabetique)",
+        "Positions recalculees, Filler ajuste si present",
+        "Appelle validate_dhsd.py pour verification D01-D11",
+        "Presente CP2 avec avant/apres"
+      ]
+    },
+    {
+      "id": "case-2",
+      "skills": [
+        "modifying-diva-entity"
+      ],
+      "query": "Change la Nature du champ Prix de 6,2 a 13,D0 dans la table ArtFam du dictionnaire gtfdd.dhsd.",
+      "files": [],
+      "expected_behavior": [
+        "Appelle list-fields pour montrer ArtFam avec Prix en Nature 6,2",
+        "Analyse l'impact : taille augmente de 7 octets (6 -> 13), champs suivants decales",
+        "Checkpoint CP1 avec delta de taille et champs impactes",
+        "Appelle modify-field avec --name Prix --new-nature 13,D0 --backup",
+        "Nature mise a jour dans le bloc [CHAMP] Prix",
+        "Positions [CHAMPS] recalculees, Filler/Taille ajustes",
+        "Si Prix dans un index : positions cumulees recalculees",
+        "Checkpoint CP2 puis compilation (CP3 skip, CP4)"
+      ]
+    },
+    {
+      "id": "case-3",
+      "skills": [
+        "modifying-diva-entity"
+      ],
+      "query": "Supprime le champ Actif de la table FamRglt dans le dictionnaire rtlfdd.dhsd. Ce champ n'est plus utilise.",
+      "files": [],
+      "expected_behavior": [
+        "Appelle list-fields pour voir FamRglt avec Actif",
+        "Analyse l'impact : taille diminue, champs suivants reculent",
+        "Avertissement explicite de perte de donnees",
+        "Checkpoint CP1 avec confirmation supplementaire",
+        "Appelle remove-field avec --name Actif --backup",
+        "Champ retire de [CHAMPS], positions recalculees",
+        "Si Actif dans un index : retire de l'index",
+        "Le bloc [CHAMP] Actif est preserve (peut etre global)",
+        "Checkpoint CP2, puis masque (CP3), compilation + synchro (CP4)"
+      ]
+    },
+    {
+      "id": "case-4",
+      "skills": [
+        "modifying-diva-entity"
+      ],
+      "query": "Ajoute 3 champs a la table Livre : Editeur (Nature 80), DateParution (Nature D8), ISBN (Nature 13). Place-les apres Libelle.",
+      "files": [],
+      "expected_behavior": [
+        "Appelle list-fields une fois pour l'etat initial",
+        "Analyse l'impact groupe : +80+8+13 = 101 octets",
+        "Checkpoint CP1 pour les 3 champs en bloc",
+        "3 appels add-field sequentiels (Editeur, DateParution, ISBN)",
+        "Apres les 3 ajouts : validate_dhsd 0 erreurs",
+        "Checkpoint CP2 avec etat final",
+        "3 champs ajoutes au masque via dhsf_modify.py",
+        "Checkpoint CP3, compilation + synchro CP4"
+      ]
+    }
+  ]
+}

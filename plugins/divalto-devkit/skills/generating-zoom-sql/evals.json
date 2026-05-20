@@ -1,0 +1,33 @@
+{
+  "skill": "generating-zoom-sql",
+  "description": "Scenarios d'evaluation de generating-zoom-sql.",
+  "scenarios": [
+    {
+      "name": "Retail FamRglt — entite simple",
+      "input": "Genere le fichier Zoom SQL pour l'entite FamRglt du domaine Retail (table RtlFamRglt, champ cle RgltFam, description 'Famille de reglement').",
+      "expected": {
+        "tokens": "--domaine Retail --entite FamRglt --table RtlFamRglt --champ-cle RgltFam --description \"Famille de reglement\"",
+        "output_file": "output/rttzfamrglt_sql.dhsp",
+        "validation": "0 errors, 0 warnings accepte"
+      }
+    },
+    {
+      "name": "DAV ArtFam — domaine DAV",
+      "input": "Genere le fichier Zoom SQL pour l'entite ArtFam du domaine DAV (table DavArtFam, champ cle ArtFam, description 'Famille articles DAV').",
+      "expected": {
+        "tokens": "--domaine DAV --entite ArtFam --table DavArtFam --champ-cle ArtFam --description \"Famille articles DAV\"",
+        "output_file": "output/davtzartfam_sql.dhsp",
+        "validation": "0 errors, 0 warnings accepte"
+      }
+    },
+    {
+      "name": "DAV Cli — entite courte domaine GG_",
+      "input": "Genere le fichier Zoom SQL pour l'entite Cli du domaine DAV (table DavCli, champ cle Cli, description 'Client DAV').",
+      "expected": {
+        "tokens": "--domaine DAV --entite Cli --table DavCli --champ-cle Cli --description \"Client DAV\"",
+        "output_file": "output/davtzcli_sql.dhsp",
+        "validation": "0 errors, 0 warnings accepte"
+      }
+    }
+  ]
+}

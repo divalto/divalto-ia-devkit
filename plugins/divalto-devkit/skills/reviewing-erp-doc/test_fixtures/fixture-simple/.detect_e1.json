@@ -1,0 +1,66 @@
+{
+  "category": "E1",
+  "generated_at": "2026-04-22T18:46:52.721073+00:00",
+  "items": [
+    {
+      "entity": "BAD",
+      "severity": "erreur",
+      "title": "Affirmation narrative non sourcee",
+      "yaml_path": "business.business_rules[0]",
+      "excerpt_deliverable": "Les entites BAD sont recalculees a chaque cloture mensuelle automatiquement.",
+      "excerpt_source": "",
+      "source_ref": "<aucune>",
+      "challenge": "Aucune citation fichier:ligne dans l'affirmation, aucun marquage [A VERIFIER] inline, aucun item meta.a_verifier couvrant le champ. Viole CA4 de UC-200 (regle de citation stricte)."
+    },
+    {
+      "entity": "BAD",
+      "severity": "erreur",
+      "title": "Affirmation narrative non sourcee",
+      "yaml_path": "business.business_rules[1]",
+      "excerpt_deliverable": "Les BAD archivees sont conservees 10 ans puis supprimees de la base.",
+      "excerpt_source": "",
+      "source_ref": "<aucune>",
+      "challenge": "Aucune citation fichier:ligne dans l'affirmation, aucun marquage [A VERIFIER] inline, aucun item meta.a_verifier couvrant le champ. Viole CA4 de UC-200 (regle de citation stricte)."
+    },
+    {
+      "entity": "BAD",
+      "severity": "erreur",
+      "title": "Affirmation narrative non sourcee",
+      "yaml_path": "business.role",
+      "excerpt_deliverable": "BAD est une entite critique du processus de vente, pivot pour les commissions.",
+      "excerpt_source": "",
+      "source_ref": "<aucune>",
+      "challenge": "Aucune citation fichier:ligne dans l'affirmation, aucun marquage [A VERIFIER] inline, aucun item meta.a_verifier couvrant le champ. Viole CA4 de UC-200 (regle de citation stricte)."
+    },
+    {
+      "entity": "BAD",
+      "severity": "erreur",
+      "title": "Affirmation narrative non sourcee",
+      "yaml_path": "technical.fields[0].business_note",
+      "excerpt_deliverable": "Identifiant fonctionnel issu d'un compteur applicatif.",
+      "excerpt_source": "",
+      "source_ref": "<aucune>",
+      "challenge": "Aucune citation fichier:ligne dans l'affirmation, aucun marquage [A VERIFIER] inline, aucun item meta.a_verifier couvrant le champ. Viole CA4 de UC-200 (regle de citation stricte)."
+    },
+    {
+      "entity": "BAD",
+      "severity": "erreur",
+      "title": "Affirmation narrative non sourcee",
+      "yaml_path": "technical.fields[1].business_note",
+      "excerpt_deliverable": "Montant TTC arrondi au centime superieur.",
+      "excerpt_source": "",
+      "source_ref": "<aucune>",
+      "challenge": "Aucune citation fichier:ligne dans l'affirmation, aucun marquage [A VERIFIER] inline, aucun item meta.a_verifier couvrant le champ. Viole CA4 de UC-200 (regle de citation stricte)."
+    },
+    {
+      "entity": "BAD",
+      "severity": "erreur",
+      "title": "Affirmation narrative non sourcee",
+      "yaml_path": "technical.performance_notes",
+      "excerpt_deliverable": "La table BAD doit etre partitionnee par annee pour performance.",
+      "excerpt_source": "",
+      "source_ref": "<aucune>",
+      "challenge": "Aucune citation fichier:ligne dans l'affirmation, aucun marquage [A VERIFIER] inline, aucun item meta.a_verifier couvrant le champ. Viole CA4 de UC-200 (regle de citation stricte)."
+    }
+  ]
+}

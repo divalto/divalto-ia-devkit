@@ -1,0 +1,36 @@
+{
+    "Dictionnaire": "a5dd.dhsd",
+    "Table": "M2",
+    "Base": "Xmenuf",
+    "PhysicalFile": "g3f.dhfi",
+    "PhysicalPath": "Achat-Vente\\fichier\\",
+    "TailleEnreg": 1000,
+    "Keys": {
+        "Index_A_M2": {"Letter": "A", "Fields": ["Ce", "Reg", "Ordre"]},
+        "Index_B":    {"Letter": "B", "Fields": ["Ce", "Mnemo"]},
+        "Index_C":    {"Letter": "C", "Fields": ["Ce", "EnrNo"]}
+    },
+    "Structure": [
+        {"Nom": "Ce",            "Offset": 0,   "Taille": 1,   "Description": "Type enregistrement (2 = choix du menu)"},
+        {"Nom": "Reg",           "Offset": 1,   "Taille": 8,   "Description": "Regroupement (section du menu)"},
+        {"Nom": "Ordre",         "Offset": 9,   "Taille": 8,   "Justify": "right", "Description": "Ordre d'affichage dans le groupe (numerique, cadre a droite)"},
+        {"Nom": "Lib",           "Offset": 17,  "Taille": 50,  "Description": "Libelle affiche dans le menu"},
+        {"Nom": "TypeChain",     "Offset": 67,  "Taille": 1,   "Description": "Type chainage (2=programme, 3=zoom, 4=sous-menu)"},
+        {"Nom": "Enchain",       "Offset": 68,  "Taille": 75,  "Description": "Valeur chainage (numero zoom si TypeChain=3)"},
+        {"Nom": "BitmapExp",     "Offset": 143, "Taille": 32,  "Description": "Bitmap/icone"},
+        {"Nom": "ConfL",         "Offset": 175, "Taille": 4,   "Description": "Confidentialite"},
+        {"Nom": "ModImp",        "Offset": 179, "Taille": 6,   "Description": "Module impression"},
+        {"Nom": "ChoixActif",    "Offset": 185, "Taille": 1,   "Description": "Choix actif (1=oui)"},
+        {"Nom": "Mnemo",         "Offset": 186, "Taille": 8,   "Description": "Mnemonique (raccourci clavier)"},
+        {"Nom": "Echange",       "Offset": 194, "Taille": 600, "Description": "Zone d'echange"},
+        {"Nom": "ChoixVisible",  "Offset": 794, "Taille": 1,   "Description": "Choix visible (1=oui)"},
+        {"Nom": "ProduitNo",     "Offset": 795, "Taille": 2,   "Justify": "right", "Description": "Numero de produit (numerique, cadre a droite)"},
+        {"Nom": "EnrNo",         "Offset": 797, "Taille": 9,   "Justify": "right", "Description": "Numero d'enregistrement (unique, auto-genere >= 100000, cadre a droite)"},
+        {"Nom": "ChoixIZY",      "Offset": 806, "Taille": 1,   "Description": "Choix IZY"},
+        {"Nom": "ProductCode",   "Offset": 807, "Taille": 8,   "Description": "Code produit"},
+        {"Nom": "AliasSearch",   "Offset": 815, "Taille": 20,  "Description": "Alias de recherche"},
+        {"Nom": "NomAddon",      "Offset": 835, "Taille": 32,  "Description": "Nom addon"},
+        {"Nom": "Filler",        "Offset": 867, "Taille": 33,  "Description": "Reserve"},
+        {"Nom": "UM2",           "Offset": 900, "Taille": 100, "Description": "Reserve distributeur"}
+    ]
+}

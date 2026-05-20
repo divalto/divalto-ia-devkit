@@ -1,0 +1,51 @@
+;>xwin4obj                              7.0       20260412000000
+[masque]
+;-- ADAPTER : utilisateur, date_modification
+ utilisateur="ROOT"
+ date_modification="12/04/2026"
+ feuille_style="fstylewpf.dhfi"
+ dernier_id=4
+ dernier_id_page=1
+[defaut]
+ [aide_page]
+  aide=0
+[enregistrements]
+;-- ADAPTER : ajouter les enregistrements necessaires
+;-- Format record : "fichier.dhsd",,table,alias,taille_buffer,0
+;-- Format rsql   : "fichier.dhoq",,vue,alias,taille_buffer,1
+[page]
+ numero=1
+ fond="STD"
+ efface=complet
+ nb_lig=25
+ nb_col=90
+ offset_lig=1
+ offset_col=1
+ ident_unique=1
+;-- ADAPTER : elements graphiques ci-dessous
+ [obj_texte]
+  [presentation]
+   position=10,10
+   taille=10,40
+   id=1
+   wstyle="STD"
+  [texte]
+;-- ADAPTER : texte du label
+   texte="Titre ou message"
+ [champ]
+  [presentation]
+   position=10,55
+   taille=9,40
+   id=2
+   wstyle="CHAMP_SAISI"
+  [description]
+;-- ADAPTER : donnee=vue,champ,alias
+   donnee=record,champ,alias
+  [param_saisie]
+   obligatoire=oui
+[diva]
+SetModuleInfo('$Id: template_simple.dhsf $')
+;-- ADAPTER : ajouter Public Record / Public RecordSql si necessaire
+[/diva]
+[diva_base]
+[/diva]

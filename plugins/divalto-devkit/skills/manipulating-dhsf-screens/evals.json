@@ -1,0 +1,38 @@
+{
+  "skill": "manipulating-dhsf-screens",
+  "description": "Scenarios d'evaluation de manipulating-dhsf-screens.",
+  "scenarios": [
+    {
+      "name": "Parsing zoom standard",
+      "input": "Parser le masque gtez099_sql.dhsf et verifier que les metriques correspondent a dhsf_info.py",
+      "expected": {
+        "command": "py .claude/skills/manipulating-dhsf-screens/scripts/dhsf_parser.py --path \"{CHEMIN_MASQUES}/gtez099_sql.dhsf\" --summary",
+        "validation": "pages, widgets_total, enregistrements, taille_diva identiques a dhsf_info.py"
+      }
+    },
+    {
+      "name": "Generation zoom par template",
+      "input": "Generer un masque zoom pour l'entite FamRglt (domaine Retail) depuis le template zoom",
+      "expected": {
+        "command": "py .claude/skills/manipulating-dhsf-screens/scripts/dhsf_template.py --template zoom --output output/rtez099_test.dhsf --params \"{\\\"rsql_file\\\":\\\"rtlrsfamrglt\\\",\\\"vue_lower\\\":\\\"famrglt\\\",\\\"vue_camel\\\":\\\"FamRglt\\\",\\\"champ_cle\\\":\\\"rgltfam\\\",\\\"champ_cle_label\\\":\\\"Code\\\",\\\"libelle_masque\\\":\\\"familles de reglement\\\",\\\"fichier_aide\\\":\\\"rtfaide\\\",\\\"masque_file\\\":\\\"rtez099_test\\\",\\\"titre_creation\\\":\\\"Famille a creer\\\"}\"",
+        "validation": "success:true, 0 warnings, fichier en ISO-8859-1 + CRLF, aucun placeholder residuel"
+      }
+    },
+    {
+      "name": "Ajout champ incremental",
+      "input": "Ajouter un champ 'Libelle' sur la page 1 d'un masque genere, puis re-parser pour valider",
+      "expected": {
+        "command": "py .claude/skills/manipulating-dhsf-screens/scripts/dhsf_modify.py --path output/rtez099_test.dhsf --action add-field --params \"{\\\"page_numero\\\":1,\\\"label\\\":\\\"Libelle\\\",\\\"vue\\\":\\\"famrglt\\\",\\\"champ\\\":\\\"librglt\\\",\\\"alias\\\":\\\"FamRglt\\\"}\"",
+        "validation": "success:true, 2 IDs alloues, dernier_id incremente, re-parsing OK"
+      }
+    },
+    {
+      "name": "Parsing masque complexe",
+      "input": "Parser gree001.dhsf (1.4 MB, 44000 lignes) et verifier le parsing complet sans erreur",
+      "expected": {
+        "command": "py .claude/skills/manipulating-dhsf-screens/scripts/dhsf_parser.py --path \"{CHEMIN_MASQUES}/gree001.dhsf\" --summary",
+        "validation": "Metriques identiques a dhsf_info.py, pas de crash, temps < 10s"
+      }
+    }
+  ]
+}

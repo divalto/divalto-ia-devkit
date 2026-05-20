@@ -1,0 +1,451 @@
+{
+  "schema_version": "1.0",
+  "slug": "ticket-contremarque-anomalie",
+  "date": "2026-04-17",
+  "request": {
+    "type": "ticket",
+    "domaine": "GT_",
+    "titre": "Anomalie contremarque / commande fournisseur provisoire",
+    "resume": "La contremarque active la commande fournisseur provisoire alors qu'il ne faudrait pas. Reproduit en 222e avec parametrage onglet Contremarque du dossier."
+  },
+  "verdict": {
+    "kind": "investigate",
+    "one_line": "Investiguer le listener de C_Action_Ctm_Lien_Suppr qui re-active la commande fournisseur provisoire.",
+    "action_critique_id": "C10"
+  },
+  "coverage": {
+    "neo4j_status": "available",
+    "signal_ratio": 0.78,
+    "confiance": "forte"
+  },
+  "claims": [
+    {
+      "id": "C1",
+      "content_type_id": 1,
+      "layer": "tactical",
+      "kind": "example",
+      "claim": "La procedure Supprimer_LienContremarque est le point d'entree UI de la suppression du lien contremarque.",
+      "confidence": "high",
+      "sources": [
+        {
+          "status": "CONFIRME_X13",
+          "path": "C:/Developpements harmony/Standard/Version X.13/Achat-Vente/source/Dav/gtppctm310.dhsp",
+          "line": 224,
+          "enclosing": "Supprimer_LienContremarque",
+          "snippet": "Public Procedure Supprimer_LienContremarque(EnrNo)\n  ; Point d'entree du bouton 'Supprimer la ligne de commande fournisseur et le lien de contremarque'"
+        }
+      ]
+    },
+    {
+      "id": "C2",
+      "content_type_id": 1,
+      "layer": "tactical",
+      "kind": "example",
+      "claim": "La fonction ActionERP_Contremarque_Fournisseur_SupprLienCtm declenche l'action C_Action_Ctm_Lien_Suppr cote fournisseur.",
+      "confidence": "high",
+      "sources": [
+        {
+          "status": "CONFIRME_X13",
+          "path": "C:/Developpements harmony/Standard/Version X.13/Achat-Vente/source/Dav/gttmaction.dhsp",
+          "line": 567,
+          "enclosing": "ActionERP_Contremarque_Fournisseur_SupprLienCtm",
+          "snippet": "Public Procedure ActionERP_Contremarque_Fournisseur_SupprLienCtm(FULLPINO, enrno, entDejaCharge)\n  ActionERP_Contremarque(C_Action_Ctm_Lien_Suppr, 'F', FULLPINO, IdLstMouvCTM, entDejaCharge)"
+        }
+      ]
+    },
+    {
+      "id": "C3",
+      "content_type_id": 1,
+      "layer": "tactical",
+      "kind": "example",
+      "claim": "Le dispatcher generique ActionERP_Contremarque propage l'action vers les listeners metier.",
+      "confidence": "high",
+      "sources": [
+        {
+          "status": "CONFIRME_X13",
+          "path": "C:/Developpements harmony/Standard/Version X.13/Achat-Vente/source/Dav/gttmaction.dhsp",
+          "line": 586,
+          "enclosing": "ActionERP_Contremarque",
+          "snippet": "Public Procedure ActionERP_Contremarque(action, tiCod, fullpino, idLstMouv, entDejaCharge)"
+        }
+      ]
+    },
+    {
+      "id": "C4",
+      "content_type_id": 1,
+      "layer": "tactical",
+      "kind": "example",
+      "claim": "Le fichier gttcpce000 centralise les constantes Arret_Generationcontremarque et Arret_AffecterContremarque.",
+      "confidence": "high",
+      "sources": [
+        {
+          "status": "CONFIRME_X13",
+          "path": "C:/Developpements harmony/Standard/Version X.13/Achat-Vente/source/Dav/gttcpce000.dhsp",
+          "line": 101,
+          "enclosing": null,
+          "snippet": "Define Arret_Generationcontremarque = 5408\nDefine Arret_AffecterContremarque = 5409"
+        }
+      ]
+    },
+    {
+      "id": "C5",
+      "content_type_id": 1,
+      "layer": "tactical",
+      "kind": "example",
+      "claim": "Le fichier dav_sd.dhsq contient le RecordSql EntetePiece qui expose la table de codes d'etat Ce4.",
+      "confidence": "high",
+      "sources": [
+        {
+          "status": "NOUVEAU_X13",
+          "path": "C:/Developpements harmony/Standard/Version X.13/Achat-Vente/source/Dav/dav_sd.dhsq",
+          "line": 453,
+          "enclosing": "EntetePiece",
+          "snippet": "CASE ENT.Ce4 WHEN '1' THEN 'active' WHEN '2' THEN 'suspendue' WHEN '4' THEN 'modele' WHEN '7' THEN 'provisoire' WHEN '8' THEN 'perimee' WHEN '9' THEN 'transferee' WHEN 'A' THEN 'archivee' END as Statut(10)"
+        }
+      ]
+    },
+    {
+      "id": "C6",
+      "content_type_id": 3,
+      "layer": "tactical",
+      "kind": "call_chain",
+      "claim": "Chaine d'appels de la suppression du lien contremarque : UI -> Supprimer_LienContremarque -> ActionERP_Contremarque_Fournisseur_SupprLienCtm -> ActionERP_Contremarque -> listener inconnu.",
+      "confidence": "high",
+      "sources": [],
+      "nodes": [
+        {
+          "id": "N0",
+          "kind": "ui",
+          "label": "Bouton Supprimer la ligne de commande fournisseur"
+        },
+        {
+          "id": "N1",
+          "kind": "fn",
+          "name": "Supprimer_LienContremarque",
+          "source_ref": "C1"
+        },
+        {
+          "id": "N2",
+          "kind": "fn",
+          "name": "ActionERP_Contremarque_Fournisseur_SupprLienCtm",
+          "source_ref": "C2"
+        },
+        {
+          "id": "N3",
+          "kind": "fn",
+          "name": "ActionERP_Contremarque",
+          "source_ref": "C3"
+        },
+        {
+          "id": "N4",
+          "kind": "action_const",
+          "const": "C_Action_Ctm_Lien_Suppr"
+        },
+        {
+          "id": "N5",
+          "kind": "gap",
+          "label": "Listener inconnu qui re-active Ce4 = '1'"
+        }
+      ],
+      "edges": [
+        ["N0", "N1"],
+        ["N1", "N2"],
+        ["N2", "N3"],
+        ["N3", "N4"],
+        ["N4", "N5"]
+      ]
+    },
+    {
+      "id": "C7",
+      "content_type_id": 3,
+      "layer": "tactical",
+      "kind": "impact_caller",
+      "claim": "La variante ActionERP_Contremarque_Fournisseur_SupprPieceMouv est appelee depuis gtpp150.dhsp.",
+      "confidence": "high",
+      "sources": [
+        {
+          "status": "CONFIRME_X13",
+          "path": "C:/Developpements harmony/Standard/Version X.13/Achat-Vente/source/Dav/gtpp150.dhsp",
+          "line": 5267,
+          "enclosing": null,
+          "snippet": "ActionERP_Contremarque_Fournisseur_SupprPieceMouv(FULLPINO, enrno, entDejaCharge)"
+        }
+      ]
+    },
+    {
+      "id": "C8",
+      "content_type_id": 3,
+      "layer": "tactical",
+      "kind": "impact_caller",
+      "claim": "La variante SupprPieceMouv est egalement appelee depuis gtpppce000.dhsp (deux sites distincts).",
+      "confidence": "high",
+      "sources": [
+        {
+          "status": "CONFIRME_X13",
+          "path": "C:/Developpements harmony/Standard/Version X.13/Achat-Vente/source/Dav/gtpppce000.dhsp",
+          "line": 9966,
+          "enclosing": null,
+          "snippet": "ActionERP_Contremarque_Fournisseur_SupprPieceMouv(...)"
+        },
+        {
+          "status": "CONFIRME_X13",
+          "path": "C:/Developpements harmony/Standard/Version X.13/Achat-Vente/source/Dav/gtpppce000.dhsp",
+          "line": 10242,
+          "enclosing": null,
+          "snippet": "ActionERP_Contremarque_Fournisseur_SupprPieceMouv(...)"
+        }
+      ]
+    },
+    {
+      "id": "C9",
+      "content_type_id": 7,
+      "layer": "technical",
+      "kind": "literal_table",
+      "claim": "Table canonique des etats piece sur le champ ENT.Ce4 : 1=active, 2=suspendue, 4=modele, 7=provisoire, 8=perimee, 9=transferee, A=archivee. Pas de constantes nommees, comparaison litterale directe.",
+      "confidence": "high",
+      "sources": [
+        {
+          "status": "NOUVEAU_X13",
+          "path": "C:/Developpements harmony/Standard/Version X.13/Achat-Vente/source/Dav/dav_sd.dhsq",
+          "line": 453,
+          "enclosing": "EntetePiece",
+          "snippet": "CASE ENT.Ce4 WHEN '1' THEN 'active' WHEN '7' THEN 'provisoire' ... END as Statut"
+        }
+      ]
+    },
+    {
+      "id": "C10",
+      "content_type_id": 4,
+      "layer": "tactical",
+      "kind": "action_site",
+      "claim": "Auditer le listener de C_Action_Ctm_Lien_Suppr cote fournisseur, qui re-active probablement ENT.Ce4 a '1' sans controle prealable de l'etat provisoire. Correction probable : ajouter une garde if ENT.Ce4 <> '7' ou sauvegarder/restaurer Ce4 avant/apres la cascade.",
+      "confidence": "high",
+      "sources": [
+        {
+          "status": "CONFIRME_X13",
+          "path": "C:/Developpements harmony/Standard/Version X.13/Achat-Vente/source/Dav/gttmaction.dhsp",
+          "line": 586,
+          "enclosing": "ActionERP_Contremarque",
+          "snippet": "ActionERP_Contremarque(C_Action_Ctm_Lien_Suppr, 'F', FULLPINO, ...)"
+        }
+      ]
+    },
+    {
+      "id": "C11",
+      "content_type_id": 4,
+      "layer": "tactical",
+      "kind": "action_site",
+      "claim": "Investiguer le parametrage onglet Contremarque du dossier qui conditionne la reproduction (bug en 222e uniquement). Possible flag dossier qui declenche le bascule d'etat.",
+      "confidence": "medium",
+      "sources": [
+        {
+          "status": "NOUVEAU_X13",
+          "path": "C:/Developpements harmony/Standard/Version X.13/Achat-Vente/source/Dav/divaltouserdav_sql.dhsf",
+          "line": 1154,
+          "enclosing": null,
+          "snippet": "[param_case]\n   texte=\"Contrats provisoires\"\n   donnee=utilisateur,contratsprovisoiresfl,utilisateur"
+        }
+      ]
+    },
+    {
+      "id": "C12",
+      "content_type_id": 10,
+      "layer": "tactical",
+      "kind": "verification",
+      "claim": "Lister les consommateurs de C_Action_Ctm_Lien_Suppr dans l'arborescence X.13 avant de modifier quoi que ce soit. Commande : rg -n \"C_Action_Ctm_Lien_Suppr|Action_Ctm_Lien_Suppr\" dans l'ERP.",
+      "confidence": "high",
+      "sources": [
+        {
+          "status": "CONFIRME_X13",
+          "path": "C:/Developpements harmony/Standard/Version X.13/Achat-Vente/source/Dav/gttmaction.dhsp",
+          "line": 586,
+          "enclosing": "ActionERP_Contremarque",
+          "snippet": "ActionERP_Contremarque(C_Action_Ctm_Lien_Suppr, 'F', FULLPINO, ...)"
+        }
+      ]
+    },
+    {
+      "id": "C13",
+      "content_type_id": 10,
+      "layer": "tactical",
+      "kind": "verification",
+      "claim": "Rechercher les champs dossier lies a la contremarque. Commande : rg -niF \"Dos.Ctm|CtmFl|CtmMode|CtmActif\" dans Achat-Vente/source/Dav, et rg -niF \"ctm\" dans le dictionnaire GTFDD.dhsd.",
+      "confidence": "medium",
+      "sources": [
+        {
+          "status": "NOUVEAU_X13",
+          "path": "C:/Developpements harmony/Standard/Version X.13/Fichier/gtfdd.dhsd",
+          "line": 1,
+          "enclosing": null,
+          "snippet": "Dictionnaire des champs communs incluant les champs dossier contremarque."
+        }
+      ]
+    },
+    {
+      "id": "C14",
+      "content_type_id": 10,
+      "layer": "tactical",
+      "kind": "verification",
+      "claim": "Lister les 30+ sites qui forcent ENT.Ce4 = '1' pour identifier celui declenche par la cascade de suppression contremarque. Sites suspects : les procedures de creation d'entete `gtpppce000`, `gtpmpce000` (PceAchAfr_Initialiser_IEnt) et `gtppctm200`.",
+      "confidence": "high",
+      "sources": [
+        {
+          "status": "CONFIRME_X13",
+          "path": "C:/Developpements harmony/Standard/Version X.13/Achat-Vente/source/Dav/gtpppce000.dhsp",
+          "line": 8949,
+          "enclosing": null,
+          "snippet": "ENT.Ce4 = '1' ; creation entete finale depuis initial"
+        },
+        {
+          "status": "CONFIRME_X13",
+          "path": "C:/Developpements harmony/Standard/Version X.13/Achat-Vente/source/Dav/gtpmpce000.dhsp",
+          "line": 10054,
+          "enclosing": "PceAchAfr_Initialiser_IEnt",
+          "snippet": "PceAchIEnt.Ce4 = '1'"
+        }
+      ]
+    },
+    {
+      "id": "C15",
+      "content_type_id": 8,
+      "layer": "technical",
+      "kind": "dossier_param",
+      "claim": "Le parametrage onglet Contremarque du dossier contient des flags comme contratsprovisoiresfl qui influencent le comportement des pieces provisoires. Une specification detaillee doit etre consultee avant correction.",
+      "confidence": "medium",
+      "sources": [
+        {
+          "status": "NOUVEAU_X13",
+          "path": "C:/Developpements harmony/Standard/Version X.13/Achat-Vente/source/Dav/divaltouserdav_sql.dhsf",
+          "line": 1030,
+          "enclosing": null,
+          "snippet": "[param_case]\n   texte=\"Pieces provisoires\"\n   donnee=utilisateur,optiong3,utilisateur,9"
+        }
+      ]
+    },
+    {
+      "id": "C16",
+      "content_type_id": 6,
+      "layer": "technical",
+      "kind": "overwrite_warning",
+      "claim": "Le code compare ENT.Ce4 directement aux litteraux '1', '7', etc. Il n'existe pas de constantes nommees C_Etat_Active ou C_Etat_Provisoire. Toute recherche doit passer par grep sur les litteraux, pas sur une constante.",
+      "confidence": "high",
+      "sources": [
+        {
+          "status": "CONFIRME_X13",
+          "path": "C:/Developpements harmony/Standard/Version X.13/Achat-Vente/source/Dav/dav_sd.dhsq",
+          "line": 453,
+          "enclosing": "EntetePiece",
+          "snippet": "CASE ENT.Ce4 WHEN '1' THEN 'active' WHEN '7' THEN 'provisoire' ..."
+        }
+      ]
+    },
+    {
+      "id": "C17",
+      "content_type_id": 6,
+      "layer": "technical",
+      "kind": "overwrite_warning",
+      "claim": "Le mecanisme ActionERP_Contremarque peut declencher un listener asynchrone (table d'actions ou dispatch Harmony). Le listener qui modifie Ce4 peut s'executer apres la fonction appelante, rendant la reproduction en step-through delicate. Prevoir un break dans le listener decouvert, pas dans Supprimer_LienContremarque. Surcharge detectee : Xmt_Call(\"PceAchAfr_Initialiser_IEnt_Write_Av\").",
+      "confidence": "medium",
+      "sources": [
+        {
+          "status": "CONFIRME_X13",
+          "path": "C:/Developpements harmony/Standard/Version X.13/Achat-Vente/source/Dav/gtpmpce000.dhsp",
+          "line": 10064,
+          "enclosing": "PceAchAfr_Initialiser_IEnt",
+          "snippet": "Xmt_Call(\"PceAchAfr_Initialiser_IEnt_Write_Av\")"
+        }
+      ]
+    },
+    {
+      "id": "C18",
+      "content_type_id": 5,
+      "layer": "tactical",
+      "kind": "hint",
+      "claim": "Si le signal cote Dav reste insuffisant apres audit, elargir le scope hors Dav avec la commande verify_x13.py --domain-scope all --max-matches 100 --max-files 40 --timeout 180.",
+      "confidence": "low",
+      "sources": [
+        {
+          "status": "NOUVEAU_X13",
+          "path": "C:/Developpements harmony/Standard/Version X.13/Achat-Vente/source/Dav",
+          "line": 1,
+          "enclosing": null,
+          "snippet": "Perimetre de recherche initial (Dav). Elargissement possible via --domain-scope all."
+        }
+      ]
+    }
+  ],
+  "selection": [
+    {
+      "id": 4,
+      "slug": "endroit_agir",
+      "score": 1.0,
+      "included": true,
+      "layer": "tactical",
+      "reason": "confirmed_x13=5 (>=1 requis)"
+    },
+    {
+      "id": 10,
+      "slug": "verification_prealable",
+      "score": 1.0,
+      "included": true,
+      "layer": "tactical",
+      "reason": "confirmed_x13=5 (synergique type 4)"
+    },
+    {
+      "id": 7,
+      "slug": "constantes_metier",
+      "score": 1.0,
+      "included": true,
+      "layer": "technical",
+      "reason": "literals_detected=['Ce4']"
+    },
+    {
+      "id": 1,
+      "slug": "exemples",
+      "score": 1.0,
+      "included": true,
+      "layer": "tactical",
+      "reason": "confirmed_x13=5"
+    },
+    {
+      "id": 3,
+      "slug": "etude_impact",
+      "score": 1.0,
+      "included": true,
+      "layer": "tactical",
+      "reason": "callers=0, confirmed=5, new=50"
+    },
+    {
+      "id": 8,
+      "slug": "parametrage_dossier",
+      "score": 1.0,
+      "included": true,
+      "layer": "technical",
+      "reason": "dossier_triggers_hit=['parametrage', 'onglet']"
+    },
+    {
+      "id": 5,
+      "slug": "pistes_recherche",
+      "score": 1.0,
+      "included": true,
+      "layer": "tactical",
+      "reason": "signal_ratio=0.09 (confirmed=5, new=50)"
+    },
+    {
+      "id": 2,
+      "slug": "fonctions_langage",
+      "score": 0.2,
+      "included": false,
+      "layer": "technical",
+      "reason": "request_type=ticket (< seuil 0.5)"
+    },
+    {
+      "id": 6,
+      "slug": "attention",
+      "score": 1.0,
+      "included": true,
+      "layer": "technical",
+      "reason": "overwrites_detected=1 (Xmt_Call PceAchAfr_Initialiser_IEnt_Write_Av)"
+    }
+  ]
+}

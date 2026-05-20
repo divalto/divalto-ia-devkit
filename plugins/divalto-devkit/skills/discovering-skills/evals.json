@@ -1,0 +1,62 @@
+{
+  "scenarios": [
+    {
+      "name": "panorama complet",
+      "input": "Que peux-tu faire pour moi dans ce workspace DIVA ?",
+      "expected_behavior": [
+        "Invoquer query_catalog.py overview",
+        "Presenter la vue panoramique : 8 workflows avec les skills de chacun",
+        "Mettre en avant les points d'entree principaux (orchestrateurs : creating-diva-entity, modifying-diva-entity, analyzing-diva-request, documenting-erp)",
+        "Terminer en invitant a demander le detail d'un skill precis ou a chercher par mot-cle"
+      ],
+      "expected_output_excerpts": [
+        "8 workflows",
+        "creating-diva-entity",
+        "analyzing-diva-request"
+      ]
+    },
+    {
+      "name": "detail d'un skill precis",
+      "input": "Explique-moi exactement ce que fait creating-diva-entity",
+      "expected_behavior": [
+        "Invoquer query_catalog.py detail creating-diva-entity",
+        "Presenter : description, workflow, is_orchestrator, checkpoint_count, scripts, references, related_skills, prerequisites",
+        "Mentionner les 11 checkpoints annonces",
+        "Citer au moins deux skills lies (ex: naming-diva-entities, generating-recordsql)"
+      ],
+      "expected_output_excerpts": [
+        "orchestrateur",
+        "checkpoint",
+        "naming-diva-entities"
+      ]
+    },
+    {
+      "name": "recherche par besoin metier",
+      "input": "Quel skill pour ajouter un champ a une entite existante ?",
+      "expected_behavior": [
+        "Invoquer query_catalog.py search avec 'ajout champ' ou 'modifier'",
+        "Identifier modifying-diva-entity comme resultat principal",
+        "Proposer au collaborateur une presentation courte du skill (summary)",
+        "Inviter a demander un detail complet si besoin"
+      ],
+      "expected_output_excerpts": [
+        "modifying-diva-entity",
+        "champ"
+      ]
+    },
+    {
+      "name": "filtrage par workflow",
+      "input": "Montre-moi les skills d'analyse pre-action",
+      "expected_behavior": [
+        "Invoquer query_catalog.py workflow analyze",
+        "Lister les 7 skills du workflow analyze (parsing-diva-request, querying-diva-graph, searching-erp-sources, building-preaction-report, rendering-preaction-livrable, analyzing-diva-request, assisting-functional-question)",
+        "Expliquer l'enchainement naturel (parsing -> querying -> searching -> building -> rendering) et le role de l'orchestrateur analyzing-diva-request"
+      ],
+      "expected_output_excerpts": [
+        "analyze",
+        "parsing-diva-request",
+        "analyzing-diva-request"
+      ]
+    }
+  ]
+}

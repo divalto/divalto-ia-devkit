@@ -1,0 +1,15 @@
+{# Cartographie item (CA pour feature / Anomalie pour ticket) -> code X.13 existant.
+   On n'affiche que les entries avec un fichier connu (tier=x13), les x12 sans fichier sont omis
+   car "[?:?]()" est du bruit pour le dev. #}
+{% set mapping = (seeds.ca_mapping.entries if seeds.ca_mapping else []) | selectattr('file_uri') | list %}
+{% set item_label = seeds.ca_mapping.item_type or 'CA' %}
+{% if mapping and mapping | length > 0 %}
+### Cartographie {{ item_label }} -> code X.13 existant
+
+| {{ item_label }} | Piste identifiee | Fichier:ligne |
+|----|-------------------|---------------|
+{% for m in mapping %}
+| {{ m.ca_id }} | `{{ m.function }}` -- {{ m.why }} | [{{ m.file_short }}:{{ m.line }}]({{ m.file_uri }}) |
+{% endfor %}
+
+{% endif %}

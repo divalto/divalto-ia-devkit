@@ -1,0 +1,70 @@
+kind: entity
+code: OKK
+label: Entite propre (sourcee correctement)
+module: TST
+base: GTFTST
+status: stable
+
+business:
+  role: "Le client OKK est l'entite pivot du module TST. Citation: Gttokk.dhsq:12"
+  criticality: core
+  object_description:
+    text: "Module fonctions et procedures de controle objet OKK"
+    source: Gttokk.dhsq
+  observation:
+    text: "Entite OKK declaree dans le masque principal [Gttokk.dhsq]."
+  business_rules:
+    - "Un OKK bloque ne peut plus etre facture. Citation: Gttmchkokk.dhop:55"
+    - "[A VERIFIER] Regle de decouvert a confirmer avec le metier"
+    - "Les OKK dont Bloque = 0 sont rejetes automatiquement de la selection par defaut. Citation: Gttokk.dhsq:22"
+
+schema:
+  primary_table: OKK
+  primary_key: [OKK_ID]
+
+technical:
+  dictionary_source: Gttokk.dhsd
+  record_name: OKK
+  field_count: 10
+  performance_notes: "Index recommande sur (OKK_ID, Dos) pour volumetrie > 100k. Citation: Gttokk.dhsd:120"
+  audit_fields: [Ce1, Dos, UserCr, UserMo]
+  fields:
+    - name: OKK_ID
+      nature: C20
+      sql_type: char(20)
+      nullable: false
+      business_note: "Identifiant unique du client OKK. Citation: Gttokk.dhsd:15"
+    - name: Nom
+      nature: C40
+      sql_type: char(40)
+      nullable: false
+    - name: Bloque
+      nature: Fl
+      sql_type: tinyint
+      nullable: false
+      business_note: "[A VERIFIER] Semantique exacte du drapeau Bloque a confirmer"
+    - name: DateCre
+      nature: Dt
+      sql_type: date
+      nullable: true
+    - name: AnnulFl
+      nature: C20
+      sql_type: char(20)
+      nullable: false
+      business_note: "Drapeau annulation, source: Gttokk.dhsd:99"
+  indexes:
+    - name: IdxOKK_ID
+      fields: [OKK_ID]
+      unique: true
+    - name: IdxNom
+      fields: [Nom]
+      unique: false
+    - name: IdxDateCre
+      fields: [DateCre]
+      unique: false
+
+meta:
+  last_reviewed: 2026-04-22
+  reviewed_by: test
+  a_verifier:
+    - "business.role : criticite metier a confirmer avec le DAF"

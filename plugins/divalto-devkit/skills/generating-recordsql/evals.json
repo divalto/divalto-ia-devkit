@@ -1,0 +1,109 @@
+{
+  "skill": "generating-recordsql",
+  "description": "Scenarios d'evaluation de generating-recordsql.",
+  "scenarios": [
+    {
+      "id": "case-1",
+      "skills": [
+        "naming-diva-entities",
+        "generating-recordsql"
+      ],
+      "query": "Genere le fichier RecordSql pour l'entite FamRglt du domaine Retail, table RtlFamRglt, champ cle RgltFam, description 'Famille de reglement'",
+      "files": [],
+      "expected_behavior": [
+        "Fichier genere en ISO-8859-1 + CRLF",
+        "Contient <RecordSql Name=FamRgltRtl>",
+        "Contient RtlFamRglt.Dos = MZ.Dos (filtre multi-dossier R01)",
+        "Contient overwrittenby (R02)",
+        "Contient DefaultDictionary=RTLFDD.dhsd",
+        "Cases WHERE : Equal_RgltFam, Like_RgltFam, Like_Libelle, Exists, PK, ID",
+        "Cases ORDERBY : Par_Code, Par_Libelle",
+        "Validation : 0 erreurs, 0 warnings"
+      ]
+    },
+    {
+      "id": "case-2",
+      "skills": [
+        "naming-diva-entities",
+        "generating-recordsql"
+      ],
+      "query": "Genere le fichier RecordSql pour l'entite ArtFam du domaine DAV, table GtfArtFam, champ cle ArtFam, description 'Famille article'",
+      "files": [],
+      "expected_behavior": [
+        "Fichier genere en ISO-8859-1 + CRLF",
+        "Contient <RecordSql Name=ArtFamGtf>",
+        "Contient DefaultDictionary=GTFDD.dhsd",
+        "Cases WHERE avec Equal_ArtFam, Like_ArtFam",
+        "Contient GtfArtFam.Dos = MZ.Dos",
+        "Validation : 0 erreurs, 0 warnings"
+      ]
+    },
+    {
+      "id": "case-3",
+      "skills": [
+        "naming-diva-entities",
+        "generating-recordsql"
+      ],
+      "query": "Genere le fichier RecordSql pour l'entite Cli du domaine DAV, table CLI, champ cle CliCod, description 'Client'. La table a un nom court",
+      "files": [],
+      "expected_behavior": [
+        "NomVue = CliGtf (pas de collision avec CLI)",
+        "Contient <RecordSql Name=CliGtf>",
+        "Contient CLI.Dos = MZ.Dos",
+        "Cases WHERE avec Equal_CliCod, Like_CliCod",
+        "Case ID avec CLI.CLI_ID",
+        "Validation : 0 erreurs (le warning V05 est dans naming, pas dans validate_rsql)"
+      ]
+    },
+    {
+      "id": "case-4",
+      "skills": [
+        "naming-diva-entities",
+        "generating-recordsql"
+      ],
+      "query": "Genere le fichier RecordSql pour l'entite CliAdr du domaine DAV, table CLI, champ cle CliCod, description 'Client avec adresse tiers'. Le RecordSql joint la table TIA en jointure implicite pour projeter le libelle du tiers (TIA.TiaLib) via la condition 'TIA.Dos = MZ.Dos AND CLI.Ticod = TIA.Ticod'.",
+      "files": [],
+      "expected_behavior": [
+        "NomVue = CliAdrGtf (pas de collision avec CLI)",
+        "Contient <RecordSql Name=CliAdrGtf>",
+        "SELECT inclut CLI.* ET TIA.TiaLib",
+        "FROM inclut CLI ET TIA (jointure implicite)",
+        "WHERE contient CLI.Dos = MZ.Dos ET la condition de jointure 'TIA.Dos = MZ.Dos AND CLI.Ticod = TIA.Ticod'",
+        "Validation R01-R08 : 0 erreurs, pas de warning R07 (TIA mentionne dans WHERE)"
+      ]
+    },
+    {
+      "id": "case-5",
+      "skills": [
+        "naming-diva-entities",
+        "generating-recordsql"
+      ],
+      "query": "Genere le fichier RecordSql pour l'entite ArtFamLib du domaine DAV, table GtfArtFam, champ cle ArtFam, description 'Famille article avec lookup T007'. Le RecordSql utilise un LEFT JOIN sur T007 pour projeter T007.Lib avec la condition ON 'T007.Dos = MZ.Dos AND T007.Code = GtfArtFam.TypeFam'.",
+      "files": [],
+      "expected_behavior": [
+        "Contient <RecordSql Name=ArtFamLibGtf>",
+        "SELECT inclut GtfArtFam.* ET T007.Lib",
+        "FROM contient 'LEFT JOIN T007 ON T007.Dos = MZ.Dos AND T007.Code = GtfArtFam.TypeFam'",
+        "WHERE ne contient PAS la condition de jointure T007 (elle est dans le ON)",
+        "Validation R01-R08 : 0 erreurs, pas de warning R08 (LEFT JOIN bien forme)"
+      ]
+    },
+    {
+      "id": "case-6",
+      "skills": [
+        "naming-diva-entities",
+        "generating-recordsql"
+      ],
+      "query": "Genere le fichier RecordSql pour l'entite LignePce du domaine DAV, table MOUV, champ cle Ref, description 'Ligne de piece'. Jointures implicites sur ART et CLI via 'ART.Dos = MZ.Dos AND MOUV.ArtCod = ART.ArtCod' et 'CLI.Dos = MZ.Dos AND MOUV.CliCod = CLI.CliCod'. Cases additionnels : Equal_Ref (champ Ref, type char), Like_Ref (champ Ref, type char), Between_DateMouv (champ DateMouv, type date).",
+      "files": [],
+      "expected_behavior": [
+        "Contient <RecordSql Name=LignePceGtf>",
+        "FROM contient MOUV, ART, CLI (3 tables, jointures implicites)",
+        "WHERE contient les 2 conditions de jointure + MOUV.Dos = MZ.Dos",
+        "3 cases additionnels : 'Case Equal_Ref(char val)', 'Case Like_Ref(char val)', 'Case Between_DateMouv(Date deb, Date fin)'",
+        "Le case Between genere BETWEEN deb AND fin",
+        "Validation R01-R08 : 0 erreurs"
+      ]
+    }
+  ]
+}

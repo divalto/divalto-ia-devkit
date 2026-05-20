@@ -1,0 +1,75 @@
+<DictionarySql DefaultDictionary={{ DICT }}.dhsd DataBase=DAV overwrittenby="{{ overwrittenby_rsql }}" ModuleInfo='$Id: {{ fichier_rsql }} 1 {{ date }} user $'>
+;*
+;*	{{ Description }} ( {{ NomVue }} )
+;*
+
+<RecordSql Name={{ NomVue }} Comment="{{ Description }}" ZoomOptimize=Yes>
+Public Record A5DD.dhsd		MZ
+
+<SELECT>
+	{{ TableSQL }}.*
+{%- for jt in joined_tables %}
+{%- for col in jt.columns_selected %}
+	{{ col }}
+{%- endfor %}
+{%- endfor %}
+
+<FROM Insert=Yes Update=Yes Delete=Yes>
+	{{ TableSQL }}
+{%- for jt in joined_tables if jt.join_type == "implicit" %}
+	{{ jt.table_sql }}{% if jt.alias and jt.alias != jt.table_sql %} {{ jt.alias }}{% endif %}
+{%- endfor %}
+{%- for jt in joined_tables if jt.join_type == "left_join" %}
+	LEFT JOIN {{ jt.table_sql }}{% if jt.alias and jt.alias != jt.table_sql %} {{ jt.alias }}{% endif %} ON {{ jt.join_condition }}
+{%- endfor %}
+
+<WHERE>
+	{{ TableSQL }}.Dos = MZ.Dos
+{%- for jt in joined_tables if jt.join_type == "implicit" %}
+	{{ jt.join_condition }}
+{%- endfor %}
+
+	Case Equal_{{ ChampCle }}(char code)
+		{{ TableSQL }}.{{ ChampCle }} = code
+
+	Case Like_{{ ChampCle }}(char code)
+		{{ TableSQL }}.{{ ChampCle }} LIKE code
+
+{% if has_libelle %}
+	Case Like_{{ ChampLibelle }}(char libelle)
+		{{ TableSQL }}.{{ ChampLibelle }} LIKE libelle
+{% endif %}
+	Case Exists	(char code)
+		{{ TableSQL }}.{{ ChampCle }} = code
+
+	Case PK(char code)
+		{{ TableSQL }}.{{ ChampCle }} = code
+
+	Case ID (Int id)
+		{{ TableSQL }}.{{ TableSQL }}_ID = id
+{%- for ac in additional_cases %}
+{%- set diva_type = {"char": "char", "int": "Int", "date": "Date", "num": "Num"}[ac.param] %}
+
+{%- if ac.type == "between" %}
+	Case {{ ac.name }}({{ diva_type }} deb, {{ diva_type }} fin)
+		{{ TableSQL }}.{{ ac.field }} BETWEEN deb AND fin
+{%- elif ac.type == "like" %}
+	Case {{ ac.name }}({{ diva_type }} val)
+		{{ TableSQL }}.{{ ac.field }} LIKE val
+{%- elif ac.type == "equal" %}
+	Case {{ ac.name }}({{ diva_type }} val)
+		{{ TableSQL }}.{{ ac.field }} = val
+{%- endif %}
+{%- endfor %}
+
+<ORDERBY>
+	Case Par_Code				"Par {{ ChampCle }}"
+		{{ TableSQL }}.Dos
+		{{ TableSQL }}.{{ ChampCle }}
+
+{% if has_libelle %}
+	Case Par_{{ ChampLibelle }}			"Par libelle"
+		{{ TableSQL }}.Dos
+		{{ TableSQL }}.{{ ChampLibelle }}
+		{{ TableSQL }}.{{ ChampCle }}
+{% endif %}

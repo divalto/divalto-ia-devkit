@@ -1,0 +1,16 @@
+{
+    "Fichier": "C:\\Developpements harmony\\Standard\\Version X.13\\TestClaude\\isam-exercice\\g3f.dhfi",
+    "Structure": "structure_xmenuf_m2.json",
+    "Donnees": {
+        "Ce": "2",
+        "Reg": "ZZZTEST",
+        "Ordre": "      10",
+        "Lib": "Claude test entry -- insert",
+        "TypeChain": "3",
+        "Enchain": "09000",
+        "ChoixActif": "1",
+        "ChoixVisible": "1",
+        "ProduitNo": "0",
+        "EnrNo": "999901"
+    }
+}

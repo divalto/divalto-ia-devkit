@@ -1,0 +1,64 @@
+{
+  "_skeleton_name": "zoom-projet-affaire-26",
+  "_description": "Zoom projet affaire : pattern X.12 a 26 tables, 83 RSQL. Tables canoniques : GATCRIT, GATETAP, PRJAP, GAPROJ, CLI + lookups.",
+  "_source_x13": "Patterns module Affaires (GA*). BasePrepa dans gtrspce.dhsq, EvtGPA / FAGPA dans garsgpa.dhsq (26 tables).",
+  "_signature_nb_tables": 26,
+  "_note": "Squelette avec 7 jointures typiques d'un zoom projet/affaire avec criteres et etapes.",
+  "joined_tables": [
+    {
+      "table_sql": "GAPROJ",
+      "alias": "GAPROJ",
+      "join_type": "implicit",
+      "join_condition": "GAPROJ.Dos = MZ.Dos AND GAPROJ.PrjCod = {MAIN}.PrjCod",
+      "columns_selected": ["GAPROJ.PrjLib"]
+    },
+    {
+      "table_sql": "GATCRIT",
+      "alias": "GATCRIT",
+      "join_type": "left_join",
+      "join_condition": "GATCRIT.Dos = MZ.Dos AND GATCRIT.CritCod = {MAIN}.CritCod",
+      "columns_selected": ["GATCRIT.CritLib"]
+    },
+    {
+      "table_sql": "GATETAP",
+      "alias": "GATETAP",
+      "join_type": "left_join",
+      "join_condition": "GATETAP.Dos = MZ.Dos AND GATETAP.EtapCod = {MAIN}.EtapCod",
+      "columns_selected": ["GATETAP.EtapLib"]
+    },
+    {
+      "table_sql": "PRJAP",
+      "alias": "PRJAP",
+      "join_type": "left_join",
+      "join_condition": "PRJAP.Dos = MZ.Dos AND PRJAP.PrjCod = {MAIN}.PrjCod AND PRJAP.ApCod = {MAIN}.ApCod",
+      "columns_selected": ["PRJAP.ApLib"]
+    },
+    {
+      "table_sql": "CLI",
+      "alias": "CLI",
+      "join_type": "left_join",
+      "join_condition": "CLI.Dos = MZ.Dos AND CLI.CliCod = {MAIN}.CliCod",
+      "columns_selected": ["CLI.CliLib"]
+    },
+    {
+      "table_sql": "T006",
+      "alias": "T006",
+      "join_type": "left_join",
+      "join_condition": "T006.Dos = MZ.Dos AND T006.Code = {MAIN}.StatutPrj",
+      "columns_selected": ["T006.Lib"]
+    },
+    {
+      "table_sql": "T007",
+      "alias": "T007",
+      "join_type": "left_join",
+      "join_condition": "T007.Dos = MZ.Dos AND T007.Code = {MAIN}.TypePrj",
+      "columns_selected": ["T007.Lib"]
+    }
+  ],
+  "additional_cases": [
+    {"name": "Equal_PrjCod", "field": "PrjCod", "type": "equal", "param": "char"},
+    {"name": "Equal_CliCod", "field": "CliCod", "type": "equal", "param": "char"},
+    {"name": "Equal_EtapCod", "field": "EtapCod", "type": "equal", "param": "char"},
+    {"name": "Between_DatePrj", "field": "DatePrj", "type": "between", "param": "date"}
+  ]
+}

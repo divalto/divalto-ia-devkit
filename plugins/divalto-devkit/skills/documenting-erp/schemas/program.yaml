@@ -1,0 +1,30 @@
+# Schema : Programme / Ecran DIVA
+# Un Program = unite executable (ecran CRUD .dhsf, zoom .dhsp, etat, moulinette, job).
+# Documente le "comment" technique : comment une entite se manipule dans l'ERP.
+
+kind: program
+version: 0.1
+
+required_fields:
+  - code            # string, nom fichier sans extension, ex: "gree001"
+  - kind            # enum: screen-crud | zoom | report | state | moulinette | batch
+  - module          # string, module parent
+
+optional_fields:
+  - label           # string, ex: "Maintenance tiers"
+  - file            # string, chemin relatif dans ERP, ex: "Relation-Tiers/source/gree001.dhsf"
+  - entities_read   # list[string], entites lues par le programme
+  - entities_write  # list[string], entites ecrites
+  - moulinettes_applied # list[string], regles CI qui s'appliquent
+  - navigation_path # string, chemin menu ERP, ex: "Fichiers > Tables > Clients"
+  - complexity      # enum: simple | medium | complex
+  - page_count      # int, nombre de pages masque (pour .dhsf)
+  - tab_count       # int, nombre d'onglets
+  - depends_on      # list[string], autres programs references (OverWrittenBy, includes)
+  - status          # enum: draft | stable | deprecated
+  - a_verifier      # list[string]
+
+rendering_layers:
+  business:   [label, navigation_path, complexity]
+  schema:     [label, kind, entities_read, entities_write, depends_on]
+  technical:  [code, file, entities_read, entities_write, moulinettes_applied, page_count, tab_count, status]

@@ -1,0 +1,297 @@
+SetModuleInfo('$Id: {{ fichier_zoom }} 1 {{ date }} user $')
+
+;>xdiva
+;*
+;*		{{ Description }} ( {{ TABLE_MAJUSCULE }} )
+;*
+
+OverWrittenBy '{{ overwrittenby_zoom }}'
+
+Include 'GTTCZ00.dhsp'										; Declarations communes
+
+;
+Module  '{{ module_mchk }}'
+Module  '{{ module_ficsql }}'
+
+; TDF
+HFileVersion  {{ DICT }}.dhsd {{ FichierDico }}
+
+; RecordSQL
+Public RecordSql '{{ fichier_rsql_compile }}' {{ NomVue }}
+Public RecordSql '{{ fichier_rsql_compile }}' {{ NomVue }}	{{ NomVue }}_Sel
+
+; DEFINE
+Define ChaineReservation	= [ Formater_Res('{{ PREFIXRES }}') {{ NomVue }}.Dos {{ NomVue }}.{{ ChampCle }} ]
+Define TitreVariable			= [ {{ TitreVariable }} ]
+
+;*
+;*		Procedures & fonctions
+;*
+
+
+;*
+;* procedures d'initialisation et fin de zoom
+;*
+
+;*
+Public Procedure Construire_Condition_Selection(nom, premier)
+; Mise en place des criteres de selection et du tri
+	1		nom						A
+	1		premier					1,0 = FALSE		; Gestion de '*' en fin de champ
+	1 		valeurCondition		S
+	1  	param						S
+
+Beginp
+
+	{{ NomVue }}.Where.RemoveCondition(Nom)
+
+	If {{ NomVue }}_Sel.{{ ChampCle }} <> ' '									; Code {{ ChampCle }}
+		param = Banaliser_Condition({{ NomVue }}_Sel.{{ ChampCle }}, premier)		|	{{ NomVue }}.Where.Like_{{ ChampCle }}(param)		|	{{ NomVue }}.Where.Like_{{ ChampCle }}.AddAndCondition(valeurCondition)
+	EndIf
+
+{% if has_libelle %}
+	If {{ NomVue }}_Sel.{{ ChampLibelle }} <> ' '									; {{ ChampLibelle }}
+		param = Banaliser_Condition({{ NomVue }}_Sel.{{ ChampLibelle }}, premier)		|	{{ NomVue }}.Where.Like_{{ ChampLibelle }}(param)		|	{{ NomVue }}.Where.Like_{{ ChampLibelle }}.AddAndCondition(valeurCondition)
+	EndIf
+{% endif %}
+
+	If valeurCondition <> ' '
+		{{ NomVue }}.Where.AddCondition(nom, valeurCondition)
+	EndIf
+
+Endp
+
+;*
+Public Procedure ZoomDebut
+Beginp
+	Init_Zoom(FicheNoBloc=0)
+
+	Load_Gtfdos(MZ.Dos)
+
+	Zoom.TitreFixe	= Translate('{{ Description }}')
+
+   If ZOOM.Scevaleur <> ' '
+		{{ NomVue }}_Sel.Init()
+{% if has_libelle %}
+ 		If Mid (ZOOM.Scevaleur, 1, 1) = '-'
+         {{ NomVue }}_Sel.{{ ChampLibelle }}	= Mid(ZOOM.Scevaleur, 2)	|	{{ NomVue }}.Orderby.Par_{{ ChampLibelle }}()
+		Else
+			{{ NomVue }}_Sel.{{ ChampCle }}	= ZOOM.Scevaleur				|	{{ NomVue }}.Orderby.Par_Code()
+		Endif
+{% else %}
+		{{ NomVue }}_Sel.{{ ChampCle }}	= ZOOM.Scevaleur				|	{{ NomVue }}.Orderby.Par_Code()
+{% endif %}
+		Construire_Condition_Selection(ZOOM_SQL_CONDITION_NORMALE, TRUE)
+	Else
+		{{ NomVue }}.Orderby.Par_Code()
+   Endif
+
+Endp
+
+;*
+Public Procedure ZoomAbandon				; Sortie du zoom
+Beginp
+Endp
+
+;*
+Public Procedure ZoomValidation			; Validation du zoom
+Beginp
+	Zoom.Valretour = {{ NomVue }}.{{ ChampCle }}
+Endp
+
+;*
+Public Procedure ZoomFin					; A la sortie du zoom
+Beginp
+Endp
+
+;*
+;*		Procedures creation, duplication, modification et suppression
+;*
+
+;*
+Public Procedure ZoomCreation
+Beginp
+	If Authorize_{{ table_minuscule }}_Insert({{ NomVue }}.{{ table_minuscule }}) <> 0
+		ZOOM.OK = 'I'
+		preturn
+	EndIf
+
+	{{ NomVue }}.Init()								         ; Initialiser les donnees
+	Initialize_{{ table_minuscule }}_New({{ NomVue }}.{{ table_minuscule }})
+Endp
+
+;*
+Public Procedure ZoomDuplication
+Beginp
+	If Authorize_{{ table_minuscule }}_Insert({{ NomVue }}.{{ table_minuscule }}) <> 0
+		ZOOM.OK = 'I'
+		preturn
+	EndIf
+
+	Initialize_{{ table_minuscule }}_Duplication({{ NomVue }}.{{ table_minuscule }})
+Endp
+
+;*
+Public Procedure ZoomApresCleCreation	; Apres saisie de la cle
+Beginp
+	If Check_{{ TABLE_MAJUSCULE }}_Key({{ NomVue }}.{{ table_minuscule }}) <> 0
+		Zoom.ok = 'C'
+	Endif
+	{{ NomVue }}.Where.Exists({{ NomVue }}.{{ ChampCle }})
+	Zoom.Res			= Get_{{ table_minuscule }}_Reservation ({{ NomVue }}.{{ table_minuscule }})
+	Zoom.Titrevar	= {{ NomVue }}.{{ ChampCle }}
+Endp
+
+;*
+Public Procedure ZoomCreationRes			; Apres reservation en creation
+Beginp
+Endp
+
+;*
+Public Procedure ZoomAvantWrite
+Beginp
+	if Check_{{ TABLE_MAJUSCULE }}({{ NomVue }}.{{ table_minuscule }}) <> 0
+		Zoom.Ok = 'S'
+		Preturn
+	endif
+	{{ PREFIX_ }}PreInsert_recordSql({{ NomVue }})
+Endp
+
+;*
+Public Procedure ZoomApresCreation			; Compte-rendu de creation
+Beginp
+	If Zoom.Ok = 'O'
+		{{ PREFIX_ }}PostInsert_recordSql({{ NomVue }})
+	EndIf
+	Zoom.Titrevar = TitreVariable
+Endp
+
+;*
+Public Procedure ZoomModification			; Avant entree en modification
+Beginp
+	If Authorize_{{ table_minuscule }}_Update({{ NomVue }}.{{ table_minuscule }}) <> 0
+		ZOOM.OK = 'I'
+		preturn
+	EndIf
+	Zoom.Res = Get_{{ table_minuscule }}_Reservation ({{ NomVue }}.{{ table_minuscule }})
+Endp
+
+;*
+Public Procedure ZoomModificationRes		; Apres reservation en modification
+Beginp
+Endp
+
+;*
+Public Procedure ZoomAvantRewrite
+Beginp
+	if Check_{{ TABLE_MAJUSCULE }}({{ NomVue }}.{{ table_minuscule }}) <> 0
+		Zoom.Ok = 'S'
+		Preturn
+	endif
+	{{ PREFIX_ }}PreUpdate_recordSql({{ NomVue }},majuser = true)
+Endp
+
+;*
+Public Procedure ZoomApresModification		; Compte-rendu de modification
+Beginp
+	If Zoom.Ok = 'O'
+		{{ PREFIX_ }}PostUpdate_recordSql({{ NomVue }})
+	EndIf
+	Zoom.Titrevar = TitreVariable
+Endp
+
+;*
+Public Procedure ZoomSuppression				; Avant entree en suppression
+Beginp
+	If Authorize_{{ table_minuscule }}_Delete({{ NomVue }}.{{ table_minuscule }}) <> 0
+		ZOOM.OK = 'I'
+		preturn
+	EndIf
+	Zoom.Res = Get_{{ table_minuscule }}_Reservation ({{ NomVue }}.{{ table_minuscule }})
+Endp
+
+;*
+Public Procedure ZoomSuppressionRes
+Beginp
+Endp
+
+;*
+Public Procedure ZoomAvantDelete
+Beginp
+	{{ PREFIX_ }}PreDelete_recordSql({{ NomVue }})
+Endp
+
+;*
+Public Procedure ZoomApresSuppression		; Compte-rendu de suppression
+Beginp
+	If Zoom.Ok = 'O'
+		{{ PREFIX_ }}PostDelete_recordSql({{ NomVue }})
+	EndIf
+Endp
+
+;*
+;* Actions
+;*
+
+;*
+Public Procedure ZoomAvantConsult
+Beginp
+Endp
+
+;*
+Public Procedure ZoomConsult
+Beginp
+	Switch2 Harmony.Key
+	Case K_F7	|	Zoom_Call()
+	Endswitch
+Endp
+
+;*
+Public Procedure ZoomAvantInput
+Beginp
+Endp
+
+;*
+Public Procedure ZoomArret						; Executee si point d'arret en mode fiche ou liste
+Beginp
+	Switch Harmony.Key
+	Case K_F8	|	Zoom_Call(Harmony.Arret)	; Appel de zoom
+	Case K_F7	|	Zoom_Call()
+
+	Case Harmony.Dataarret = 8002
+		If Harmony.Sourisbout = RIGHT_BUTTON
+			Zoom_Call()
+		ElsIf Harmony.Sourisclic = DOUBLE_CLICK
+			Harmony.Retour 	= XMENEXT_SIMULATION_TOUCHE
+			Harmony.Cplretour = K_F8
+		EndIf
+
+	EndSwitch
+Endp
+
+;*
+Public Procedure ZoomFiltreAvantValeur
+Beginp
+Endp
+
+;*
+Public Procedure ZoomFiltreApresValeur
+Beginp
+Endp
+
+;*
+;*		Procedures liees a la lecture du fichier
+;*
+
+;*
+Public Procedure ZoomApresCle
+Beginp
+	Construire_Condition_Selection(ZOOM_SQL_CONDITION_NORMALE)
+Endp
+
+
+;*
+Public Procedure ZoomApresRead
+Beginp
+	Zoom.Titrevar = TitreVariable
+Endp

@@ -1,0 +1,59 @@
+{
+  "skill": "generating-objet-metier",
+  "description": "Scenarios d'evaluation de generating-objet-metier.",
+  "scenarios": [
+    {
+      "id": "case-1",
+      "skills": [
+        "naming-diva-entities",
+        "generating-objet-metier"
+      ],
+      "query": "Genere le fichier Module Check pour l'entite FamRglt du domaine Retail, table RtlFamRglt, champ cle RgltFam, description 'Famille de reglement'",
+      "files": [],
+      "expected_behavior": [
+        "Fichier genere en ISO-8859-1 + CRLF",
+        "Contient Init_Module avec RT_Get_CheckObject_Data(RS_FAMRGLTRTL)",
+        "Contient OverWrittenBy rtumchkrtlfamrglt.dhop",
+        "Contient Shared Record 'RTLFDD.dhsd' rtlfamrglt rtlfamrglt_INIT",
+        "Contient les 22 fonctions obligatoires (ChkData, FieldProperties, FieldNames, Record, Lib, Key, Reservation, Check_Key, Check, FieldCod, New, PostFetch, Duplication, Pre/PostInsert, Pre/PostUpdate, Pre/PostDelete, Authorize Insert/Update/Delete)",
+        "Contient les fonctions de reservation (Lock, Shift, Share, UnLock)",
+        "Validation : 0 erreurs, 0 warnings"
+      ]
+    },
+    {
+      "id": "case-2",
+      "skills": [
+        "naming-diva-entities",
+        "generating-objet-metier"
+      ],
+      "query": "Genere le fichier Module Check pour l'entite ArtFam du domaine DAV, table GtfArtFam, champ cle ArtFam, description 'Famille article'",
+      "files": [],
+      "expected_behavior": [
+        "Fichier genere en ISO-8859-1 + CRLF",
+        "Contient Init_Module avec GT_Get_CheckObject_Data",
+        "Contient OverWrittenBy gtumchkgtfartfam.dhop",
+        "Contient DefaultDictionary=GTFDD.dhsd",
+        "Include gtcficsql.dhsp (domaine gt, pas rt)",
+        "Module gtpmficsql.dhop (domaine gt)",
+        "Validation : 0 erreurs, 0 warnings"
+      ]
+    },
+    {
+      "id": "case-3",
+      "skills": [
+        "naming-diva-entities",
+        "generating-objet-metier"
+      ],
+      "query": "Genere le fichier Module Check pour l'entite Cli du domaine DAV, table CLI, champ cle CliCod, description 'Client'. La table a un nom court",
+      "files": [],
+      "expected_behavior": [
+        "NomVue = CliGtf (pas de collision avec CLI)",
+        "Contient Declaration_CliGtf RS_CliGtf",
+        "Contient ChkData_CLI (TABLE_MAJUSCULE = CLI)",
+        "Contient Check_CLI_Key, Check_CLI (fonctions de donnees en MAJUSCULES)",
+        "Contient Initialize_cli_New (fonctions init en minuscules)",
+        "Validation : 0 erreurs"
+      ]
+    }
+  ]
+}

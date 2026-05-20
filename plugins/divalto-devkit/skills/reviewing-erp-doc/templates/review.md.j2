@@ -1,0 +1,102 @@
+# Rapport de relecture -- {{ module.code or "(module inconnu)" }}
+
+> Genere le {{ generated_at }}
+> Livrable : `{{ deliverable_root }}`
+> Relecteur : reviewing-erp-doc
+
+{% if editorial %}
+## Retour du relecteur
+
+{{ editorial }}
+
+---
+
+{% endif %}
+## Resume executif
+
+**Verdict : `{{ verdict }}`**
+
+### Compteurs par categorie
+
+| Categorie | Erreurs | Warnings | Infos | Total |
+|-----------|--------:|---------:|------:|------:|
+| E1 (non sourcee) | {{ stats.E1.erreur }} | {{ stats.E1.warning }} | {{ stats.E1.info }} | {{ stats.E1.total }} |
+| E2 (desalignement) | {{ stats.E2.erreur }} | {{ stats.E2.warning }} | {{ stats.E2.info }} | {{ stats.E2.total }} |
+| E3 (omission) | {{ stats.E3.erreur }} | {{ stats.E3.warning }} | {{ stats.E3.info }} | {{ stats.E3.total }} |
+| E4 (contradiction docs/) | {{ stats.E4.erreur }} | {{ stats.E4.warning }} | {{ stats.E4.info }} | {{ stats.E4.total }} |
+| **Total** | **{{ stats.total.erreur }}** | **{{ stats.total.warning }}** | **{{ stats.total.info }}** | **{{ stats.total.total }}** |
+
+### Couverture du producteur
+
+- Items `[A VERIFIER]` deja presents dans le livrable : **{{ stats.a_verifier_count }}**
+- Items detectes par le relecteur : **{{ stats.items_count }}**
+- Ratio de couverture du producteur : **{{ stats.coverage_ratio }}%**
+
+{% if stats.top_critical %}
+### Top entites critiques (par erreurs)
+
+{% for entity, nb in stats.top_critical %}
+- **{{ entity }}** -- {{ nb }} erreur(s)
+{% endfor %}
+{% endif %}
+
+{% if warnings_global %}
+### Warnings globaux
+
+{% for w in warnings_global %}
+- {{ w }}
+{% endfor %}
+{% endif %}
+
+---
+
+## Detail par entite
+
+{% for entity in entities %}
+### {{ entity.code }}{% if entity.label %} -- {{ entity.label }}{% endif %}
+
+{% if entity.detected %}
+{% for cat in ["E1", "E3", "E4", "E2"] %}
+{% set cat_items = entity.detected | selectattr("category", "equalto", cat) | list %}
+{% if cat_items %}
+#### {{ cat }} -- {{ cat_items | length }} item(s)
+
+{% for item in cat_items %}
+- **[{{ item.severity }}]** {{ item.title }}
+  - Champ YAML : `{{ item.yaml_path }}`
+  - Source : `{{ item.source_ref }}`
+{% if item.excerpt_deliverable %}
+  - Extrait livrable : {{ item.excerpt_deliverable }}
+{% endif %}
+{% if item.excerpt_source %}
+  - Extrait source : {{ item.excerpt_source }}
+{% endif %}
+  - Challenge : {{ item.challenge }}
+
+{% endfor %}
+{% endif %}
+{% endfor %}
+{% else %}
+_Aucun item detecte -- entite propre._
+
+{% endif %}
+{% endfor %}
+
+---
+
+## Items `[A VERIFIER]` deja presents dans le livrable
+
+{% set total_av = namespace(count=0) %}
+{% for entity in entities %}
+{% if entity.a_verifier %}
+### {{ entity.code }}
+{% for item in entity.a_verifier %}
+- {{ item }}
+{% set total_av.count = total_av.count + 1 %}
+{% endfor %}
+
+{% endif %}
+{% endfor %}
+{% if total_av.count == 0 %}
+_Aucun item `[A VERIFIER]` dans le livrable._
+{% endif %}

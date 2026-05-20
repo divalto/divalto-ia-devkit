@@ -1,0 +1,49 @@
+{
+  "skill": "compiling-diva-projects",
+  "description": "Scenarios d'evaluation de compiling-diva-projects.",
+  "scenarios": [
+    {
+      "id": "case-1",
+      "skills": [
+        "compiling-diva-projects"
+      ],
+      "query": "Compile le projet divalto achat-vente.dhpt avec le profil developpement et dis-moi s'il y a des erreurs.",
+      "files": [],
+      "expected_behavior": [
+        "Construit la commande xwin7 avec -action buildall, -project, -profile (avec accent), -output, -outputall",
+        "Le script .ps1 est en ISO-8859-1 (pas UTF-8) pour que l'accent du profil soit reconnu",
+        "Execute la compilation et attend la fin",
+        "Parse le rapport avec parse_compilation.py",
+        "Retourne JSON avec success=true/false et le resume (Erreur(s), Warning(s), Diva, Masques, etc.)"
+      ]
+    },
+    {
+      "id": "case-2",
+      "skills": [
+        "compiling-diva-projects"
+      ],
+      "query": "La compilation a echoue avec 3 erreurs. Donne-moi le detail des erreurs avec le fichier source concerne.",
+      "files": [],
+      "expected_behavior": [
+        "Parse le rapport avec parse_compilation.py --path",
+        "Extrait les 3 erreurs avec leur contexte (ligne precedente = fichier source)",
+        "Pour chaque erreur : affiche le message, le fichier source, et le contexte",
+        "Propose des pistes de correction basees sur le type d'erreur (syntaxe, fichier manquant, encodage)"
+      ]
+    },
+    {
+      "id": "case-3",
+      "skills": [
+        "compiling-diva-projects"
+      ],
+      "query": "Je veux compiler mais le profil n'est pas trouve. Le message dit 'Profil absent du projet'.",
+      "files": [],
+      "expected_behavior": [
+        "Identifie le probleme : encodage du nom de profil (P14/P15)",
+        "Verifie l'encodage du script .ps1 avec file --mime-encoding",
+        "Si UTF-8 : propose la conversion en ISO-8859-1 avec iconv",
+        "Explique que l'accent sur developpement doit etre 0xE9 (ISO-8859-1), pas 0xC3A9 (UTF-8)"
+      ]
+    }
+  ]
+}

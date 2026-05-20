@@ -1,0 +1,79 @@
+{
+  "skill": "testing-erp",
+  "description": "Scenarios d'evaluation de testing-erp.",
+  "scenarios": [
+    {
+      "name": "connexion-erp",
+      "description": "Connexion a l'ERP et verification de la page d'accueil",
+      "prompt": "Connecte-toi a l'ERP Divalto et verifie que la page d'accueil est accessible.",
+      "expected": {
+        "actions": [
+          "browser_navigate vers http://localhost:8080/LCWeb",
+          "browser_snapshot pour detecter la page de login",
+          "Demander a l'utilisateur de saisir login/mdp et choisir le profil",
+          "browser_snapshot (refresh refs apres saisie utilisateur)",
+          "browser_click sur Se connecter",
+          "browser_snapshot pour verifier le titre Divalto infinity",
+          "CHECKPOINT CP1 : presenter la page d'accueil"
+        ]
+      }
+    },
+    {
+      "name": "verification-post-creation-zoom",
+      "description": "Verification complete apres creation d'entite (N6)",
+      "prompt": "J'ai cree l'entite Livre (zoom 9490) dans le domaine DAV. La compilation et la synchro SQL sont OK. Verifie dans l'ERP que le zoom fonctionne.",
+      "expected": {
+        "actions": [
+          "Verifier que l'ERP est ouvert (browser_tabs) ou se connecter (N1)",
+          "Naviguer dans le menu : Commerce & logistique > Fichiers > Livre (N2)",
+          "browser_tabs action=select pour basculer sur le nouvel onglet",
+          "browser_snapshot pour verifier le titre du zoom, la barre de navigation, la structure",
+          "Verifier le zoom des zooms (N4) : Autres actions > Gestion des Zooms, rechercher 9490",
+          "CHECKPOINT CP2 : presenter titre, mode, structure ecran, presence dans le menu"
+        ]
+      }
+    },
+    {
+      "name": "navigation-menu-standalone",
+      "description": "Navigation dans le menu sans creation prealable",
+      "prompt": "Ouvre le zoom Clients dans l'ERP (Commerce & logistique > Fichiers > Clients) et montre-moi le premier enregistrement.",
+      "expected": {
+        "actions": [
+          "Verifier connexion ERP ou se connecter",
+          "Cliquer Menu, cliquer Commerce & logistique, cliquer Fichiers, cliquer Clients",
+          "browser_tabs action=select pour basculer",
+          "browser_snapshot pour lire le titre (Client), la liste, le premier enregistrement",
+          "Presenter les donnees visibles du premier client"
+        ]
+      }
+    },
+    {
+      "name": "zoom-des-zooms-consultation",
+      "description": "Consulter la definition d'un zoom dans le zoom des zooms",
+      "prompt": "Consulte la definition du zoom 9000 (Articles) dans le zoom des zooms.",
+      "expected": {
+        "actions": [
+          "Verifier connexion ERP ou se connecter",
+          "Cliquer Autres actions (3 points verticaux) > Gestion des Zooms",
+          "browser_tabs action=select pour basculer",
+          "Rechercher le zoom 9000 via le bouton Rechercher",
+          "Basculer en mode fiche (Shift+F4)",
+          "Lire et presenter les champs : numero, libelle, application, masque ecran, module traitement"
+        ]
+      }
+    },
+    {
+      "name": "session-management-recompile",
+      "description": "Gestion de session apres recompilation",
+      "prompt": "J'ai recompile le projet. L'ERP etait ouvert. Je veux retester le zoom Livre.",
+      "expected": {
+        "actions": [
+          "Detecter que l'ERP etait ouvert avant recompilation",
+          "Fermer la session ERP (browser_close) car les objets compiles sont charges au demarrage",
+          "Se reconnecter (N1) pour charger les nouveaux objets",
+          "Naviguer vers le zoom Livre (N2) et verifier (N6)"
+        ]
+      }
+    }
+  ]
+}

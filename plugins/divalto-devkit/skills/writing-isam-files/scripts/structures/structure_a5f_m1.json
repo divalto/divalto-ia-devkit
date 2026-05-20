@@ -1,0 +1,21 @@
+{
+    "Dictionnaire": "a5dd.dhsd",
+    "Table": "M1",
+    "Base": "A5f",
+    "PhysicalFile": "a5f.dhfi",
+    "PhysicalPath": "A5\\fichier\\",
+    "TailleEnreg": 50,
+    "Ce": 5,
+    "Description": "Visibilite par F7 d'un zoom par application (un enreg M1 autorise un zoom ZoomNum dans une application Applic donnee).",
+    "Keys": {
+        "Index_A": {"Letter": "A", "Fields": ["Ce", "ZoomNum"]}
+    },
+    "Structure": [
+        {"Nom": "Ce",       "Offset": 0,  "Taille": 1,  "Description": "Code enregistrement (toujours 5 pour M1)"},
+        {"Nom": "ZoomNum",  "Offset": 1,  "Taille": 5,  "Description": "Numero du zoom autorise (match M4.ZoomNum, cadrage identique M4 : string space-padded)"},
+        {"Nom": "Ap",       "Offset": 6,  "Taille": 8,  "Description": "Application d'origine (copie M4.Ap, code domaine ex DAV/DCPT)"},
+        {"Nom": "Reg",      "Offset": 14, "Taille": 8,  "Description": "Registre d'origine (copie M4.Reg)"},
+        {"Nom": "Ordre",    "Offset": 22, "Taille": 8,  "Description": "Ordre d'affichage (copie M4.Ordre)"},
+        {"Nom": "Applic",   "Offset": 30, "Taille": 20, "Description": "Application qui voit le zoom via F7 (plusieurs Applic possibles pour un meme ZoomNum : une ligne M1 par domaine visible)"}
+    ]
+}

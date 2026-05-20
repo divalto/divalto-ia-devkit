@@ -1,0 +1,6 @@
+kind: module
+code: TST
+label: Module de test fixture
+prefix: Gtt
+status: stable
+domain: TST

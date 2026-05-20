@@ -1,0 +1,73 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "request.json -- sortie canonique de parsing-diva-request",
+  "description": "Structure d'une demande DIVA (user story ou ticket) apres parsing. Consomme par querying-diva-graph et searching-erp-sources dans le pipeline d'analyse pre-action.",
+  "type": "object",
+  "required": [
+    "type",
+    "titre",
+    "resume",
+    "acteurs",
+    "donnees",
+    "domaine_pressenti",
+    "keywords_techniques",
+    "keywords_metier",
+    "ca_detectes",
+    "message_erreur",
+    "needs_clarification"
+  ],
+  "properties": {
+    "type": {
+      "enum": ["feature", "ticket", "unknown"],
+      "description": "Type detecte de la demande."
+    },
+    "titre": {
+      "type": "string",
+      "maxLength": 80,
+      "description": "Titre court extrait (premiere ligne non vide)."
+    },
+    "resume": {
+      "type": "string",
+      "maxLength": 400,
+      "description": "1 a 3 premieres phrases du texte."
+    },
+    "acteurs": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "Roles metier extraits des patterns 'En tant que X'."
+    },
+    "donnees": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "Noms PascalCase ou MAJUSCULE potentiellement tables/entites."
+    },
+    "domaine_pressenti": {
+      "type": ["string", "null"],
+      "description": "Prefixe ERP (GT_, RT_, CC_...) ou null si non identifie. Voir docs/MODULES-ERP.md."
+    },
+    "keywords_techniques": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "PascalCase, noms de fichiers DIVA, noms de fonctions appelees."
+    },
+    "keywords_metier": {
+      "type": "array",
+      "items": {"type": "string"},
+      "maxItems": 15,
+      "description": "Substantifs metier (5+ caracteres), hors stop-words."
+    },
+    "ca_detectes": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "Criteres d'acceptation extraits (bullets sous une section dediee ou CA1/CA2...)."
+    },
+    "message_erreur": {
+      "type": ["string", "null"],
+      "description": "Message extrait entre quotes ou apres 'erreur:'. Null si type != ticket ou pas de message detecte."
+    },
+    "needs_clarification": {
+      "type": "boolean",
+      "description": "True si signal insuffisant : type unknown, feature sans acteur ni CA, ou ticket sans message d'erreur."
+    }
+  }
+}

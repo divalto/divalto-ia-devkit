@@ -1,0 +1,34 @@
+{
+  "skill": "assisting-functional-question",
+  "description": "Scenarios d'evaluation de assisting-functional-question.",
+  "scenarios": [
+    {
+      "id": "case-1",
+      "skills": [
+        "assisting-functional-question"
+      ],
+      "query": "Nicolas demande : pourquoi le zoom client ne montre plus rien depuis qu'on a active la gestion multi-etablissements ?",
+      "files": [],
+      "expected_behavior": [
+        "Identifie 3 a 5 causes probables classees par probabilite",
+        "Chaque cause cite au moins une reference fichier:ligne dans le standard ERP",
+        "Reponse courte (< 40 lignes), format chat-ready",
+        "Aucun fichier disque genere",
+        "Propose une action de verification concrete pour chaque cause"
+      ]
+    },
+    {
+      "id": "case-2",
+      "skills": [
+        "assisting-functional-question"
+      ],
+      "query": "User story formelle : 'En tant que comptable je veux exporter mes ecritures afin de les transmettre a mon expert-comptable'",
+      "files": [],
+      "expected_behavior": [
+        "Detecte que la formulation est une user story formelle (anti-declencheur)",
+        "Refuse le traitement et redirige vers analyzing-diva-request (UC-100)",
+        "Explique brievement la difference de perimetre entre les deux skills"
+      ]
+    }
+  ]
+}

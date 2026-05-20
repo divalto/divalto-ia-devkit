@@ -1,0 +1,25 @@
+{% set lits = seeds.type_7.literals %}
+{% if lits | length > 0 %}
+## Reference metier
+
+{% for lit in lits %}
+### {{ lit.name }}
+
+{% if lit.canonical_source_doc %}
+Source : [{{ lit.canonical_source_doc }}]({{ lit.canonical_source_doc }}) (voir aussi `{{ lit.canonical_source_code }}`).
+{% endif %}
+
+| Valeur | Libelle |
+|--------|---------|
+{% for v in lit.table %}
+| `{{ v.code }}` | {{ v.label }} |
+{% endfor %}
+
+{% if lit.note %}
+_{{ lit.note }}_
+{% endif %}
+
+{% endfor %}
+
+---
+{% endif %}

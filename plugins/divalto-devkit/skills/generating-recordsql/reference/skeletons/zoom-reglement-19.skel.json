@@ -1,0 +1,49 @@
+{
+  "_skeleton_name": "zoom-reglement-19",
+  "_description": "Zoom reglement : pattern X.12 a 19 tables, 146 RSQL partagent la signature. Tables canoniques : CLI, FOU, TIA, C3/C4/C8, SOC, H8, RGLTJNLDET.",
+  "_source_x13": "Representatif -- pour une copie exhaustive, extraire depuis gtrsdtrfa.dhsq, gtrsdtr.dhsq ou src equivalents (cf. corpus-patterns.md section 3).",
+  "_signature_nb_tables": 19,
+  "_note": "Squelette pilote (G-022). Contient les 5 jointures les plus frequentes du pattern. Les 14 autres (C4, RGLTJNLDET, etc.) sont a ajouter selon le besoin metier.",
+  "joined_tables": [
+    {
+      "table_sql": "CLI",
+      "alias": "CLI",
+      "join_type": "left_join",
+      "join_condition": "CLI.Dos = MZ.Dos AND CLI.CliCod = {MAIN}.CliCod",
+      "columns_selected": ["CLI.CliLib"]
+    },
+    {
+      "table_sql": "FOU",
+      "alias": "FOU",
+      "join_type": "left_join",
+      "join_condition": "FOU.Dos = MZ.Dos AND FOU.FouCod = {MAIN}.FouCod",
+      "columns_selected": ["FOU.FouLib"]
+    },
+    {
+      "table_sql": "TIA",
+      "alias": "TIA",
+      "join_type": "left_join",
+      "join_condition": "TIA.Dos = MZ.Dos AND TIA.Ticod = {MAIN}.Ticod",
+      "columns_selected": ["TIA.TiaLib"]
+    },
+    {
+      "table_sql": "C3",
+      "alias": "C3",
+      "join_type": "implicit",
+      "join_condition": "C3.Dos = MZ.Dos AND C3.NumPce = {MAIN}.NumPce",
+      "columns_selected": ["C3.DatePce", "C3.MntPce"]
+    },
+    {
+      "table_sql": "C8",
+      "alias": "C8",
+      "join_type": "left_join",
+      "join_condition": "C8.Dos = MZ.Dos AND C8.NumCpt = {MAIN}.NumCpt",
+      "columns_selected": ["C8.LibCpt"]
+    }
+  ],
+  "additional_cases": [
+    {"name": "Equal_CliCod", "field": "CliCod", "type": "equal", "param": "char"},
+    {"name": "Equal_FouCod", "field": "FouCod", "type": "equal", "param": "char"},
+    {"name": "Between_DatePce", "field": "DatePce", "type": "between", "param": "date"}
+  ]
+}

@@ -1,0 +1,238 @@
+{
+  "deliverable_root": ".claude\\skills\\reviewing-erp-doc\\test_fixtures\\fixture-simple",
+  "module": {
+    "code": "TST",
+    "label": "Module de test fixture",
+    "domain": "TST"
+  },
+  "verdict": "corrections necessaires avant publication",
+  "entities": [
+    {
+      "code": "BAD",
+      "label": "Entite avec affirmations non sourcees",
+      "detected": [
+        {
+          "entity": "BAD",
+          "severity": "erreur",
+          "title": "Affirmation narrative non sourcee",
+          "yaml_path": "business.business_rules[0]",
+          "excerpt_deliverable": "Les entites BAD sont recalculees a chaque cloture mensuelle automatiquement.",
+          "excerpt_source": "",
+          "source_ref": "<aucune>",
+          "challenge": "Aucune citation fichier:ligne dans l'affirmation, aucun marquage [A VERIFIER] inline, aucun item meta.a_verifier couvrant le champ. Viole CA4 de UC-200 (regle de citation stricte).",
+          "category": "E1"
+        },
+        {
+          "entity": "BAD",
+          "severity": "erreur",
+          "title": "Affirmation narrative non sourcee",
+          "yaml_path": "business.business_rules[1]",
+          "excerpt_deliverable": "Les BAD archivees sont conservees 10 ans puis supprimees de la base.",
+          "excerpt_source": "",
+          "source_ref": "<aucune>",
+          "challenge": "Aucune citation fichier:ligne dans l'affirmation, aucun marquage [A VERIFIER] inline, aucun item meta.a_verifier couvrant le champ. Viole CA4 de UC-200 (regle de citation stricte).",
+          "category": "E1"
+        },
+        {
+          "entity": "BAD",
+          "severity": "erreur",
+          "title": "Affirmation narrative non sourcee",
+          "yaml_path": "business.role",
+          "excerpt_deliverable": "BAD est une entite critique du processus de vente, pivot pour les commissions.",
+          "excerpt_source": "",
+          "source_ref": "<aucune>",
+          "challenge": "Aucune citation fichier:ligne dans l'affirmation, aucun marquage [A VERIFIER] inline, aucun item meta.a_verifier couvrant le champ. Viole CA4 de UC-200 (regle de citation stricte).",
+          "category": "E1"
+        },
+        {
+          "entity": "BAD",
+          "severity": "erreur",
+          "title": "Affirmation narrative non sourcee",
+          "yaml_path": "technical.fields[0].business_note",
+          "excerpt_deliverable": "Identifiant fonctionnel issu d'un compteur applicatif.",
+          "excerpt_source": "",
+          "source_ref": "<aucune>",
+          "challenge": "Aucune citation fichier:ligne dans l'affirmation, aucun marquage [A VERIFIER] inline, aucun item meta.a_verifier couvrant le champ. Viole CA4 de UC-200 (regle de citation stricte).",
+          "category": "E1"
+        },
+        {
+          "entity": "BAD",
+          "severity": "erreur",
+          "title": "Affirmation narrative non sourcee",
+          "yaml_path": "technical.fields[1].business_note",
+          "excerpt_deliverable": "Montant TTC arrondi au centime superieur.",
+          "excerpt_source": "",
+          "source_ref": "<aucune>",
+          "challenge": "Aucune citation fichier:ligne dans l'affirmation, aucun marquage [A VERIFIER] inline, aucun item meta.a_verifier couvrant le champ. Viole CA4 de UC-200 (regle de citation stricte).",
+          "category": "E1"
+        },
+        {
+          "entity": "BAD",
+          "severity": "erreur",
+          "title": "Affirmation narrative non sourcee",
+          "yaml_path": "technical.performance_notes",
+          "excerpt_deliverable": "La table BAD doit etre partitionnee par annee pour performance.",
+          "excerpt_source": "",
+          "source_ref": "<aucune>",
+          "challenge": "Aucune citation fichier:ligne dans l'affirmation, aucun marquage [A VERIFIER] inline, aucun item meta.a_verifier couvrant le champ. Viole CA4 de UC-200 (regle de citation stricte).",
+          "category": "E1"
+        },
+        {
+          "entity": "BAD",
+          "severity": "info",
+          "title": "Source .dhsd introuvable",
+          "yaml_path": "technical.dictionary_source",
+          "excerpt_deliverable": "",
+          "excerpt_source": "",
+          "source_ref": "<aucun fichier .dhsd trouve sous erp-root pour table BAD>",
+          "challenge": "Le relecteur n'a pas pu localiser le dictionnaire source pour cette entite (essaye : Gttbad.dhsd, baddd.dhsd). Detection E3 partielle.",
+          "category": "E3"
+        }
+      ],
+      "a_verifier": []
+    },
+    {
+      "code": "OKK",
+      "label": "Entite propre (sourcee correctement)",
+      "detected": [
+        {
+          "entity": "OKK",
+          "severity": "erreur",
+          "title": "Champ Telephone absent du livrable",
+          "yaml_path": "technical.fields",
+          "excerpt_deliverable": "technical.fields ne contient pas 'Telephone'",
+          "excerpt_source": "[CHAMPS] Nom=Telephone...",
+          "source_ref": "Gttokk.dhsd",
+          "challenge": "Champ 'Telephone' declare dans le dictionnaire source mais absent de technical.fields du livrable, sans justification dans meta.a_verifier.",
+          "category": "E3"
+        },
+        {
+          "entity": "OKK",
+          "severity": "erreur",
+          "title": "Index IdxTel absent du livrable",
+          "yaml_path": "technical.indexes",
+          "excerpt_deliverable": "technical.indexes ne contient pas 'IdxTel'",
+          "excerpt_source": "[INDEX] Nom=IdxTel...",
+          "source_ref": "Gttokk.dhsd",
+          "challenge": "Index 'IdxTel' declare dans le dictionnaire source mais absent de technical.indexes du livrable, sans justification dans meta.a_verifier.",
+          "category": "E3"
+        },
+        {
+          "entity": "OKK",
+          "severity": "warning",
+          "title": "Nature de AnnulFl incoherente avec suffixe Fl",
+          "yaml_path": "technical.fields[AnnulFl].nature",
+          "excerpt_deliverable": "AnnulFl = C20",
+          "excerpt_source": "suffixe Fl attendu en Nature 1,... (Flottant (1,0 ou 1,N))",
+          "source_ref": "DICTIONNAIRE-DHSD.md:section 2 (+ managing-diva-dictionaries/scripts/suggest_nature.py)",
+          "challenge": "Le champ 'AnnulFl' porte le suffixe typee 'Fl' (Nature attendue : 1,..., Flottant (1,0 ou 1,N)), mais le livrable declare Nature 'C20'. Soit le nom du champ derive de la convention, soit la Nature a ete mal extraite.",
+          "category": "E4"
+        },
+        {
+          "entity": "OKK",
+          "severity": "warning",
+          "title": "Desalignement narratif vs source (inversion logique)",
+          "yaml_path": "business.business_rules[2]",
+          "excerpt_deliverable": "Les OKK dont Bloque = 0 sont rejetes automatiquement de la selection par defaut.",
+          "excerpt_source": "; Parcourt les OKK actifs (Bloque = 0) / Collate OKKSelect By OKK.Bloque = 0",
+          "source_ref": "Gttokk.dhsq:22",
+          "challenge": "Inversion : la source selectionne les OKK avec Bloque=0 comme actifs (commentaire et Collate explicites 'LoadAllActifs'), le narratif affirme qu'ils sont rejetes.",
+          "category": "E2"
+        },
+        {
+          "entity": "OKK",
+          "severity": "info",
+          "title": "Source citee introuvable",
+          "yaml_path": "business.business_rules[0]",
+          "excerpt_deliverable": "Un OKK bloque ne peut plus etre facture.",
+          "excerpt_source": "<source_not_found>",
+          "source_ref": "Gttmchkokk.dhop:55",
+          "challenge": "Le fichier cite est introuvable sous erp-root. Impossible de verifier l'alignement narratif/source. A confirmer que la citation pointe un fichier existant.",
+          "category": "E2"
+        },
+        {
+          "entity": "OKK",
+          "severity": "info",
+          "title": "Paraphrase deductive a confirmer (contexte .dhsd structurel)",
+          "yaml_path": "technical.fields[0].business_note",
+          "excerpt_deliverable": "Identifiant unique du client OKK.",
+          "excerpt_source": "[CHAMPS] Nom=OKK_ID,1,20,... (+ [INDEX] Nom=IdxOKK_ID,Ce1,Dos,OKK_ID)",
+          "source_ref": "Gttokk.dhsd:15",
+          "challenge": "Le contexte cite est la declaration .dhsd du champ OKK_ID. La qualification 'identifiant unique' est plausible (nom suffixe _ID + index dedie) mais n'est pas explicitement sourcee dans les lignes citees. A renforcer par une reference au mchk ou un marquage metier.",
+          "category": "E2"
+        },
+        {
+          "entity": "OKK",
+          "severity": "info",
+          "title": "Contexte source insuffisant pour evaluation E2",
+          "yaml_path": "technical.fields[4].business_note",
+          "excerpt_deliverable": "Drapeau annulation, source: Gttokk.dhsd:99",
+          "excerpt_source": "<contexte vide : ligne au-dela du fichier source>",
+          "source_ref": "Gttokk.dhsd:99",
+          "challenge": "La ligne citee (99) est au-dela de la fin du fichier source (~23 lignes). Citation probablement incorrecte -- a verifier.",
+          "category": "E2"
+        },
+        {
+          "entity": "OKK",
+          "severity": "info",
+          "title": "Contexte source insuffisant pour evaluation E2",
+          "yaml_path": "technical.performance_notes",
+          "excerpt_deliverable": "Index recommande sur (OKK_ID, Dos) pour volumetrie > 100k.",
+          "excerpt_source": "<contexte vide : ligne au-dela du fichier source>",
+          "source_ref": "Gttokk.dhsd:120",
+          "challenge": "La ligne citee (120) est au-dela de la fin du fichier source (~23 lignes). Citation probablement incorrecte -- a verifier.",
+          "category": "E2"
+        }
+      ],
+      "a_verifier": [
+        "business.role : criticite metier a confirmer avec le DAF"
+      ]
+    }
+  ],
+  "warnings_global": [],
+  "stats": {
+    "E1": {
+      "erreur": 6,
+      "warning": 0,
+      "info": 0,
+      "total": 6
+    },
+    "E2": {
+      "erreur": 0,
+      "warning": 1,
+      "info": 4,
+      "total": 5
+    },
+    "E3": {
+      "erreur": 2,
+      "warning": 0,
+      "info": 1,
+      "total": 3
+    },
+    "E4": {
+      "erreur": 0,
+      "warning": 1,
+      "info": 0,
+      "total": 1
+    },
+    "total": {
+      "erreur": 8,
+      "warning": 2,
+      "info": 5,
+      "total": 15
+    },
+    "a_verifier_count": 1,
+    "items_count": 15,
+    "coverage_ratio": 6.2,
+    "top_critical": [
+      [
+        "BAD",
+        6
+      ],
+      [
+        "OKK",
+        2
+      ]
+    ]
+  }
+}

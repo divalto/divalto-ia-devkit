@@ -1,0 +1,63 @@
+{
+  "skill": "linting-diva-code",
+  "description": "Scenarios d'evaluation de linting-diva-code.",
+  "scenarios": [
+    {
+      "id": "case-1",
+      "skills": [
+        "linting-diva-code"
+      ],
+      "query": "Analyse ce fichier .dhsp qui utilise la concatenation avec + et le mot-cle VRAI",
+      "files": [
+        "test_concat.dhsp"
+      ],
+      "expected_behavior": [
+        "Detecte S01 (error) : concatenation avec + au lieu de &",
+        "Detecte S02 (warning) : VRAI au lieu de True",
+        "Rapport JSON avec errors et warnings separes"
+      ]
+    },
+    {
+      "id": "case-2",
+      "skills": [
+        "linting-diva-code"
+      ],
+      "query": "Verifie ce fichier zoom qui assigne Zoom.OK sans preturn",
+      "files": [
+        "test_zoom.dhsp"
+      ],
+      "expected_behavior": [
+        "Detecte Z02 (warning) : Zoom.OK assigne sans preturn dans les 3 lignes suivantes",
+        "Detecte L01 si ForEach est present (error)",
+        "Rapport JSON avec le numero de ligne et le contexte"
+      ]
+    },
+    {
+      "id": "case-3",
+      "skills": [
+        "linting-diva-code"
+      ],
+      "query": "Analyse ce RecordSql qui n'a pas de filtre multi-dossier",
+      "files": [
+        "test_rsql.dhsq"
+      ],
+      "expected_behavior": [
+        "Detecte R01 (warning) : pas de Dos = MZ.Dos",
+        "Detecte R02 (warning) : pas de OverWrittenBy",
+        "Le fichier .dhsq est correctement identifie comme type RecordSql"
+      ]
+    },
+    {
+      "id": "case-4",
+      "skills": [
+        "linting-diva-code"
+      ],
+      "query": "Analyse le fichier ERP standard rttzfamrglt_sql.dhsp",
+      "files": [],
+      "expected_behavior": [
+        "0 erreurs, 0 warnings (fichier ERP standard conforme)",
+        "summary.total == 0"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,43 @@
+{
+  "skill": "parsing-diva-request",
+  "description": "Scenarios de validation du parser de demande DIVA.",
+  "scenarios": [
+    {
+      "id": "feature-famille-reglement",
+      "description": "User story feature Retail avec 3 CA.",
+      "input": "En tant que gestionnaire reglement, je veux saisir la famille de reglement sur la fiche client, afin de regrouper les reglements par famille.\n\nCriteres d'acceptation :\n- Le zoom famille reglement est accessible depuis le menu Retail\n- La saisie de la famille est obligatoire sur la fiche client\n- La suppression d'une famille est bloquee si des reglements existent",
+      "expected": {
+        "type": "feature",
+        "acteurs_contains": ["gestionnaire reglement"],
+        "domaine_pressenti": "RT_",
+        "ca_count_min": 3,
+        "needs_clarification": false
+      }
+    },
+    {
+      "id": "ticket-fichier-livre",
+      "description": "Ticket myService avec message d'erreur entre quotes.",
+      "input": "Ticket myService #45678 : le zoom article affiche l'erreur \"Fichier LIVRE non trouve\" lors de la creation d'une nouvelle fiche. L'anomalie se produit systematiquement en mode Creation depuis le menu Achat-Vente.",
+      "expected": {
+        "type": "ticket",
+        "message_erreur_contains": "Fichier LIVRE non trouve",
+        "domaine_pressenti": "GT_",
+        "needs_clarification": false
+      }
+    },
+    {
+      "id": "texte-ambigu",
+      "description": "Texte trop court sans signal clair : doit lever needs_clarification.",
+      "input": "Il faudrait ajouter un champ pour le suivi.",
+      "expected": {
+        "type": "unknown",
+        "needs_clarification": true
+      }
+    }
+  ],
+  "execution": {
+    "command_template": "py .claude/skills/parsing-diva-request/scripts/parse_request.py",
+    "input_method": "stdin",
+    "verification": "JSON keys present, values match expected (contains/min checks)."
+  }
+}

@@ -1,0 +1,9 @@
+## Parametrage dossier (investigation secondaire)
+
+La demande mentionne {% for t in seeds.type_8.triggers_hit %}`{{ t }}`{% if not loop.last %}, {% endif %}{% endfor %}. Si la cause racine n'est pas dans le listener (cf. Plan d'action), verifier les champs dossier :
+
+```
+{{ seeds.type_8.grep_hint }}
+```
+
+---

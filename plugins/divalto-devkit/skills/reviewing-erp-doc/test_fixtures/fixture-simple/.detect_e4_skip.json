@@ -1,0 +1,19 @@
+{
+  "category": "E4",
+  "generated_at": "2026-04-22T18:24:15.126954+00:00",
+  "warnings_global": [
+    "E4 partielle : --docs-root skip, seule H1 (taxonomie hardcodee) est active."
+  ],
+  "items": [
+    {
+      "entity": "OKK",
+      "severity": "warning",
+      "title": "Nature de AnnulFl incoherente avec suffixe Fl",
+      "yaml_path": "technical.fields[AnnulFl].nature",
+      "excerpt_deliverable": "AnnulFl = C20",
+      "excerpt_source": "suffixe Fl attendu en Nature 1,... (Flottant (1,0 ou 1,N))",
+      "source_ref": "DICTIONNAIRE-DHSD.md:section 2 (+ managing-diva-dictionaries/scripts/suggest_nature.py)",
+      "challenge": "Le champ 'AnnulFl' porte le suffixe typee 'Fl' (Nature attendue : 1,..., Flottant (1,0 ou 1,N)), mais le livrable declare Nature 'C20'. Soit le nom du champ derive de la convention, soit la Nature a ete mal extraite."
+    }
+  ]
+}

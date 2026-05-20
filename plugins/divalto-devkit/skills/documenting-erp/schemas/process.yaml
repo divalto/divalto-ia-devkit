@@ -1,0 +1,32 @@
+# Schema : Processus metier
+# Un Process = sequence d'operations metier qui traverse plusieurs entites
+# (ex: cycle commande-livraison-facturation, cycle ecriture-pointage-lettrage).
+# Permet de restituer la couche "metier" transverse, invisible dans les entites isolees.
+
+kind: process
+version: 0.1
+
+required_fields:
+  - code            # string, identifiant court, ex: "ORDER-TO-CASH"
+  - label           # string, nom metier, ex: "Commande a encaissement"
+  - module          # string, module principal, ex: "DAV"
+
+optional_fields:
+  - description     # string, 2-4 phrases
+  - trigger         # string, declencheur, ex: "Saisie commande client"
+  - outcome         # string, resultat, ex: "Facture emise et encaissee"
+  - entities        # list[string], entites impliquees dans l'ordre d'apparition
+                    # ex: ["CLI","ART","ENT","BDOCL","LDOCL","C8"]
+  - steps           # list[step], chaque step :
+                    # - label: "Creation commande", actor: "commercial", entity: "BDOCL"
+                    # - label: "Livraison", actor: "logistique", entity: "MOUV"
+                    # - label: "Facturation", actor: "comptable", entity: "C8"
+  - integration_points # list[string], points de jonction avec autres processus
+  - variants        # list[string], variantes (ex: "commande directe","commande sur devis")
+  - kpi             # list[string], indicateurs de suivi
+  - a_verifier      # list[string]
+
+rendering_layers:
+  business:   [label, description, trigger, outcome, steps, actors, kpi]
+  schema:     [label, entities, integration_points, variants]
+  technical:  [code, entities, steps]

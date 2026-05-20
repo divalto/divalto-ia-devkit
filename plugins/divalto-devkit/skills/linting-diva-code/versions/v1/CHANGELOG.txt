@@ -1,0 +1,7 @@
+2026-04-10 -- Version avant ajout regles CI (CI01-CI11)
+
+Contenu : 70 regles, 6 categories (S, L, Z, M, F, R, D, E, P)
+Types supportes : .dhsp, .dhsq, .dhsd, .dhsf, .dhpt, .dhps
+Fichiers sauvegardes : SKILL.md, lint_diva.py, rules-syntax.md, rules-architecture.md, rules-recordsql.md, rules-project.md
+
+Raison de la sauvegarde : ajout massif de 11 regles CI shift-left (CI01-CI11) transposees des moulinettes CI nightly.

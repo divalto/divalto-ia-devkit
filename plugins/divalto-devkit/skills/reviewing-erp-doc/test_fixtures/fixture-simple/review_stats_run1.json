@@ -1,0 +1,49 @@
+{
+  "module": "TST",
+  "verdict": "corrections necessaires avant publication",
+  "stats": {
+    "E1": {
+      "erreur": 6,
+      "warning": 0,
+      "info": 0,
+      "total": 6
+    },
+    "E2": {
+      "erreur": 0,
+      "warning": 1,
+      "info": 4,
+      "total": 5
+    },
+    "E3": {
+      "erreur": 2,
+      "warning": 0,
+      "info": 1,
+      "total": 3
+    },
+    "E4": {
+      "erreur": 0,
+      "warning": 1,
+      "info": 0,
+      "total": 1
+    },
+    "total": {
+      "erreur": 8,
+      "warning": 2,
+      "info": 5,
+      "total": 15
+    },
+    "a_verifier_count": 1,
+    "items_count": 15,
+    "coverage_ratio": 6.2,
+    "top_critical": [
+      [
+        "BAD",
+        6
+      ],
+      [
+        "OKK",
+        2
+      ]
+    ]
+  }
+}

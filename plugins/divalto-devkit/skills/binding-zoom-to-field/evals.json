@@ -1,0 +1,64 @@
+{
+  "skill": "binding-zoom-to-field",
+  "description": "Scenarios de binding FK par zoom standard sur une entite existante (post-creation).",
+  "scenarios": [
+    {
+      "id": "cas-retex-r003-racechien-pays",
+      "description": "Cas du RETEX R-003 : binding simple d'un champ RacPays vers la table T013 (Pays) via le zoom 9053, sur l'entite RacEChien existante.",
+      "input": {
+        "src_table": "RACECHIEN",
+        "dhsp_path": "gttmchkracechien.dhsp",
+        "dhsf_path": "gtezracechien_sql.dhsf",
+        "fk": "RacPays:T013:9053"
+      },
+      "expected": {
+        "dhsp_mutations": [
+          "Module \"Gttmchkt013.dhop\" ajoute apres le dernier Module",
+          "Check_RACECHIEN_Field_RacPays() presente en fin de fichier",
+          "Check_RACECHIEN_Field_RacPays_Lib() presente en fin de fichier"
+        ],
+        "dhsf_mutations": [
+          "[champ] RacPays enrichi avec f8=9053, table_associee=oui, diva_apres defini",
+          "[diva] contient Champ_RacPays_<id>_Ap appelant Check_RACECHIEN_Field_RacPays_Lib"
+        ],
+        "lint_Z14": 0,
+        "lint_Z15": 0
+      }
+    },
+    {
+      "id": "fk-multiple-racechien",
+      "description": "Binding FK multiples sur une meme entite : RacPays + RacDev + RacDepo vers 3 cibles distinctes en un seul appel.",
+      "input": {
+        "src_table": "RACECHIEN",
+        "dhsp_path": "gttmchkracechien.dhsp",
+        "dhsf_path": "gtezracechien_sql.dhsf",
+        "fk": ["RacPays:T013:9053", "RacDev:T007:9047", "RacDepo:T017:9057"]
+      },
+      "expected": {
+        "dhsp_modules_added": ["Gttmchkt013.dhop", "Gttmchkt007.dhop", "Gttmchkt017.dhop"],
+        "dhsp_procs_added_count": 6,
+        "dhsf_champs_enriched": 3,
+        "dhsf_callbacks_added": 3,
+        "lint_Z14": 0,
+        "lint_Z15": 0
+      }
+    },
+    {
+      "id": "idempotence-rerun",
+      "description": "Second appel sur le meme fichier avec le meme --fk : pas de duplication des imports Module ni des procedures Check_*_Field_*.",
+      "input": {
+        "src_table": "RACECHIEN",
+        "dhsp_path": "gttmchkracechien.dhsp",
+        "dhsf_path": "gtezracechien_sql.dhsf",
+        "fk": "RacPays:T013:9053",
+        "run": "twice"
+      },
+      "expected": {
+        "dhsp_module_count": 1,
+        "dhsp_proc_count": 2,
+        "dhsf_callback_count": 1,
+        "dhsf_champ_attributes_warning": "f8, table_associee, diva_apres appliques une seule fois (idempotence couche structurelle)"
+      }
+    }
+  ]
+}

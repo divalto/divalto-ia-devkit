@@ -1,0 +1,34 @@
+{
+  "skill": "rendering-preaction-livrable",
+  "description": "Scenarios d'evaluation de rendering-preaction-livrable.",
+  "scenarios": [
+    {
+      "id": "case-1",
+      "skills": [
+        "rendering-preaction-livrable"
+      ],
+      "query": "Rends le livrable markdown a partir du facts.json genere par build_facts.py",
+      "files": [],
+      "expected_behavior": [
+        "Lit le facts.json en entree",
+        "Produit un markdown structure en 3 couches : strategique (2 min), tactique (15 min), technique (30 min)",
+        "Aucun chemin absolu (C:/...), aucune balise [X.12] ou [CONFIRME X.13] dans le markdown final",
+        "Le validator refuse les stubs, les balises HTML non supportees Mermaid, les pronoms relatifs apres un label, les refs visibles",
+        "Si le validator passe, le livrable est ecrit sur disque ; sinon, le rendu est avorte avec un message d'ecart"
+      ]
+    },
+    {
+      "id": "case-2",
+      "skills": [
+        "rendering-preaction-livrable"
+      ],
+      "query": "Le facts.json contient une ref non resolue -- que se passe-t-il au rendu ?",
+      "files": [],
+      "expected_behavior": [
+        "Le validator detecte la ref non resolue (stub)",
+        "Le rendu est avorte avec un exit code != 0 et un message indiquant le claim concerne",
+        "Aucun fichier markdown n'est ecrit"
+      ]
+    }
+  ]
+}

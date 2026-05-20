@@ -1,0 +1,91 @@
+{
+  "skill": "reviewing-erp-doc",
+  "description": "4 scenarios alignes sur les scenarios BDD de UC-201 + 1 eval d'idempotence (CA13).",
+  "scenarios": [
+    {
+      "id": "relecture-nominale-dav",
+      "query": "Relire un livrable UC-200 pour le module DAV (5 entites CLI, FOU, ART, SOC, VRP) fraichement produit par documenting-erp.",
+      "input": {
+        "deliverable": "{REPERTOIRE_SORTIE}/doc-erp/DAV/",
+        "erp_root": "{CHEMIN_ERP_STANDARD}",
+        "schema_sql": "{CHEMIN_SCHEMA_SQL}",
+        "docs_root": "{RACINE_DOCS}",
+        "entities": "all"
+      },
+      "expected_behavior": [
+        "Confirme les 4 chemins au CP-Entree et attend validation",
+        "Execute les 7 etapes du pipeline en autonomie (ingest -> E1 -> E3 -> E4 -> prepare-E2 -> eval-E2 -> build)",
+        "Produit review.md, review.json, review.stats.json sous {REPERTOIRE_SORTIE}/doc-erp/DAV/",
+        "Le CP-Rapport-Final presente : nb erreurs/warnings/infos par categorie E1/E2/E3/E4, entites touchees, verdict publiable ou non, ratio de couverture du producteur",
+        "Aucun fichier du livrable UC-200 (YAML, MD, JSON) n'est modifie",
+        "Aucun fichier de docs/ n'est modifie"
+      ]
+    },
+    {
+      "id": "detection-contresens-plante",
+      "query": "Detecter un desalignement E2 sur un livrable ou l'operateur a plante un contresens : narratif 'CLI.Bloque = client actif' citant correctement Gttmchkcli.dhop:142 qui dit en realite 'Case Sql_Bloque <> 0 ; Gosub RejectActive'.",
+      "input": {
+        "deliverable": "{REPERTOIRE_SORTIE}/doc-erp/DAV-plante/",
+        "erp_root": "{CHEMIN_ERP_STANDARD}",
+        "schema_sql": "{CHEMIN_SCHEMA_SQL}",
+        "docs_root": "{RACINE_DOCS}",
+        "entities": "CLI"
+      },
+      "expected_behavior": [
+        "L'etape 6 (evaluation LLM) remonte le desalignement en categorie E2",
+        "Severite warning (align: non)",
+        "L'item contient extrait_deliverable, extrait_source (20 lignes autour de ligne 142), challenge explicite ('la source rejette les clients avec Bloque <> 0, le narratif affirme le contraire')",
+        "Pas de faux positif sur les autres champs de CLI"
+      ]
+    },
+    {
+      "id": "livrable-massivement-non-source",
+      "query": "Relire un livrable ou la moitie des affirmations business.* sont non sourcees et non marquees [A VERIFIER] (simule une regression CA4 de UC-200).",
+      "input": {
+        "deliverable": "{REPERTOIRE_SORTIE}/doc-erp/DAV-nosource/",
+        "erp_root": "{CHEMIN_ERP_STANDARD}",
+        "schema_sql": "{CHEMIN_SCHEMA_SQL}",
+        "docs_root": "{RACINE_DOCS}",
+        "entities": "all"
+      },
+      "expected_behavior": [
+        "E1 remonte massivement les affirmations non sourcees en severite erreur",
+        "E2 n'a presque aucune paire a evaluer (peu de citations dans l'IR)",
+        "Le verdict du CP-Rapport-Final est 'regression CA4 UC-200' (pas seulement 'corrections necessaires')",
+        "Le rapport liste explicitement les entites touchees"
+      ]
+    },
+    {
+      "id": "livrable-propre-publiable",
+      "query": "Relire un livrable ou toutes les affirmations sont correctement sourcees ou marquees [A VERIFIER], aucune omission, aucun desalignement.",
+      "input": {
+        "deliverable": "{REPERTOIRE_SORTIE}/doc-erp/DAV-propre/",
+        "erp_root": "{CHEMIN_ERP_STANDARD}",
+        "schema_sql": "{CHEMIN_SCHEMA_SQL}",
+        "docs_root": "{RACINE_DOCS}",
+        "entities": "all"
+      },
+      "expected_behavior": [
+        "review.md rapporte 0 erreur, 0 warning, eventuellement N infos",
+        "Verdict 'publiable en l'etat'",
+        "Ratio de couverture du producteur = 100% (tous les items incertains sont dans meta.a_verifier)"
+      ]
+    },
+    {
+      "id": "idempotence-deux-passes",
+      "query": "Executer deux fois le relecteur sur le meme livrable et verifier que les rapports sont identiques (hors timestamps).",
+      "input": {
+        "deliverable": "{REPERTOIRE_SORTIE}/doc-erp/DAV/",
+        "erp_root": "{CHEMIN_ERP_STANDARD}",
+        "schema_sql": "{CHEMIN_SCHEMA_SQL}",
+        "docs_root": "{RACINE_DOCS}",
+        "entities": "all"
+      },
+      "expected_behavior": [
+        "Diff entre review.md de la passe 1 et review.md de la passe 2 = 0 lignes (hors ligne de timestamp)",
+        "Diff entre review.json de la passe 1 et review.json de la passe 2 = 0 octets (hors champ generated_at)",
+        "Ordre des items identique : par entite alpha, puis categorie E1->E3->E4->E2, puis severite erreur->warning->info, puis ligne source"
+      ]
+    }
+  ]
+}

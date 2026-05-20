@@ -1,0 +1,427 @@
+;>xwin4obj                              7.0       20260412000000
+[masque]
+;-- ADAPTER : utilisateur, date_modification
+;-- PAS de type_masque (ecran standard, pas un zoom)
+ utilisateur="ROOT"
+ date_modification="12/04/2026"
+ feuille_style="fstylewpf.dhfi"
+ id_traitements=100
+ dernier_id=25
+ dernier_id_page=5
+[defaut]
+ [aide_page]
+  aide=0
+;-- ADAPTER : fichier aide du domaine
+  fichier="gtfaide"
+[enregistrements]
+;-- ADAPTER : records de l entite
+;-- Entete du document
+ "dictionnaire.dhsd",,entete,entete,2000,0
+;-- Lignes du document
+ "dictionnaire.dhsd",,ligne,ligne,1500,0
+;-- (optionnel) RecordSql pour lookups
+;-- "monrecordsql.dhoq",,mavue,mavue,1024,1
+;-- =====================================================================
+;-- ONGLETS : ENTETE + LIGNE + PIED
+;-- =====================================================================
+[onglet]
+ [presentation]
+  position=0,0
+  taille=225,280
+  attache_lgx=oui
+  attache_lgy=oui
+  id=1
+ [param_onglet]
+  nom="ENTETE"
+  multi_lignes=non
+  arret=2
+  wnom_police="ONGLET"
+  wnom_padding="ONGLET"
+[onglet]
+ [presentation]
+  position=0,0
+  taille=225,280
+  attache_lgx=oui
+  attache_lgy=oui
+  id=2
+ [param_onglet]
+  nom="LIGNE"
+  multi_lignes=non
+  arret=3
+  wnom_police="ONGLET"
+  wnom_padding="ONGLET"
+[onglet]
+ [presentation]
+  position=0,0
+  taille=225,280
+  attache_lgx=oui
+  id=3
+ [param_onglet]
+  nom="PIED"
+  multi_lignes=non
+  arret=4
+  wnom_police="ONGLET"
+  wnom_padding="ONGLET"
+;-- =====================================================================
+;-- PAGE 1 : conteneur principal
+;-- =====================================================================
+[page]
+ numero=1
+ fond="STD"
+ nature=double
+ nb_lig=33
+ nb_col=120
+ offset_lig=1
+ offset_col=1
+ attache_lgx=oui
+ attache_lgy=oui
+ ident_unique=1
+;-- =====================================================================
+;-- PAGE 2 : en-tete du document (onglet ENTETE)
+;-- =====================================================================
+[page]
+ numero=2
+ libelle="En-tete"
+ fond="STD"
+ efface=partiel
+ nb_lig=25
+ nb_col=100
+ offset_lig=1
+ offset_col=1
+ attache_lgx=oui
+ ident_unique=2
+ [onglet_page]
+  [param_onglet_page]
+   nom="ENTETE"
+   libelle="En-tete"
+   couleur_fond="STD"
+;-- ADAPTER : champs de l en-tete du document
+ [groupbox]
+  [presentation]
+   position=5,5
+   taille=80,270
+   attache_lgx=oui
+   id=4
+   wstyle="GROUPE"
+  [param_groupbox]
+   texte="Identification"
+   couleur_fond="GROUPE_FOND"
+ [obj_texte]
+  [presentation]
+   position=20,10
+   taille=9,50
+   id=5
+   wstyle="STD"
+  [texte]
+;-- ADAPTER : champ cle du document
+   texte="Numero"
+ [champ]
+  [presentation]
+   position=20,65
+   taille=9,60
+   id=6
+   wstyle="CHAMP_NON_SAISI"
+  [description]
+;-- ADAPTER : donnee=entete,numpiece,entete
+   donnee=entete,numpiece,entete
+   saisie=non
+ [obj_texte]
+  [presentation]
+   position=34,10
+   taille=9,50
+   id=7
+   wstyle="STD"
+  [texte]
+   texte="Date"
+ [champ]
+  [presentation]
+   position=34,65
+   taille=9,60
+   id=8
+   wstyle="CHAMP_SAISI"
+  [description]
+   donnee=entete,datepiece,entete
+  [param_saisie]
+   type_date=jj/mm/aaaa
+   obligatoire=oui
+ [obj_texte]
+  [presentation]
+   position=48,10
+   taille=9,50
+   id=9
+   wstyle="STD"
+  [texte]
+;-- ADAPTER : tiers ou autre champ principal
+   texte="Tiers"
+ [champ]
+  [presentation]
+   position=48,65
+   taille=9,60
+   id=10
+   wstyle="CHAMP_SAISI"
+  [description]
+   donnee=entete,codtiers,entete
+  [param_saisie]
+   obligatoire=oui
+   table_associee=oui
+  [touches]
+   f7=135
+  [boutons]
+   "zoom"
+;-- =====================================================================
+;-- PAGE 3 : lignes du document (onglet LIGNE)
+;-- =====================================================================
+[page]
+ numero=3
+ libelle="Lignes"
+ fond="STD"
+ efface=partiel
+ nb_lig=25
+ nb_col=100
+ offset_lig=1
+ offset_col=1
+ attache_lgx=oui
+ attache_lgy=oui
+ ident_unique=3
+ [onglet_page]
+  [param_onglet_page]
+   nom="LIGNE"
+   libelle="Lignes"
+   couleur_fond="STD"
+;-- ADAPTER : tableau des lignes
+ [tableau]
+  [presentation]
+   position=5,0
+   taille=200,280
+   attache_lgx=oui
+   attache_lgy=oui
+   id=11
+   wstyle="TABLEAU_SAISI"
+  [param_tableau]
+;-- ADAPTER : nom du tableau
+   nom="lignes_document"
+   point_arret=3000
+   col_depl=2
+   hauteur_lig=11
+   hauteur_entete=10
+   largeur_controle=8
+   var_controle=oui
+  [description]
+   donnee=ligne,ligne,ligne
+   minmaj=majuscules
+;-- ADAPTER : colonnes du tableau
+;-- Colonne article
+  [champ_tableau]
+   [presentation]
+    position=10,5
+    taille=10,60
+    id=12
+    wstyle="TABLEAU_SAISI"
+   [description]
+    donnee=ligne,codart,ligne
+   [param_saisie]
+    table_associee=oui
+   [touches]
+    f7=135
+   [info_bulle]
+   texte="Article"
+   [param_colonne]
+    titre="Article"
+    largeur_col=60
+    wstyle="ENTETE_COLONNE"
+   [boutons]
+    "zoom"
+;-- Colonne libelle (lecture seule)
+  [champ_tableau]
+   [presentation]
+    position=10,70
+    taille=10,120
+    id=13
+    wstyle="TABLEAU_AFF"
+   [description]
+    donnee=ligne,libart,ligne
+    saisie=non
+   [info_bulle]
+   texte="Libelle article"
+   [param_colonne]
+    titre="Libelle"
+    largeur_col=120
+    wstyle="ENTETE_COLONNE"
+;-- Colonne quantite
+  [champ_tableau]
+   [presentation]
+    position=10,195
+    taille=10,40
+    id=14
+    wstyle="TABLEAU_SAISI"
+   [description]
+    donnee=ligne,qte,ligne
+   [param_saisie]
+    esp_si_zero=oui
+   [info_bulle]
+   texte="Quantite"
+   [param_colonne]
+    titre="Qte"
+    largeur_col=40
+    wstyle="ENTETE_COLONNE"
+;-- Colonne prix unitaire
+  [champ_tableau]
+   [presentation]
+    position=10,240
+    taille=10,50
+    id=15
+    wstyle="TABLEAU_SAISI"
+   [description]
+    donnee=ligne,prixunit,ligne
+   [param_saisie]
+    esp_si_zero=oui
+   [info_bulle]
+   texte="Prix unitaire"
+   [param_colonne]
+    titre="PU"
+    largeur_col=50
+    wstyle="ENTETE_COLONNE"
+;-- =====================================================================
+;-- PAGE 4 : pied de page (onglet PIED)
+;-- =====================================================================
+[page]
+ numero=4
+ libelle="Pied"
+ fond="STD"
+ efface=partiel
+ nb_lig=15
+ nb_col=100
+ offset_lig=1
+ offset_col=1
+ attache_lgx=oui
+ ident_unique=4
+ [onglet_page]
+  [param_onglet_page]
+   nom="PIED"
+   libelle="Totaux"
+   couleur_fond="STD"
+;-- ADAPTER : champs totaux en lecture seule
+ [groupbox]
+  [presentation]
+   position=5,5
+   taille=60,270
+   attache_lgx=oui
+   id=16
+   wstyle="GROUPE"
+  [param_groupbox]
+   texte="Totaux"
+   couleur_fond="GROUPE_FOND"
+ [obj_texte]
+  [presentation]
+   position=20,10
+   taille=9,80
+   id=17
+   wstyle="STD"
+  [texte]
+   texte="Total HT"
+ [champ]
+  [presentation]
+   position=20,95
+   taille=9,80
+   id=18
+   wstyle="CHAMP_AFF"
+  [description]
+   donnee=entete,totalht,entete
+   saisie=non
+  [param_saisie]
+   esp_si_zero=oui
+ [obj_texte]
+  [presentation]
+   position=34,10
+   taille=9,80
+   id=19
+   wstyle="STD"
+  [texte]
+   texte="TVA"
+ [champ]
+  [presentation]
+   position=34,95
+   taille=9,80
+   id=20
+   wstyle="CHAMP_AFF"
+  [description]
+   donnee=entete,totaltva,entete
+   saisie=non
+  [param_saisie]
+   esp_si_zero=oui
+ [obj_texte]
+  [presentation]
+   position=48,10
+   taille=9,80
+   id=21
+   wstyle="STD"
+  [texte]
+   texte="Total TTC"
+ [champ]
+  [presentation]
+   position=48,95
+   taille=9,80
+   id=22
+   wstyle="CHAMP_AFF"
+  [description]
+   donnee=entete,totalttc,entete
+   saisie=non
+  [param_saisie]
+   esp_si_zero=oui
+;-- =====================================================================
+;-- RESSOURCES : menu + toolbar ecran standard
+;-- =====================================================================
+[ressources]
+ [menu]
+  ident="MAIN"
+  [item]
+   type=ssmenu
+   [param_bouton]
+    wnom=""
+    wtexte="_Fichier"
+    wid_ressource="FICHIER"
+   [item]
+    [param_bouton]
+     wnom="QUITTER"
+     wtexte="_Quitter"
+     wid_ressource="QUITTER"
+     wtrait_chaine="#escape"
+ [toolbar]
+  ident="FENETRE"
+  [item]
+   [param_bouton]
+    wnom="OK"
+    wid_ressource="OK"
+    wtrait_chaine="#return"
+   [info_bulle]
+   texte="Valider <Entree>"
+  [item]
+   [param_bouton]
+    wnom="ABANDON"
+    wid_ressource="ABANDON"
+    wtrait_chaine="#escape"
+   [info_bulle]
+   texte="Abandonner <Echap>"
+;-- =====================================================================
+;-- DIVA : declarations et logique
+;-- =====================================================================
+[diva]
+;-- ADAPTER : $Id du fichier reel
+SetModuleInfo('$Id: template_ecran_crud.dhsf $')
+
+;-- ADAPTER : includes et modules du domaine
+;-- Include  GTTC000.dhsp
+;-- Module   GTPMFICSQL.dhop
+
+;-- ADAPTER : declarations Record
+Public Record "dictionnaire.dhsd" entete entete
+Public Record "dictionnaire.dhsd" ligne ligne
+
+;-- ADAPTER : procedures evenementielles
+;-- Public Procedure Champ_CodTiers_1_Ap
+;-- BeginP
+;--   ; logique apres saisie du tiers
+;-- EndP ;Champ_CodTiers_1_Ap
+[/diva]
+[diva_base]
+[/diva]

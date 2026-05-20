@@ -1,0 +1,128 @@
+# Schema : Entite metier ERP Divalto
+# Une Entite = objet metier persistant (ex : CLI, FOU, ART, SOC, C3 compte, C8 ecriture).
+# C'est l'unite documentaire principale : 1 entite = 1 page de documentation.
+#
+# Les 3 couches de lecture (metier / schema / technique) sont portees par ce schema
+# via des sections distinctes. Les renderers decident quoi afficher selon le profil.
+#
+# Convention : chaque cle decrit un champ attendu dans une instance d'entite.
+# La valeur est une description type + contraintes + exemple.
+
+kind: entity
+version: 0.1
+
+required_fields:
+  code:   "string, 2-8 chars, ex: CLI, FOU, ART, SOC, C3"
+  label:  "string, nom lisible, ex: Client, Compte general"
+  module: "string, code du module parent, ex: DAV"
+  base:   "string, code de la base parente, ex: GTFPCF, CCFJCA"
+  status: "enum: draft | stable | deprecated"
+
+# ───────────────────────────────────────────────────────────────
+# COUCHE METIER (audience : consultants, chefs de projet)
+# ───────────────────────────────────────────────────────────────
+business:
+  role:            "string obligatoire, 2-3 phrases, role metier de l'entite"
+  criticality:     "enum: core | standard | peripheral"
+  variants:        "list[string] optionnel, ex pour CLI: [standard, prospect, affaire, contrat]"
+  processes:       "list[string] optionnel, codes processus ou l'entite intervient (ref process.yaml)"
+  typical_users:   "list[string] optionnel, ex: [commercial, comptable, DAF]"
+  business_rules:  "list[string] optionnel, regles metier notables"
+  examples:        "list[string] optionnel, exemples concrets d'usage"
+
+# ───────────────────────────────────────────────────────────────
+# COUCHE SCHEMA (audience : dev clients / integrateurs)
+# ───────────────────────────────────────────────────────────────
+schema:
+  primary_table:      "string obligatoire, nom table SQL, ex: CLI"
+  primary_key:        "list[string], ex: [CLI_ID] ou [DOS, TIERS]"
+  satellite_tables:   "list[string] optionnel, ex: [ETBCLI, TIERSGRP]"
+  relations:          "list[ref] optionnel, chaque ref : {target_entity, direction, type, cardinality, source_field?, target_field?, business_note?}"
+  integration_points: "list[string] optionnel, hooks/events/API exposees"
+  diagram_mermaid:    "string optionnel, diagramme relationnel en Mermaid"
+
+# ───────────────────────────────────────────────────────────────
+# COUCHE TECHNIQUE (audience : dev Divalto internes)
+# ───────────────────────────────────────────────────────────────
+technical:
+  dictionary_source: "string, fichier .dhsd source, ex: GTFDD.dhsd"
+  record_name:       "string, nom du Record DIVA, ex: CLI ou Client"
+  field_count:       "int, nombre total de champs (calcule par extracteur)"
+  fields:            "list[field], voir sous-schema field ci-dessous"
+  indexes:           "list[index], voir sous-schema index ci-dessous"
+  audit_fields:      "list[string], champs audit canoniques (UserCr, UserMo, UserCrDh, UserMoDh, Ce1, Dos, Filler)"
+  zoom_code:         "string optionnel, code zoom ecran, ex: 09021"
+  main_screens:      "list[string] optionnel, ex: [gree001.dhsf, gtee300_sql.dhsf]"
+  main_programs:     "list[string] optionnel, codes programmes (ref program.yaml)"
+  moulinettes:       "list[string] optionnel, regles CI appliquees"
+  performance_notes: "string optionnel, indexes recommandes, volumetries"
+
+# ───────────────────────────────────────────────────────────────
+# Sous-schema : field (entry dans technical.fields)
+# ───────────────────────────────────────────────────────────────
+field_shape:
+  name:           "string, nom du champ, ex: TIERS"
+  nature:         "string, Nature DIVA (cf. docs/DICTIONNAIRE-DHSD.md), ex: C20"
+  sql_type:       "string, type SQL, ex: char(20)"
+  label:          "string optionnel, libelle fonctionnel"
+  nullable:       "bool"
+  default:        "string optionnel"
+  zoom:           "string optionnel, entite/table cible du zoom f8"
+  business_note:  "string optionnel, explication metier du champ"
+  layer:          "enum: all | schema+technical | technical-only -- couche ou le champ apparait"
+
+# ───────────────────────────────────────────────────────────────
+# Sous-schema : index (entry dans technical.indexes)
+# ───────────────────────────────────────────────────────────────
+index_shape:
+  name:     "string, nom de l'index"
+  fields:   "list[string], champs composant l'index (dans l'ordre)"
+  unique:   "bool"
+  purpose:  "string optionnel, role de l'index"
+
+# ───────────────────────────────────────────────────────────────
+# Sous-schema : ce_analysis (technical.ce_analysis)
+# ───────────────────────────────────────────────────────────────
+# Drapeaux multi-etats Ce1..CeA : role metier inferre + signaux bruts X.13.
+# La description_metier d'un CE actif est redigee par Claude (etape 3bis du
+# skill documenting-erp) avec citation obligatoire. Les CE reserves ont une
+# description figee ecrite par le script (idempotent).
+ce_analysis_shape:
+  summary: "string, ex: '6 CE actifs, 4 reserves'"
+  source:  "string, source technique d'analyse (indexes + mchk)"
+  fields:  "list[ce_field], voir sous-schema ce_field ci-dessous"
+
+ce_field_shape:
+  name:                          "string, nom du CE, ex: CE1"
+  status:                        "enum: actif | reserve | inutilise"
+  role_infere:                   "string, rôle technique déduit de l'usage (heuristique)"
+  indexes:                       "list[string], indexes SQL contenant ce CE"
+  index_count:                   "int, nb d'indexes contenant ce CE"
+  co_cols:                       "list[string], co-colonnes des indexes (hors partition/PK)"
+  values_observed_in_mchk:       "list[string], valeurs litterales observees en code"
+  activation_rule:               "string | null, expression Condition (ex: Ean <> ' ')"
+  fixed_value:                   "string | null, valeur fixe assignee (ex: '3')"
+  assign_count:                  "int, nb d'affectations observees"
+  compare_count:                 "int, nb de comparaisons observees"
+  ref_count:                     "int, nb de refs totales dans le mchk"
+  dhsd_comment:                  "string | null, commentaire [CHAMP] du champ Ce<n>"
+  dhsd_source:                   "string | null, citation fichier:ligne du .dhsd"
+  mchk_constants:                "list[{name,value,comment,source}], constantes C_*Ce<n>* du mchk"
+  description_metier:            "string, role metier (obligatoire si status=actif ; redige par Claude avec citation ; figé par le script si status=reserve)"
+  description_metier_source:     "string, 1+ citation(s) fichier:ligne separees par ', ' (ou 'analyse automatique (aucun signal)' pour les reserves)"
+  description_metier_signature:  "string 8-hex, empreinte sha1 stable des signaux bruts -- si inchangee entre 2 runs, Claude conserve description_metier a l'identique (idempotence CA13)"
+
+# ───────────────────────────────────────────────────────────────
+# Metadonnees
+# ───────────────────────────────────────────────────────────────
+meta:
+  last_reviewed:    "date ISO, ex: 2026-04-21"
+  reviewed_by:      "string, ex: scastelain"
+  a_verifier:       "list[string], items ouverts (cf. convention docs/A-VERIFIER.md)"
+  source_x12_neo4j: "string optionnel, reference snapshot"
+  source_x13_path:  "string optionnel, chemin absolu dans ERP standard"
+
+rendering_layers:
+  business:  [code, label, module, base, business]
+  schema:    [code, label, "schema.primary_table", "schema.primary_key", "schema.satellite_tables", "schema.relations", "schema.diagram_mermaid"]
+  technical: [code, label, technical, meta]

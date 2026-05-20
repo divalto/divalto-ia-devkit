@@ -1,0 +1,42 @@
+{
+  "_skeleton_name": "zoom-evenement-9",
+  "_description": "Zoom evenement : pattern X.12 a 9 tables, 90 RSQL partagent la signature. Tables canoniques : GRTEVT, CA, PAR + lookups T006/T007.",
+  "_source_x13": "Representatif -- pour une copie exhaustive, extraire depuis garsgpa.dhsq ou src equivalents (cf. corpus-patterns.md section 3).",
+  "_signature_nb_tables": 9,
+  "_note": "Squelette pilote (G-022). Contient les 4 jointures les plus frequentes du pattern. Les 5 autres (CA, PAR, etc.) sont a ajouter selon le besoin metier.",
+  "joined_tables": [
+    {
+      "table_sql": "GRTEVT",
+      "alias": "GRTEVT",
+      "join_type": "implicit",
+      "join_condition": "GRTEVT.Dos = MZ.Dos AND GRTEVT.EvtCod = {MAIN}.EvtCod",
+      "columns_selected": ["GRTEVT.EvtLib"]
+    },
+    {
+      "table_sql": "CA",
+      "alias": "CA",
+      "join_type": "left_join",
+      "join_condition": "CA.Dos = MZ.Dos AND CA.CACod = {MAIN}.CACod",
+      "columns_selected": ["CA.CALib"]
+    },
+    {
+      "table_sql": "PAR",
+      "alias": "PAR",
+      "join_type": "implicit",
+      "join_condition": "PAR.Dos = MZ.Dos AND PAR.ParCod = {MAIN}.ParCod",
+      "columns_selected": ["PAR.ParLib"]
+    },
+    {
+      "table_sql": "T007",
+      "alias": "T007",
+      "join_type": "left_join",
+      "join_condition": "T007.Dos = MZ.Dos AND T007.Code = {MAIN}.TypeEvt",
+      "columns_selected": ["T007.Lib"]
+    }
+  ],
+  "additional_cases": [
+    {"name": "Equal_EvtCod", "field": "EvtCod", "type": "equal", "param": "char"},
+    {"name": "Like_EvtCod", "field": "EvtCod", "type": "like", "param": "char"},
+    {"name": "Between_DateEvt", "field": "DateEvt", "type": "between", "param": "date"}
+  ]
+}

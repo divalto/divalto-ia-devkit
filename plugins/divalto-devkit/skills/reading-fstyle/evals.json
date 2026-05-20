@@ -1,0 +1,76 @@
+{
+  "skill": "reading-fstyle",
+  "description": "Scenarios d'evaluation de reading-fstyle.",
+  "scenarios": [
+    {
+      "id": "case-1",
+      "skills": [
+        "reading-fstyle"
+      ],
+      "query": "Liste la distribution des types du fichier fstylewpf.dhfi dans C:/divalto/sys/. Combien de styles et quelle repartition par Type ?",
+      "files": [],
+      "expected_behavior": [
+        "Execute read_fstyle.py avec --variant wpf --stats",
+        "Sortie JSON : total_nc autour de 1590 (variabilite +/- 50 selon snapshot)",
+        "Distribution par Type : 1 police (~9 %), 2 couleur (~20 %), 3 reference i18n (~29 %), 6 cadre, 7 style compose, 9 contexte",
+        "Aucun plantage sur le magic *$version (skippe correctement par le parseur)"
+      ]
+    },
+    {
+      "id": "case-2",
+      "skills": [
+        "reading-fstyle"
+      ],
+      "query": "Donne-moi le detail du style TBLART dans fstylewpf.dhfi. C'est un libelle tbl* consomme par les multichoix.",
+      "files": [],
+      "expected_behavior": [
+        "Execute read_fstyle.py avec --variant wpf --detail TBLART",
+        "Sortie JSON : found=true, type=3, nom=TBLART",
+        "Champ cle_i18n = #tblart (reference i18n non resolue, cf FS-01 BACKLOG)",
+        "Champ flags = 001 (semantique a formaliser en FS-04 BACKLOG)"
+      ]
+    },
+    {
+      "id": "case-3",
+      "skills": [
+        "reading-fstyle"
+      ],
+      "query": "Donne-moi le detail du style .POLICE dans fstyle.dhfi legacy (famille Tahoma attendue).",
+      "files": [],
+      "expected_behavior": [
+        "Execute read_fstyle.py avec --variant legacy --detail .POLICE",
+        "Sortie JSON : found=true, type=1, nom=.POLICE",
+        "Champ taille = 8, poids = 400000 (police normale, convention Windows font-weight)",
+        "Champ famille = Tahoma (decodage robuste : strip prefixe numerique 34 eventuel)"
+      ]
+    },
+    {
+      "id": "case-4",
+      "skills": [
+        "reading-fstyle"
+      ],
+      "query": "Resous le nom TBLART a travers les variantes fstyle (wpf -> legacy -> imp). Quelle variante fournit la definition ?",
+      "files": [],
+      "expected_behavior": [
+        "Execute read_fstyle.py avec --resolve TBLART",
+        "Sortie JSON : resolved=true, variant_source=wpf, type=3, cle_i18n=#tblart",
+        "Le tableau variants_tried contient uniquement [wpf] (premier trouve, arret)",
+        "Exit code 0 (succes avec resultat)"
+      ]
+    },
+    {
+      "id": "case-5",
+      "skills": [
+        "reading-fstyle"
+      ],
+      "query": "Tente de resoudre TBLAFF (cas orphelin DAV d'apres FSTYLE.md). Le resultat doit indiquer clairement l'absence.",
+      "files": [],
+      "expected_behavior": [
+        "Execute read_fstyle.py avec --resolve TBLAFF",
+        "Sortie JSON : resolved=false, orphan=true, nom=TBLAFF",
+        "Le tableau variants_tried contient [wpf, legacy, imp] (les 3 variantes testees)",
+        "Exit code 1 (resultat vide sur cas orphelin -- le script n'est pas en erreur)"
+      ]
+    }
+  ]
+}

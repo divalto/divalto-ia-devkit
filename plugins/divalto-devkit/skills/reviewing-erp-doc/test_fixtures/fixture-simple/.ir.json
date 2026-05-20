@@ -1,0 +1,211 @@
+{
+  "generated_at": "2026-04-22T18:46:52.339367+00:00",
+  "deliverable_root": ".claude\\skills\\reviewing-erp-doc\\test_fixtures\\fixture-simple",
+  "module": {
+    "code": "TST",
+    "label": "Module de test fixture",
+    "domain": "TST"
+  },
+  "entities": [
+    {
+      "code": "BAD",
+      "label": "Entite avec affirmations non sourcees",
+      "module": "TST",
+      "source_file": ".claude\\skills\\reviewing-erp-doc\\test_fixtures\\fixture-simple\\entity\\BAD.yaml",
+      "affirmations": [
+        {
+          "yaml_path": "business.role",
+          "text": "BAD est une entite critique du processus de vente, pivot pour les commissions.",
+          "citations": [],
+          "has_a_verifier_mark": false
+        },
+        {
+          "yaml_path": "business.business_rules[0]",
+          "text": "Les entites BAD sont recalculees a chaque cloture mensuelle automatiquement.",
+          "citations": [],
+          "has_a_verifier_mark": false
+        },
+        {
+          "yaml_path": "business.business_rules[1]",
+          "text": "Les BAD archivees sont conservees 10 ans puis supprimees de la base.",
+          "citations": [],
+          "has_a_verifier_mark": false
+        },
+        {
+          "yaml_path": "technical.performance_notes",
+          "text": "La table BAD doit etre partitionnee par annee pour performance.",
+          "citations": [],
+          "has_a_verifier_mark": false
+        },
+        {
+          "yaml_path": "technical.fields[0].business_note",
+          "text": "Identifiant fonctionnel issu d'un compteur applicatif.",
+          "citations": [],
+          "has_a_verifier_mark": false
+        },
+        {
+          "yaml_path": "technical.fields[1].business_note",
+          "text": "Montant TTC arrondi au centime superieur.",
+          "citations": [],
+          "has_a_verifier_mark": false
+        }
+      ],
+      "structures": {
+        "fields": [
+          {
+            "name": "BAD_ID",
+            "nature": "C20",
+            "zoom": ""
+          },
+          {
+            "name": "Montant",
+            "nature": "Fl",
+            "zoom": ""
+          }
+        ],
+        "indexes": [],
+        "audit_fields": [],
+        "primary_key": [
+          "BAD_ID"
+        ],
+        "primary_table": "BAD",
+        "dictionary_source": "Gttbad.dhsd",
+        "relations": []
+      },
+      "a_verifier": []
+    },
+    {
+      "code": "OKK",
+      "label": "Entite propre (sourcee correctement)",
+      "module": "TST",
+      "source_file": ".claude\\skills\\reviewing-erp-doc\\test_fixtures\\fixture-simple\\entity\\OKK.yaml",
+      "affirmations": [
+        {
+          "yaml_path": "business.role",
+          "text": "Le client OKK est l'entite pivot du module TST. Citation: Gttokk.dhsq:12",
+          "citations": [
+            "Gttokk.dhsq:12"
+          ],
+          "has_a_verifier_mark": false
+        },
+        {
+          "yaml_path": "business.object_description.text",
+          "text": "Module fonctions et procedures de controle objet OKK",
+          "citations": [
+            "Gttokk.dhsq"
+          ],
+          "has_a_verifier_mark": false
+        },
+        {
+          "yaml_path": "business.observation.text",
+          "text": "Entite OKK declaree dans le masque principal [Gttokk.dhsq].",
+          "citations": [
+            "Gttokk.dhsq"
+          ],
+          "has_a_verifier_mark": false
+        },
+        {
+          "yaml_path": "business.business_rules[0]",
+          "text": "Un OKK bloque ne peut plus etre facture. Citation: Gttmchkokk.dhop:55",
+          "citations": [
+            "Gttmchkokk.dhop:55"
+          ],
+          "has_a_verifier_mark": false
+        },
+        {
+          "yaml_path": "business.business_rules[1]",
+          "text": "[A VERIFIER] Regle de decouvert a confirmer avec le metier",
+          "citations": [],
+          "has_a_verifier_mark": true
+        },
+        {
+          "yaml_path": "business.business_rules[2]",
+          "text": "Les OKK dont Bloque = 0 sont rejetes automatiquement de la selection par defaut. Citation: Gttokk.dhsq:22",
+          "citations": [
+            "Gttokk.dhsq:22"
+          ],
+          "has_a_verifier_mark": false
+        },
+        {
+          "yaml_path": "technical.performance_notes",
+          "text": "Index recommande sur (OKK_ID, Dos) pour volumetrie > 100k. Citation: Gttokk.dhsd:120",
+          "citations": [
+            "Gttokk.dhsd:120"
+          ],
+          "has_a_verifier_mark": false
+        },
+        {
+          "yaml_path": "technical.fields[0].business_note",
+          "text": "Identifiant unique du client OKK. Citation: Gttokk.dhsd:15",
+          "citations": [
+            "Gttokk.dhsd:15"
+          ],
+          "has_a_verifier_mark": false
+        },
+        {
+          "yaml_path": "technical.fields[2].business_note",
+          "text": "[A VERIFIER] Semantique exacte du drapeau Bloque a confirmer",
+          "citations": [],
+          "has_a_verifier_mark": true
+        },
+        {
+          "yaml_path": "technical.fields[4].business_note",
+          "text": "Drapeau annulation, source: Gttokk.dhsd:99",
+          "citations": [
+            "Gttokk.dhsd:99"
+          ],
+          "has_a_verifier_mark": false
+        }
+      ],
+      "structures": {
+        "fields": [
+          {
+            "name": "OKK_ID",
+            "nature": "C20",
+            "zoom": ""
+          },
+          {
+            "name": "Nom",
+            "nature": "C40",
+            "zoom": ""
+          },
+          {
+            "name": "Bloque",
+            "nature": "Fl",
+            "zoom": ""
+          },
+          {
+            "name": "DateCre",
+            "nature": "Dt",
+            "zoom": ""
+          },
+          {
+            "name": "AnnulFl",
+            "nature": "C20",
+            "zoom": ""
+          }
+        ],
+        "indexes": [
+          "IdxOKK_ID",
+          "IdxNom",
+          "IdxDateCre"
+        ],
+        "audit_fields": [
+          "Ce1",
+          "Dos",
+          "UserCr",
+          "UserMo"
+        ],
+        "primary_key": [
+          "OKK_ID"
+        ],
+        "primary_table": "OKK",
+        "dictionary_source": "Gttokk.dhsd",
+        "relations": []
+      },
+      "a_verifier": [
+        "business.role : criticite metier a confirmer avec le DAF"
+      ]
+    }
+  ]
+}

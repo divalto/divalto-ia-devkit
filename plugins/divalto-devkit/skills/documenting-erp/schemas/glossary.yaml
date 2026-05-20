@@ -1,0 +1,27 @@
+# Schema : Glossaire (terme metier <-> code technique)
+# Un Glossary = table de correspondance entre termes metier (francais lisible)
+# et codes techniques (CLI, FOU, GTFPCF...) utilises dans le code et les ecrans.
+# Permet a la couche "metier" de pointer vers les elements techniques sans les introduire.
+
+kind: glossary
+version: 0.1
+
+required_fields:
+  - term            # string, terme metier, ex: "Client"
+  - technical_code  # string, code technique correspondant, ex: "CLI"
+
+optional_fields:
+  - definition      # string, 1-3 phrases
+  - synonyms        # list[string], ex: ["Acheteur","Compte client"]
+  - related_terms   # list[string], termes voisins
+  - module          # string, module de predilection
+  - see_also        # list[string], references vers entities, processes, programs
+  - scope           # enum: universal | module-specific
+  - deprecated      # bool, terme obsolete ?
+  - replacement     # string optionnel, terme de remplacement si deprecated
+  - a_verifier      # list[string]
+
+rendering_layers:
+  business:   [term, definition, synonyms, related_terms]
+  schema:     [term, technical_code, see_also]
+  technical:  [term, technical_code, scope, deprecated]

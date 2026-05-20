@@ -1,0 +1,34 @@
+## Strategique
+
+> Lecture : 2 minutes. Public : chef projet, decideur.
+
+- **Nature de la demande** : {{ request.type }}{% if request.domaine %} ({{ request.domaine }}){% endif +%}
+- **Confiance globale** : {{ coverage.confiance }}
+{% if coverage.neo4j_status == "available" %}
+- **Couverture exploration** : disponible (snapshot graphe X.12 + verification X.13)
+{% elif coverage.neo4j_status == "partial" %}
+- **Couverture exploration** : partielle (degradation gracieuse activee)
+{% else %}
+- **Couverture exploration** : verification X.13 directe (graphe X.12 indisponible)
+{% endif %}
+
+**Verdict**
+
+{{ verdict.one_line }}
+
+{% if action_critique %}
+**Action prioritaire**
+
+{{ action_critique.claim }}
+{% endif %}
+
+**Panorama de l'analyse**
+
+{% set inclus = selection | selectattr("included") | list %}
+{% set omis = selection | rejectattr("included") | list %}
+Types inclus dans l'analyse ({{ inclus | length }}) : {% for s in inclus %}{{ s.slug }}{% if not loop.last %}, {% endif %}{% endfor %}.
+{% if omis %}
+Types omis ({{ omis | length }}) : {% for s in omis %}{{ s.slug }}{% if not loop.last %}, {% endif %}{% endfor %}.
+{% endif %}
+
+---

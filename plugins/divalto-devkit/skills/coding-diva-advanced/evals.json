@@ -1,0 +1,52 @@
+{
+  "skill": "coding-diva-advanced",
+  "description": "Scenarios d'evaluation de coding-diva-advanced.",
+  "scenarios": [
+    {
+      "name": "rest-get-json",
+      "description": "Appel REST GET avec parsing JSON de la reponse",
+      "prompt": "Ecris un code DIVA qui fait un GET sur https://api.example.com/articles, parse la reponse JSON, et affiche le nombre d'articles retournes.",
+      "expected": {
+        "patterns": [
+          "WebRequestNew() pour creer le ticket",
+          "WebRequestSetUrl avec l'URL",
+          "WebRequestSetMethod GET",
+          "WebRequestSend pour envoyer",
+          "WebRequestClose apres utilisation",
+          "JsonOpen + JsonParse pour parser la reponse",
+          "JsonGetLength pour compter les elements",
+          "JsonClose apres parsing"
+        ]
+      }
+    },
+    {
+      "name": "surcharge-zoom",
+      "description": "Surcharge d'un module zoom standard",
+      "prompt": "Je veux surcharger le zoom standard gtpz099.dhsp pour ajouter un controle supplementaire sur le code article dans ZoomArret. Comment faire ?",
+      "expected": {
+        "patterns": [
+          "Convention nommage : gtpz099u.dhsp (suffixe U)",
+          "OverWrite 'gtpz099.dhop' dans le fichier de surcharge",
+          "OverWrittenBy 'gtpz099U.dhop' dans le fichier standard",
+          "Standard.ZoomArret() pour appeler l'original",
+          "Switch Harmony.Key pour intercepter les evenements"
+        ]
+      }
+    },
+    {
+      "name": "reader-pattern",
+      "description": "Lecture sequentielle avec pattern Reader sur un RecordSql",
+      "prompt": "J'ai un RecordSql gtrsart pour les articles. Je veux lire tous les articles dont le code commence par 'ART' et les traiter un par un. Ecris le code.",
+      "expected": {
+        "patterns": [
+          "ReaderOpen_gtrsart pour ouvrir le curseur",
+          "GT_ClearAllCondition pour nettoyer",
+          "Where.Like_Code pour filtrer par prefixe",
+          "ReaderSelect_gtrsart pour executer",
+          "Loop ReaderNext_gtrsart = 0 pour iterer",
+          "ReaderClose_gtrsart pour fermer"
+        ]
+      }
+    }
+  ]
+}

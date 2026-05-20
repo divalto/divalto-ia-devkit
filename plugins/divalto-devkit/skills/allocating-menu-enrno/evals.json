@@ -1,0 +1,47 @@
+{
+  "skill": "allocating-menu-enrno",
+  "description": "Scenarios d'evaluation de allocating-menu-enrno.",
+  "scenarios": [
+    {
+      "id": "case-1",
+      "skills": [
+        "allocating-menu-enrno"
+      ],
+      "query": "Alloue-moi un EnrNo libre dans g3f.dhfi d'Achat-Vente pour une entite metier custom que je vais creer.",
+      "files": [],
+      "expected_behavior": [
+        "Execute find_free_enrno.py avec --file pointant sur g3f.dhfi Achat-Vente et --range custom",
+        "Sortie JSON : free=[100000] (plage custom vide en X.13 Achat-Vente standard, max+1 sur plage vide = lo = 100000)",
+        "sources.m2_records = 1367 environ (match RETEX R-006 apres filtre Ce=2, drift possible)",
+        "sources.used_in_range = 0 (aucun EnrNo custom pre-existant)",
+        "Exit code 0"
+      ]
+    },
+    {
+      "id": "case-2",
+      "skills": [
+        "allocating-menu-enrno"
+      ],
+      "query": "Combien de choix M2 dans g3f.dhfi Achat-Vente et quel est le plus grand EnrNo en plage standard ?",
+      "files": [],
+      "expected_behavior": [
+        "Execute find_free_enrno.py avec --range standard",
+        "Sortie JSON : sources.m2_records = 1367 environ, sources.used_in_range > 1300, sources.max_used_in_range doit etre < 100000 (plage standard)",
+        "free[0] = max_used_in_range + 1"
+      ]
+    },
+    {
+      "id": "case-3",
+      "skills": [
+        "allocating-menu-enrno"
+      ],
+      "query": "Donne-moi 3 EnrNo libres consecutifs en plage custom.",
+      "files": [],
+      "expected_behavior": [
+        "Execute find_free_enrno.py avec --range custom --count 3",
+        "Sortie JSON : free = [100000, 100001, 100002] (plage custom vide au demarrage)",
+        "len(free) = 3"
+      ]
+    }
+  ]
+}

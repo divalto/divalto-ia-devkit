@@ -1,0 +1,48 @@
+{
+  "skill": "allocating-zoom-numbers",
+  "description": "Scenarios d'evaluation de allocating-zoom-numbers.",
+  "scenarios": [
+    {
+      "id": "case-1",
+      "skills": [
+        "allocating-zoom-numbers"
+      ],
+      "query": "Trouve-moi un numero de zoom libre dans la plage DAV (9000-9999) avec cross-check minimal sur a5tczoom.dhsp.",
+      "files": [],
+      "expected_behavior": [
+        "Execute find_free_zoom.py avec --a5tczoom <chemin> et --domain DAV",
+        "Sortie JSON avec 'free' contenant au moins 1 numero dans la plage DAV",
+        "Sortie 'sources.a5tczoom_count' > 0 et 'a5f_local_count' = 0 (non fourni)",
+        "Exit 0"
+      ]
+    },
+    {
+      "id": "case-2",
+      "skills": [
+        "allocating-zoom-numbers"
+      ],
+      "query": "Trouve 5 numeros libres dans la plage 9900-9999 avec cross-check complet (a5tczoom + a5f.dhfi local).",
+      "files": [],
+      "expected_behavior": [
+        "Execute find_free_zoom.py avec --range 9900-9999 --count 5 --a5tczoom <chemin> --a5f-local <chemin> --read-isam-script <chemin> --structure <chemin>",
+        "Sortie JSON avec 'free' contenant 5 numeros (ou moins si saturation)",
+        "Sortie 'sources' avec compteurs a5tczoom + a5f_local + union",
+        "Si des numeros sont declares dans a5tczoom ET enregistres dans a5f.dhfi, ils apparaissent dans 'collisions_a5f_local_vs_a5tczoom_in_range'",
+        "Cas R-010 (9946 declare dans a5tczoom mais dans une autre plage) : ne doit PAS etre propose comme libre"
+      ]
+    },
+    {
+      "id": "case-3",
+      "skills": [
+        "allocating-zoom-numbers"
+      ],
+      "query": "Verifie qu'on peut utiliser un domaine non DAV (ex: DAFF).",
+      "files": [],
+      "expected_behavior": [
+        "Execute find_free_zoom.py --domain DAFF --a5tczoom <chemin>",
+        "Sortie JSON avec 'ranges_considered' reflete la config DAFF (31000-31999 et 12592-12593)",
+        "'free' contient un numero dans cette plage"
+      ]
+    }
+  ]
+}

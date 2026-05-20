@@ -1,0 +1,56 @@
+{
+  "skill": "managing-diva-dictionaries",
+  "description": "Scenarios d'evaluation de managing-diva-dictionaries.",
+  "scenarios": [
+    {
+      "id": "case-1",
+      "skills": [
+        "managing-diva-dictionaries"
+      ],
+      "query": "Ajoute la table FamRglt dans le dictionnaire rtlfdd.dhsd. Elle a 3 champs metier : RgltFam (Nature 20, code famille), Libelle (Nature 80, designation), Actif (Nature 1, booleen actif/inactif). Valeur CE = 'A'. Base = RtlFamRglt. Index primaire sur Dos + RgltFam.",
+      "files": [],
+      "expected_behavior": [
+        "Genere 4 blocs [CHAMP] : RgltFam, Libelle, Actif, UFamRglt",
+        "Positions sans trou : Ce1(1,1) Dos(2,8) RgltFam(10,20) Libelle(30,80) Actif(110,1) UserCr(111,20) UserMo(131,20) UserTrace(151,28) UFamRglt(179,500)",
+        "Taille totale = 678",
+        "Bloc [BASE] avec prefixe Rtl : RtlFamRglt, Fichier=RTLFAMRGLT.dhfi",
+        "Index_A avec CLE=RtlFamRglt,A,Ce1,2,A,n,1,n et champs Dos(1) + RgltFam(9)",
+        "Ligne INDEXL : Nom=RtlFamRglt,FamRglt,Index_A,0",
+        "Validation : 0 erreurs, 0 warnings"
+      ]
+    },
+    {
+      "id": "case-2",
+      "skills": [
+        "managing-diva-dictionaries"
+      ],
+      "query": "Ajoute la table ArtFam dans gtfdd.dhsd avec des types varies : ArtFam (Nature 20), Libelle (Nature 80), DateCr (Nature D8), DateMo (Nature D8), Coeff (Nature 6,2), MntMax (Nature 13,D0), NbRef (Nature 11,0). Valeur CE = 'B'. Base = GtfArtFam. Index A sur Dos+ArtFam, Index B sur Dos+Libelle. Reserve distributeur 1000 octets.",
+      "files": [],
+      "expected_behavior": [
+        "Genere 8 blocs [CHAMP] : ArtFam, Libelle, DateCr, DateMo, Coeff, MntMax, NbRef, UArtFam",
+        "Nature D8 = 8 octets, 6,2 = 6 octets, 13,D0 = 13 octets, 11,0 = 11 octets",
+        "Positions contigues sans trou, Taille coherente",
+        "U-field UArtFam avec Nature=1000 et Flags n,1,o,o,n,n,n,n,o",
+        "Base GtfArtFam avec prefixe Gtf, Fichier=GTFARTFAM.dhfi",
+        "2 index avec positions cumulees dans les champs d'index",
+        "Validation : 0 erreurs"
+      ]
+    },
+    {
+      "id": "case-3",
+      "skills": [
+        "managing-diva-dictionaries"
+      ],
+      "query": "Valide la table Art dans le dictionnaire ERP reel gtfdd.dhsd. Verifie que les positions sont correctes et que UArt existe.",
+      "files": [],
+      "expected_behavior": [
+        "Utilise validate_dhsd.py avec --path et --table Art",
+        "Verifie D01/D02 : positions contigues sans trou",
+        "Verifie D03 : UArt present",
+        "Verifie D04 : tous les champs declares",
+        "Verifie D05/D06 : encodage ISO-8859-1 + CRLF",
+        "Rapport JSON avec le resultat de validation"
+      ]
+    }
+  ]
+}

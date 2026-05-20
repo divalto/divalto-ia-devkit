@@ -1,0 +1,29 @@
+# Schema : Relation inter-entites
+# Une Relation = lien entre deux entites (FK, zoom, composition, heritage).
+# Peut etre portee en-ligne dans entity.schema.relations OU en objets independants
+# quand la relation est riche (ex: M:N avec attributs).
+
+kind: relation
+version: 0.1
+
+required_fields:
+  - source_entity   # string, code entite source, ex: "CLI"
+  - target_entity   # string, code entite cible, ex: "SOC"
+  - type            # enum: fk | zoom | composition | inheritance | association
+  - cardinality     # enum: 1-1 | 1-N | N-1 | N-N
+
+optional_fields:
+  - label           # string, nom metier de la relation, ex: "Client appartient a Dossier"
+  - source_field    # string, champ dans source qui porte la FK, ex: "DOS"
+  - target_field    # string, champ cible (souvent la PK)
+  - direction       # enum: unidirectional | bidirectional
+  - nullable        # bool, la relation est-elle obligatoire ?
+  - cascade         # enum: none | delete | restrict | set_null
+  - business_note   # string, explication metier du lien
+  - constraint      # string optionnel, contrainte supplementaire
+  - a_verifier      # list[string]
+
+rendering_layers:
+  business:   [label, business_note, cardinality]
+  schema:     [source_entity, target_entity, type, cardinality, direction, nullable]
+  technical:  [source_entity, target_entity, type, source_field, target_field, cascade, constraint]

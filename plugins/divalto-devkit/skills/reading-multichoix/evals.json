@@ -1,0 +1,75 @@
+{
+  "skill": "reading-multichoix",
+  "description": "Scenarios d'evaluation de reading-multichoix.",
+  "scenarios": [
+    {
+      "id": "case-1",
+      "skills": [
+        "reading-multichoix"
+      ],
+      "query": "Liste tous les multichoix du dictionnaire gtfdmc.dhfi d'Achat-Vente. Combien y en a-t-il et quelle est la distribution des Types ?",
+      "files": [],
+      "expected_behavior": [
+        "Execute read_multichoix.py avec --file gtfdmc.dhfi d'Achat-Vente et --list puis --stats",
+        "Sortie --list : total_nc = 881 environ, total_records = 2869 environ (drift possible selon snapshot ERP)",
+        "Sortie --stats : distribution ~90.2% Type=1, ~3.5% Type=3, ~6.2% Type=4",
+        "Aucun plantage sur le header multi-choix 6.0 (filtre Ce in 1/2 correctement applique)"
+      ]
+    },
+    {
+      "id": "case-2",
+      "skills": [
+        "reading-multichoix"
+      ],
+      "query": "Donne-moi le detail du multichoix NONOUI dans gtfdmc.dhfi d'Achat-Vente.",
+      "files": [],
+      "expected_behavior": [
+        "Execute read_multichoix.py avec --detail NONOUI",
+        "Sortie JSON : found=true, type=1, 2 entries",
+        "Entry 1 : ce=1, choix='Non', valeur='' (le libelle fait office de code retourne)",
+        "Entry 2 : ce=2, choix='Oui', valeur=''"
+      ]
+    },
+    {
+      "id": "case-3",
+      "skills": [
+        "reading-multichoix"
+      ],
+      "query": "Donne-moi le detail du multichoix AXENO (c'est un lookup dynamique de Type 3) dans gtfdmc.dhfi.",
+      "files": [],
+      "expected_behavior": [
+        "Execute read_multichoix.py avec --detail AXENO",
+        "Sortie JSON : found=true, type=3",
+        "Champ lookup present avec enreg=ca, donnee=axelibtb, prefixe=ca, ideb=1, ifin=4",
+        "Les entries ont enreg/donnee/prefixe/ideb/ifin au lieu de choix/valeur"
+      ]
+    },
+    {
+      "id": "case-4",
+      "skills": [
+        "reading-multichoix"
+      ],
+      "query": "Le mode --resolve AXENO doit-il marcher pour lire la table cible axelibtb ?",
+      "files": [],
+      "expected_behavior": [
+        "Execute read_multichoix.py avec --resolve AXENO",
+        "Sortie JSON : success=false, resolved=false, error referencant BACKLOG MC-03",
+        "Exit code 1 (pas 2 : le mode est reconnu mais pas implemente)",
+        "Le message suggere d'utiliser reading-isam-files pour lire axelibtb manuellement"
+      ]
+    },
+    {
+      "id": "case-5",
+      "skills": [
+        "reading-multichoix"
+      ],
+      "query": "Cherche le multichoix CHOIX_FICJOINT dans gtfdmc.dhfi. C'est un Type 4 avec un IdFic.",
+      "files": [],
+      "expected_behavior": [
+        "Execute read_multichoix.py avec --detail CHOIX_FICJOINT",
+        "Sortie JSON : found=true, type=4, 1 entree",
+        "Entry : ce=1, valeur contient 'IdFic', choix est vide"
+      ]
+    }
+  ]
+}

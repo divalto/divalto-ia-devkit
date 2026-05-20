@@ -1,0 +1,77 @@
+{
+  "skill": "reading-isam-files",
+  "description": "Scenarios d'evaluation de reading-isam-files.",
+  "scenarios": [
+    {
+      "id": "case-1",
+      "skills": [
+        "reading-isam-files"
+      ],
+      "query": "Lis les enregistrements zoom M4 dans le fichier a5f.dhfi et montre-moi les 5 premiers.",
+      "files": [],
+      "expected_behavior": [
+        "Utilise la structure structure_a5f_m4.json",
+        "Execute read_isam.py avec --file, --structure, --key A4, --max 5",
+        "Sortie JSON avec success=true, records=[] (5 enregistrements max), count=N",
+        "Chaque enregistrement contient les 46 champs de la structure M4"
+      ]
+    },
+    {
+      "id": "case-2",
+      "skills": [
+        "reading-isam-files"
+      ],
+      "query": "Cherche le menu FIC dans le fichier g3f.dhfi (nom logique Xmenuf, chemin Achat-Vente\\fichier\\) pour trouver les entrees du menu Fichier.",
+      "files": [],
+      "expected_behavior": [
+        "Utilise la structure structure_xmenuf_m2.json",
+        "Execute read_isam.py avec --key A2 --key-value FIC",
+        "Sortie JSON avec les enregistrements dont Reg=FIC",
+        "Arrete la lecture quand Reg change (plus FIC)"
+      ]
+    },
+    {
+      "id": "case-3",
+      "skills": [
+        "reading-isam-files"
+      ],
+      "query": "Filtre les zooms dans a5f.dhfi pour trouver celui avec ZoomNum=9490 et montre-moi seulement le libelle et le fichier.",
+      "files": [],
+      "expected_behavior": [
+        "Execute read_isam.py avec --key A4 --filter 'ZoomNum=9490' --fields 'ZoomNum,Lib,ZoomEnr,ZoomFic'",
+        "Sortie JSON avec 1 enregistrement filtre",
+        "Seuls les champs demandes sont presents dans le resultat"
+      ]
+    },
+    {
+      "id": "case-4",
+      "skills": [
+        "reading-isam-files"
+      ],
+      "query": "Fais un parcours forward complet du fichier a5f.dhfi sur la cle A4 pour verifier que le refactor R-014 tient : tu dois lire tous les enregistrements sans saturation.",
+      "files": [],
+      "expected_behavior": [
+        "Execute read_isam.py avec --file sur a5f.dhfi, --key A4, --max 10000",
+        "Utilise le mode reservation par defaut (P = Partage, pas de consommation de la table de reservations ISAM)",
+        "Retourne count = 7480 records environ (drift possible selon l'etat du fichier). Distribution attendue : Ce=4 ~2483, Ce=5 ~4577, Ce=7 ~420",
+        "Aucun warning 'ret=46 detecte (table de reservations ISAM saturee)' sur stderr",
+        "Garde-fou R-014 (2026-04-22) : un count plafonne a ~1003 indiquerait usage accidentel du mode R (ou alias invalide S) en parcours forward. Cas historique corrige par le refactor ISAM-06 (parametre `reservation=b\"P\"` par defaut)"
+      ]
+    },
+    {
+      "id": "case-5",
+      "skills": [
+        "reading-isam-files"
+      ],
+      "query": "Compare les counts forward et reverse du fichier a5f.dhfi sur la cle A4 pour verifier la parite du refactor.",
+      "files": [],
+      "expected_behavior": [
+        "Execute read_isam.py deux fois en mode reservation par defaut (P)",
+        "Forward (--key A4, --max 10000) : ~7480 records (Ce=4 + Ce=5 + Ce=7 -- la cle A4 positionne au premier Ce=4, puis remonte vers Ce=5 et Ce=7)",
+        "Reverse (--key A4, --reverse, --max 10000) : ~2483 records Ce=4 uniquement (la cle A4 delimite la plage haute en remontee, arret au changement de Ce)",
+        "Reverse avec ZoomNum 49998 en premier et 0 en dernier (ordre decroissant coherent avec R-011)",
+        "Aucun warning saturation sur stderr dans aucun des deux sens"
+      ]
+    }
+  ]
+}

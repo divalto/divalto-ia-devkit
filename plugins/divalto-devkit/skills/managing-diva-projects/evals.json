@@ -1,0 +1,57 @@
+{
+  "skill": "managing-diva-projects",
+  "description": "Scenarios d'evaluation de managing-diva-projects.",
+  "scenarios": [
+    {
+      "id": "case-1",
+      "skills": [
+        "managing-diva-projects"
+      ],
+      "query": "Cree un sous-projet pour un zoom article dans le domaine commercial (DAV). Les fichiers sources sont gtez099_sql.dhsf, gtpp099.dhsp, gtpz099.dhsp et gttq099.dhsq. Les includes necessaires sont a5pcbaslic.dhsp, a5tcchk000.dhsp, gtpc000.dhsp et gttcficsql.dhsp. Les groupes communs sont gt_base, gt_dictionnaires et gt_sql.",
+      "files": [],
+      "expected_behavior": [
+        "Genere un fichier .dhps avec en-tete xwin-sprojet       2.0",
+        "Section [general] avec date et util",
+        "Section [communs] avec 3 incl= (gt_base, gt_dictionnaires, gt_sql) avec syntaxe incl=\"nom\",\" \"",
+        "Section [fichiers] avec 4 fic= et syntaxe fic=\"nom\",\" \" (avec virgule-espace)",
+        "Section [includes] avec zdiva.dhsp en premier et 4 autres includes, syntaxe fic=\"nom\" (SANS virgule)",
+        "Section [autres] presente meme si vide",
+        "Conversion ISO-8859-1 + CRLF via writing-diva-files"
+      ]
+    },
+    {
+      "id": "case-2",
+      "skills": [
+        "managing-diva-projects"
+      ],
+      "query": "Ajoute le sous-projet 'gt_zoom article.dhps' dans le fichier divalto achat-vente.dhpt",
+      "files": [],
+      "expected_behavior": [
+        "Utilise add_to_project.py avec --dhpt et --dhps",
+        "Verifie que le .dhps n'est pas deja reference dans [sousprojets]",
+        "Ajoute fic=\"gt_zoom article.dhps\",\" \" dans [sousprojets] en ordre alphabetique",
+        "Preserve l'encodage ISO-8859-1 du .dhpt existant",
+        "Retourne JSON avec already_present=false et total_subprojects"
+      ]
+    },
+    {
+      "id": "case-3",
+      "skills": [
+        "managing-diva-projects"
+      ],
+      "query": "Valide le fichier gt_zoom article.dhps et verifie qu'il est bien reference dans le projet parent divalto achat-vente.dhpt",
+      "files": [],
+      "expected_behavior": [
+        "Utilise validate_project.py avec --path et --dhpt",
+        "Verifie P04 (en-tete xwin-sprojet, pas xwin-projet)",
+        "Verifie P06 (pas de virgule dans [includes])",
+        "Verifie P07 (virgule obligatoire dans [fichiers])",
+        "Verifie P09 (zdiva.dhsp present dans [includes])",
+        "Verifie P12 (section [autres] presente)",
+        "Verifie P08 (reference dans [sousprojets] du .dhpt parent)",
+        "Verifie P01/P02 (encodage ISO-8859-1, fins de ligne CRLF)",
+        "Retourne JSON avec valid=true/false, errors et warnings"
+      ]
+    }
+  ]
+}

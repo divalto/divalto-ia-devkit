@@ -1,0 +1,75 @@
+{
+  "erp_root": ".claude\\skills\\reviewing-erp-doc\\test_fixtures\\fixture-simple\\erp-root",
+  "context_lines": 20,
+  "entries": [
+    {
+      "entity": "OKK",
+      "yaml_path": "business.business_rules[0]",
+      "narratif": "Un OKK bloque ne peut plus etre facture. Citation: Gttmchkokk.dhop:55",
+      "citation": "Gttmchkokk.dhop:55",
+      "context_source": "",
+      "context_lines_range": null,
+      "context_error": "source_not_found"
+    },
+    {
+      "entity": "OKK",
+      "yaml_path": "business.business_rules[2]",
+      "narratif": "Les OKK dont Bloque = 0 sont rejetes automatiquement de la selection par defaut. Citation: Gttokk.dhsq:22",
+      "citation": "Gttokk.dhsq:22",
+      "context_source": "  Public Procedure LoadAllActifs\n  BeginP\n    ; Parcourt les OKK actifs (Bloque = 0)\n    Collate OKKSelect By OKK.Bloque = 0\n  EndP\n",
+      "context_lines_range": [
+        19,
+        23
+      ],
+      "context_error": null
+    },
+    {
+      "entity": "OKK",
+      "yaml_path": "business.role",
+      "narratif": "Le client OKK est l'entite pivot du module TST. Citation: Gttokk.dhsq:12",
+      "citation": "Gttokk.dhsq:12",
+      "context_source": "  Public Procedure LoadByID\n  BeginP\n    Collate OKKSelect By OKK.OKK_ID\n    ; Recherche un OKK par son identifiant\n    ; L'entite OKK est au coeur du module TST\n    ; Bloque != 0 => client inactif, a ignorer en selection par defaut\n  EndP\n",
+      "context_lines_range": [
+        11,
+        17
+      ],
+      "context_error": null
+    },
+    {
+      "entity": "OKK",
+      "yaml_path": "technical.fields[0].business_note",
+      "narratif": "Identifiant unique du client OKK. Citation: Gttokk.dhsd:15",
+      "citation": "Gttokk.dhsd:15",
+      "context_source": "Nom=OKK,Entite OKK\nTaille=120,0\nCE=Bloque,0\n[CHAMPS]\nNom=OKK_ID,1,20,1,1,1,0,0\nNom=Nom,21,40,1,1,1,0,0\nNom=Bloque,61,1,1,1,1,0,0\nNom=DateCre,62,8,1,1,1,0,0\nNom=Telephone,70,20,1,1,1,0,0\nNom=Ce1,90,4,1,1,1,0,0\nNom=Dos,74,4,1,1,1,0,0\nNom=UserCr,78,20,1,1,1,0,0\nNom=UserMo,98,20,1,1,1,0,0\n[/CHAMPS]\n[INDEX]\nNom=IdxOKK_ID,Ce1,Dos,OKK_ID\nNom=IdxNom,Ce2,Dos,Nom\nNom=IdxDateCre,Ce3,Dos,DateCre\nNom=IdxTel,Ce4,Dos,Telephone\n[/INDEX]\n",
+      "context_lines_range": [
+        5,
+        24
+      ],
+      "context_error": null
+    },
+    {
+      "entity": "OKK",
+      "yaml_path": "technical.fields[4].business_note",
+      "narratif": "Drapeau annulation, source: Gttokk.dhsd:99",
+      "citation": "Gttokk.dhsd:99",
+      "context_source": "",
+      "context_lines_range": [
+        89,
+        24
+      ],
+      "context_error": null
+    },
+    {
+      "entity": "OKK",
+      "yaml_path": "technical.performance_notes",
+      "narratif": "Index recommande sur (OKK_ID, Dos) pour volumetrie > 100k. Citation: Gttokk.dhsd:120",
+      "citation": "Gttokk.dhsd:120",
+      "context_source": "",
+      "context_lines_range": [
+        110,
+        24
+      ],
+      "context_error": null
+    }
+  ]
+}

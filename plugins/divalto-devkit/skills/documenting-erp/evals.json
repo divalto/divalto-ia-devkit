@@ -1,0 +1,116 @@
+{
+  "skill": "documenting-erp",
+  "description": "Scenarios couvrant les cas d'usage principaux du skill. Le module DAV est le golden de reference (5 entites, 2 audiences, Mermaid). Les scenarios 'audiences-*' et 'pdf-*' valident les ajouts post 2026-04-22 (separation externe/interne + rendu Mermaid via CDN) et gardent contre la regression reportlab ad-hoc du 2026-04-23.",
+  "scenarios": [
+    {
+      "id": "extract-cli-from-sql-schema",
+      "query": "Extraire la structure technique de l'entite CLI depuis le JSON SQL schema et produire un YAML partiel conforme au modele.",
+      "input": {
+        "entity": "CLI",
+        "module": "DAV",
+        "base": "GTFPCF",
+        "sql_schema": "{CHEMIN_SCHEMA_SQL}/columns/CLI.json",
+        "sql_indexes": "{CHEMIN_SCHEMA_SQL}/indexes/CLI.json"
+      },
+      "expected_behavior": [
+        "Execute `py scripts/extract_entity.py` avec les bons arguments",
+        "Produit un fichier {REPERTOIRE_SORTIE}/entity/CLI.partial.yaml valide YAML",
+        "Le fichier contient technical.fields avec une liste non vide",
+        "Le fichier contient technical.indexes avec une liste non vide",
+        "Les audit_fields detectes incluent UserCr, UserMo, UserCrDh, UserMoDh s'ils sont presents dans columns.json",
+        "La section business contient des placeholders [A ENRICHIR]",
+        "meta.a_verifier contient au moins 3 items"
+      ]
+    },
+    {
+      "id": "assemble-and-validate-dav-pilot",
+      "query": "Apres extraction de 2-3 entites DAV (CLI, FOU, ART), assembler le modele complet, valider, puis generer un rendu Markdown 'all couches'.",
+      "expected_behavior": [
+        "Execute assemble_model.py --module DAV -> produit module.yaml + entity/*.yaml",
+        "Execute validate_model.py --model {REPERTOIRE_SORTIE}/DAV/ -> exit 0 ou liste d'erreurs explicites",
+        "Execute render_markdown.py --layer all -> produit un .md",
+        "Le .md contient 3 sections par entite (Metier, Schema, Technique)",
+        "Le .md termine par une section 'Items [A VERIFIER]' avec au moins 1 item"
+      ]
+    },
+    {
+      "id": "render-three-layers-separately",
+      "query": "Generer 3 livrables separes (un par couche) a partir du meme modele DAV, pour 3 audiences distinctes.",
+      "expected_behavior": [
+        "Execute render_markdown.py --layer business -> DAV-business.md (court, sans tables de champs)",
+        "Execute render_markdown.py --layer schema -> DAV-schema.md (avec relations, sans champs detailles)",
+        "Execute render_markdown.py --layer technical -> DAV-technical.md (long, avec tables de champs)",
+        "Les 3 fichiers s'ouvrent proprement, chaque entite apparait dans les 3",
+        "DAV-business.md ne contient aucune table 'Champs' ni Nature DIVA",
+        "DAV-technical.md contient au moins une table 'Champs' par entite documentee"
+      ]
+    },
+    {
+      "id": "audiences-externe-vs-interne",
+      "query": "A partir du meme modele DAV assemble, produire 2 MD distincts : un pour audience externe (clients) et un pour audience interne (equipe Divalto).",
+      "expected_behavior": [
+        "Execute render_markdown.py --audience externe --output DAV.md -> produit DAV.md",
+        "Execute render_markdown.py --audience interne --output DAV.md -> produit DAV.interne.md (suffixe auto)",
+        "DAV.md (externe) ne contient aucune ref `fichier.dhsp:NNN`, aucun chemin absolu `C:/`, aucune annexe 'Sources consultees'",
+        "DAV.interne.md (interne) contient les refs `fichier.dhsp:NNN` inline dans les narratifs",
+        "DAV.interne.md se termine par '## Sources consultees (audit interne)'",
+        "MD interne est plus gros que MD externe (refs + annexe)"
+      ]
+    },
+    {
+      "id": "pdf-golden-dav-mermaid",
+      "query": "A partir de DAV.md (audience externe), produire DAV-externe.pdf via render_pdf.py avec rendu Mermaid actif.",
+      "expected_behavior": [
+        "Execute render_pdf.py --input DAV.md --output DAV-externe.pdf -> exit 0",
+        "DAV-externe.pdf pese entre 2 MB et 8 MB (Chrome headless avec typo + diagrammes Mermaid rendus)",
+        "pdftotext -layout DAV-externe.pdf ne contient PAS 'graph LR' (= diagrammes Mermaid bien rendus en SVG et non en code brut)",
+        "pdftotext ne contient PAS de 'fichier.dhsp:NNN' (audience externe -- refs elagues au niveau MD)",
+        "Nombre de pages extrait par pdfinfo est >= 15"
+      ]
+    },
+    {
+      "id": "pdf-fallback-no-mermaid",
+      "query": "En environnement offline (CDN jsdelivr inaccessible), produire un PDF sans rendu Mermaid.",
+      "expected_behavior": [
+        "Execute render_pdf.py --input DAV.md --output DAV-nomermaid.pdf --no-mermaid -> exit 0",
+        "DAV-nomermaid.pdf est produit (degradation gracieuse, pas d'echec)",
+        "pdftotext contient 'graph LR' (code source Mermaid non rendu -- comportement attendu en fallback)",
+        "Le reste du livrable (tableaux, typo, blockquotes) est rendu normalement"
+      ]
+    },
+    {
+      "id": "extract-codified-values-generic",
+      "query": "Extraire les valeurs codifiees complètes d'un module (choix multi-valeurs) en parsant le .dhfd DIVA directement, sans dependance ISAM/DLL.",
+      "expected_behavior": [
+        "Execute extract_codified_values.py --dhfd <prefix>fdmc.dhfd --partial-json <prefix>fdmc.json --output _codified_values.json",
+        "Pour DAV (gtfdmc.dhfd seul) : produit >= 800 choix_ids et >= 2500 values (golden 2026-04-23 : 880 choix_ids / 2864 values)",
+        "Multi-dhfd supporte : `--dhfd gtfdmc.dhfd --dhfd rtfdmc.dhfd --dhfd wmfdmc.dhfd` resout les choix cross-modules (ex: NATURE sur CLI DAV defini dans rtfdmc.dhfd). Premier gagne sur les doublons. Golden DAV multi : 1024 choix_ids / 3499 values / 0 non-resolue.",
+        "Summary JSON expose `choix_by_dhfd_source: {gtfdmc.dhfd: 880, wmfdmc.dhfd: 128, rtfdmc.dhfd: 16}` pour tracer l'origine",
+        "Le .json partiel prime si le choix_id y figure (preserve la couleur)",
+        "Les choix absents du .json mais presents dans le .dhfd sont completes avec {Id, Label} (sans couleur)",
+        "Les labels references i18n (style 'tbl*') sont marques `LabelReference: true` pour tracabilite",
+        "Generique : fonctionne pour n'importe quel <prefix>fdmc.dhfd (gtfdmc, ccfdmc, rtfdmc, wmfdmc, gafdmc, ...), un par module ERP",
+        "Autonomie : parseur regex sur le binaire texte, pas de dependance ISAM/DhxIsam64.dll"
+      ]
+    },
+    {
+      "id": "codified-values-in-md-pdf",
+      "query": "Apres enrichissement codified_values, le rendu DAV.md + DAV-externe.pdf affiche les valeurs au lieu de '(valeurs non extraites)'.",
+      "expected_behavior": [
+        "Apres run extract_codified_values + extract_narrative avec --choix-json enrichi + merge + render : DAV.md contient >= 100 lignes 'Valeurs :' (golden 2026-04-23 : 110)",
+        "DAV.md contient <= 2 lignes '(valeurs non extraites)' (residuel : cas choix_id dans un autre module, ex: NATURE dans rtfdmc.dhfd)",
+        "Les 8 choix avec couleur (FEU_*, STATUSBEX_*, AFFETAT_*) affichent le code couleur : `[red]`, `[orange]`, `[green]`",
+        "Les references i18n (tbl*) sont rendues visibles comme telles au lieu d'etre masquees : signale au lecteur que le label reel est dans un autre fichier"
+      ]
+    },
+    {
+      "id": "anti-regression-reportlab-adhoc",
+      "query": "Garde-fou anti-regression : aucun PDF UC-200 ne doit etre produit par un renderer externe au skill.",
+      "expected_behavior": [
+        "Aucun script `output/_md_to_pdf*.py` ou `output/*md_to_pdf*.py` n'existe (RETEX 2026-04-23 : un script reportlab ad-hoc avait produit des PDFs 40x plus petits que la reference Chrome headless)",
+        "Tous les PDFs `out/doc-erp/*.pdf` font au moins 1 MB (seuil defensif vs reportlab ad-hoc qui produit ~100 KB)",
+        "Les PDFs UC-200 sont systematiquement produits via `.claude/skills/documenting-erp/scripts/render_pdf.py`"
+      ]
+    }
+  ]
+}

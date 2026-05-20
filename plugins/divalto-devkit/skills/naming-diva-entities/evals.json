@@ -1,0 +1,58 @@
+{
+  "skill": "naming-diva-entities",
+  "description": "Scenarios d'evaluation de naming-diva-entities.",
+  "scenarios": [
+    {
+      "id": "case-1",
+      "skills": [
+        "naming-diva-entities"
+      ],
+      "query": "Calcule les tokens de nommage pour l'entite FamRglt du domaine Retail, table RtlFamRglt, champ cle RgltFam, description 'Famille de reglement'",
+      "files": [],
+      "expected_behavior": [
+        "NomVue = FamRgltRtl",
+        "fichier_rsql = rtlrsfamrglt.dhsq",
+        "fichier_zoom = rttzfamrglt_sql.dhsp",
+        "fichier_mchk = rttmchkrtlfamrglt.dhsp",
+        "RS_instance = RS_FamRgltRtl",
+        "ChkData = ChkData_RTLFAMRGLT",
+        "PREFIXRES = RTTB",
+        "collision_detected = false",
+        "Validation : 0 erreurs, 0 warnings"
+      ]
+    },
+    {
+      "id": "case-2",
+      "skills": [
+        "naming-diva-entities"
+      ],
+      "query": "Calcule les tokens de nommage pour l'entite ArtFam du domaine DAV, table GtfArtFam, champ cle ArtFam, description 'Famille article'",
+      "files": [],
+      "expected_behavior": [
+        "NomVue = ArtFamGtf",
+        "PREFIX_ = GT_",
+        "DICT = GTFDD",
+        "fichier_rsql = gtfrsartfam.dhsq",
+        "fichier_zoom = gttzartfam_sql.dhsp",
+        "fichier_mchk = gttmchkgtfartfam.dhsp",
+        "collision_detected = false",
+        "Validation : 0 erreurs, 0 warnings"
+      ]
+    },
+    {
+      "id": "case-3",
+      "skills": [
+        "naming-diva-entities"
+      ],
+      "query": "Calcule les tokens de nommage pour l'entite Cli du domaine DAV, table CLI, champ cle CliCod, description 'Client'. Utilise le NomVue par defaut et verifie la detection de collision",
+      "files": [],
+      "expected_behavior": [
+        "NomVue calcule = CliGtf",
+        "collision_detected = false (CliGtf != CLI)",
+        "Si on force --nom-vue CLI, collision_detected = true (erreur V01)",
+        "Validation sans override : 0 erreurs",
+        "Warning V05 si la table CLI ne commence pas par le prefixe DB gtf"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,114 @@
+# Analyse pre-action -- {{ request.titre }}
+
+> Genere le {{ date_iso }} | Type : {{ request.type }} | Domaine : {{ request.domaine_pressenti or 'non identifie' }} | Confiance : {{ metrics.confiance_globale }}
+
+---
+
+{% if request.type == 'feature' %}
+## Demande
+
+{% if request.acteurs %}
+- **Acteur** : {{ request.acteurs | join(', ') }}
+{% endif %}
+- **Objectif** : {{ request.resume | truncate(200) }}
+{% if request.keywords_techniques %}
+- **Keywords** : {{ request.keywords_techniques | join(', ') }}
+{% endif %}
+
+{% if request.ca_detectes %}
+**Criteres d'acceptation ({{ request.ca_detectes | length }}) :**
+
+{% for ca in request.ca_detectes %}
+{{ loop.index }}. {{ ca }}
+{% endfor %}
+{% endif %}
+{% else %}
+## Anomalie
+
+{% if request.ca_detectes and request.ca_detectes | length >= 2 %}
+{# Ticket multi-anomalies (feedback client avec N bugs) : afficher la liste explicite a la place de l'Observe/Attendu unique. #}
+{% if request.acteurs %}
+- **Acteur(s) concerne(s)** : {{ request.acteurs | join(', ') }}
+{% endif %}
+- **Contexte** : {{ request.resume | truncate(200) }}
+{% if request.keywords_techniques %}
+- **Keywords** : {{ request.keywords_techniques | join(', ') }}
+{% endif %}
+
+**Anomalies detectees ({{ request.ca_detectes | length }}) :**
+
+{% for ca in request.ca_detectes %}
+{{ loop.index }}. {{ ca }}
+{% endfor %}
+{% else %}
+{% if anomalie_reformulee.observe and not anomalie_reformulee.fallback %}
+- **Observe** : {{ anomalie_reformulee.observe }}
+{% if anomalie_reformulee.attendu %}
+- **Attendu** : {{ anomalie_reformulee.attendu }}
+{% endif %}
+{% elif anomalie_reformulee.observe %}
+- **Ticket** : {{ anomalie_reformulee.observe }}
+{% endif %}
+{% if request.message_erreur %}
+- **Declencheur UI** : `{{ request.message_erreur }}`
+{% endif %}
+{% if request.keywords_techniques %}
+- **Keywords** : {{ request.keywords_techniques | join(', ') }}
+{% endif %}
+{% endif %}
+{% endif %}
+
+---
+
+{# Chain of blame utile uniquement pour un ticket d'anomalie unique (declencheur UI).
+   Pour un ticket multi-anomalies (ca_detectes >= 2), la chain of blame n'a pas de sens
+   (un seul chemin d'appels pour N bugs = confusion). Utiliser ca_mapping a la place. #}
+{% if seeds.chain_of_blame.available and request.type == 'ticket' and (not request.ca_detectes or request.ca_detectes | length < 2) %}
+{% include 'fragments/chain_of_blame.md.j2' %}
+{% endif %}
+
+{# Plan d'action.
+   Si ca_mapping produit des entries (feature OU ticket multi-anomalies) : cartographie + piste principale.
+   Sinon : fallback sur type_4 classique (ticket avec anomalie unique). #}
+{% if seeds.ca_mapping.entries and seeds.ca_mapping.entries | length > 0 %}
+## Plan d'action
+
+{% include 'fragments/ca_mapping.md.j2' %}
+{% if seeds.type_4.propositions and seeds.type_4.propositions | length > 0 %}
+### Piste principale a ouvrir
+
+[{{ seeds.type_4.propositions[0].file }}:{{ seeds.type_4.propositions[0].line }}]({{ seeds.type_4.propositions[0].file_uri }}) (`{{ seeds.type_4.propositions[0].enclosing or seeds.type_4.propositions[0].title }}`) -- {{ seeds.type_4.propositions[0].hypothese }}
+
+```bash
+{{ seeds.type_4.propositions[0].next_uc }}
+```
+
+{% endif %}
+---
+{% else %}
+{% include 'fragments/type_4_endroit_agir.md.j2' %}
+{% endif %}
+
+{# Reference metier (T7) = table Ce4 etc. #}
+{% include 'fragments/type_7_constantes_metier.md.j2' %}
+
+{# Parametrage dossier (T8) si pertinent. #}
+{% if (seeds.type_8.triggers_hit | length) > 0 %}
+{% include 'fragments/type_8_parametrage_dossier.md.j2' %}
+{% endif %}
+
+{# Annexes repliables : code source (T1), sites de propagation (T3), pistes (T5). #}
+{% include 'fragments/type_1_exemples.md.j2' %}
+{% include 'fragments/type_3_etude_impact.md.j2' %}
+{% include 'fragments/type_5_pistes.md.j2' %}
+
+{# T2 (fonctions langage) uniquement si selectionne par le catalog (omis sur ticket). #}
+{% if types_included_ids and 'T2' in types_included_ids %}
+{% include 'fragments/type_2_fonctions_langage.md.j2' %}
+{% endif %}
+{# T6 (attention) a ses propres conditions internes (omis si pas de surcharge). #}
+{% include 'fragments/type_6_attention.md.j2' %}
+
+---
+
+_Donnees techniques du pipeline (selection des types, sources consultees, metriques) : voir le JSON parallele `{{ metrics_json_path }}`._

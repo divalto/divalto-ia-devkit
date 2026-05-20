@@ -1,0 +1,50 @@
+{% set props = seeds.type_4.propositions %}
+{% set verifs = seeds.type_10.verifications %}
+{% if props | length > 0 or verifs | length > 0 %}
+## Plan d'action
+
+{% if seeds.chain_of_blame.action_const %}
+**Etape principale** -- identifier le listener qui consomme `{{ seeds.chain_of_blame.action_const }}` (probablement le site qui bascule l'etat observe) :
+
+```bash
+rg -n "\b{{ seeds.chain_of_blame.action_const }}\b" "<ERP>"
+```
+
+> **Attendu :** 1 a 3 fichiers avec un handler / event consumer. Chercher dans chacun une affectation de type `ENT.$champ = '$valeur'` sans garde conditionnelle preservant l'etat initial.
+{% elif props and props[0].hypothese %}
+**Piste principale** : [{{ props[0].file }}:{{ props[0].line }}]({{ props[0].file_uri }}){% if props[0].enclosing %} (`{{ props[0].enclosing }}`){% endif %}.
+
+> **Hypothese :** {{ props[0].hypothese }}
+
+```bash
+{{ props[0].next_uc }}
+```
+{% endif %}
+
+{% set shown_verifs = [] %}
+{% for v in verifs %}
+{% if seeds.chain_of_blame.action_const and seeds.chain_of_blame.action_const in v.command %}
+{% elif 'gtfdd.dhsd' in v.command and seeds.type_8.triggers_hit | length > 0 %}
+{% else %}
+{% if shown_verifs.append(v) %}{% endif %}
+{% endif %}
+{% endfor %}
+{% if shown_verifs | length > 0 %}
+**Verifications complementaires** :
+{% for v in shown_verifs %}
+- {{ v.intent }} :
+  ```bash
+  {{ v.command }}
+  ```
+{% endfor %}
+{% endif %}
+
+{% if seeds.type_4.related_tickets %}
+**Tickets lies** (extraits des commits SVN recents sur les fichiers consultes) :
+{% for t in seeds.type_4.related_tickets %}
+- `{{ t.type }} #{{ t.number }}` (r{{ t.rev }} sur `{{ t.file }}`)
+{% endfor %}
+{% endif %}
+
+---
+{% endif %}

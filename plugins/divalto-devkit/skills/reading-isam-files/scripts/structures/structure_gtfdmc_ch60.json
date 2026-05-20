@@ -1,0 +1,94 @@
+{
+    "Dictionnaire": "rnfdd.dhsd",
+    "Table": "ch60",
+    "Base": "gtfdmc",
+    "PhysicalFile": "gtfdmc.dhfi",
+    "PhysicalPath": "<module>\\fichier\\",
+    "TailleEnreg": 420,
+    "Keys": {
+        "Index_A": {
+            "Letter": "A",
+            "Fields": [
+                "Ce",
+                "Nc"
+            ]
+        }
+    },
+    "Structure": [
+        {
+            "Nom": "Ce",
+            "Offset": 0,
+            "Taille": 1,
+            "Description": "Code enreg multichoix : 1 ou 2"
+        },
+        {
+            "Nom": "Nc",
+            "Offset": 1,
+            "Taille": 16,
+            "Description": "Nom du multichoix (ex: TPSTYP_3, NONOUI)"
+        },
+        {
+            "Nom": "Type",
+            "Offset": 17,
+            "Taille": 1,
+            "Description": "Type du multichoix"
+        },
+        {
+            "Nom": "choix_enreg",
+            "Offset": 18,
+            "Taille": 32,
+            "Description": "Nom d'enreg (sous-champ de choix)"
+        },
+        {
+            "Nom": "choix_donnee",
+            "Offset": 50,
+            "Taille": 32,
+            "Description": "Nom du champ (sous-champ de choix)"
+        },
+        {
+            "Nom": "choix_prefixe",
+            "Offset": 82,
+            "Taille": 32,
+            "Description": "Prefixe (sous-champ de choix)"
+        },
+        {
+            "Nom": "choix_ideb",
+            "Offset": 114,
+            "Taille": 4,
+            "Type": "N",
+            "Description": "Indice debut"
+        },
+        {
+            "Nom": "choix_ifin",
+            "Offset": 118,
+            "Taille": 4,
+            "Type": "N",
+            "Description": "Indice fin"
+        },
+        {
+            "Nom": "modbitmap",
+            "Offset": 122,
+            "Taille": 1,
+            "Description": "Mode bitmap ?"
+        },
+        {
+            "Nom": "datemc",
+            "Offset": 123,
+            "Taille": 8,
+            "Description": "Date (binaire 8 octets)",
+            "Type": "B"
+        },
+        {
+            "Nom": "valeur",
+            "Offset": 131,
+            "Taille": 80,
+            "Description": "Valeur (texte du choix)"
+        },
+        {
+            "Nom": "Noms",
+            "Offset": 211,
+            "Taille": 80,
+            "Description": "Noms"
+        }
+    ]
+}

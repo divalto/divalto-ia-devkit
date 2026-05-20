@@ -1,0 +1,12 @@
+{% set fns = seeds.type_2.functions_seeded %}
+{% if fns | length > 0 %}
+## Fonctions du langage DIVA utiles
+
+| Fonction | Usage X.13 |
+|----------|------------|
+{% for fn in fns %}
+| `{{ fn.name }}` | `{{ fn.usage_file }}:{{ fn.usage_line }}` |
+{% endfor %}
+
+---
+{% endif %}

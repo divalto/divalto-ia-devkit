@@ -1,0 +1,33 @@
+{
+  "skill": "creating-diva-entity",
+  "description": "Scenarios d'evaluation de creating-diva-entity.",
+  "scenarios": [
+    {
+      "name": "Retail FamRglt — entite Retail complete",
+      "input": "Cree l'entite complete FamRglt du domaine Retail (table RtlFamRglt, champ cle RgltFam, description 'Famille de reglement').",
+      "expected": {
+        "command": "py .claude/skills/creating-diva-entity/scripts/orchestrate.py --domaine Retail --entite FamRglt --table RtlFamRglt --champ-cle RgltFam --description \"Famille de reglement\" --output-dir output/eval1",
+        "files_generated": 5,
+        "validation": "success=true, cross_validate 0 errors"
+      }
+    },
+    {
+      "name": "DAV ArtFam — entite DAV",
+      "input": "Cree l'entite complete ArtFam du domaine DAV (table DavArtFam, champ cle ArtFam, description 'Famille articles DAV').",
+      "expected": {
+        "command": "py .claude/skills/creating-diva-entity/scripts/orchestrate.py --domaine DAV --entite ArtFam --table DavArtFam --champ-cle ArtFam --description \"Famille articles DAV\" --output-dir output/eval2",
+        "files_generated": 5,
+        "validation": "success=true, cross_validate 0 errors"
+      }
+    },
+    {
+      "name": "DAV Cli — entite courte domaine GG_",
+      "input": "Cree l'entite complete Cli du domaine DAV (table DavCli, champ cle Cli, description 'Client DAV').",
+      "expected": {
+        "command": "py .claude/skills/creating-diva-entity/scripts/orchestrate.py --domaine DAV --entite Cli --table DavCli --champ-cle Cli --description \"Client DAV\" --output-dir output/eval3",
+        "files_generated": 5,
+        "validation": "success=true, cross_validate 0 errors"
+      }
+    }
+  ]
+}

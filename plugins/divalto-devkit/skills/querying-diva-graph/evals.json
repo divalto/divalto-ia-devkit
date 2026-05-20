@@ -1,0 +1,76 @@
+{
+  "skill": "querying-diva-graph",
+  "description": "Scenarios de validation du generateur/consolidateur Neo4j.",
+  "scenarios": [
+    {
+      "id": "generate-feature-reglement",
+      "description": "Generation de requetes pour une feature Retail sur RTFTAB.",
+      "mode": "generate",
+      "input_request": {
+        "type": "feature",
+        "titre": "Famille reglement",
+        "resume": "En tant que gestionnaire reglement, je veux...",
+        "acteurs": ["gestionnaire reglement"],
+        "donnees": ["RTFTAB", "FamRglt"],
+        "domaine_pressenti": "RT_",
+        "keywords_techniques": ["FamRglt"],
+        "keywords_metier": ["famille", "reglement"],
+        "ca_detectes": [],
+        "message_erreur": null,
+        "needs_clarification": false
+      },
+      "expected": {
+        "queries_count_min": 3,
+        "templates_present": ["by_module", "accesses_table", "similar_entity"],
+        "disclaimers_contain": "Snapshot X.12"
+      }
+    },
+    {
+      "id": "consolidate-ok",
+      "description": "Consolidation de resultats Neo4j mocks.",
+      "mode": "consolidate",
+      "input_request": {
+        "type": "feature", "titre": "x", "resume": "x",
+        "acteurs": [], "donnees": ["RTFTAB"],
+        "domaine_pressenti": "RT_",
+        "keywords_techniques": [], "keywords_metier": [],
+        "ca_detectes": [], "message_erreur": null,
+        "needs_clarification": false
+      },
+      "input_results": {
+        "by_module:RT_": [{"name": "rttzfamrglt_sql", "domain": "Retail"}],
+        "accesses_table:RTFTAB": [{"name": "rttzfamrglt_sql", "domain": "Retail"}]
+      },
+      "expected": {
+        "neo4j_status": "ok",
+        "programs_count": 1,
+        "tables_count": 1,
+        "all_entries_marked_x12": true
+      }
+    },
+    {
+      "id": "neo4j-indispo",
+      "description": "Degradation gracieuse quand diva-mcp est inaccessible.",
+      "mode": "consolidate",
+      "input_request": {
+        "type": "feature", "titre": "x", "resume": "x",
+        "acteurs": [], "donnees": [],
+        "domaine_pressenti": null,
+        "keywords_techniques": [], "keywords_metier": [],
+        "ca_detectes": [], "message_erreur": null,
+        "needs_clarification": false
+      },
+      "neo4j_status": "unavailable",
+      "expected": {
+        "neo4j_status": "unavailable",
+        "programs_count": 0,
+        "disclaimers_contain": "Neo4j inaccessible"
+      }
+    }
+  ],
+  "execution": {
+    "command_generate": "py .claude/skills/querying-diva-graph/scripts/query_neo4j.py --mode generate --request request.json",
+    "command_consolidate": "py .claude/skills/querying-diva-graph/scripts/query_neo4j.py --mode consolidate --request request.json --results results.json",
+    "command_unavailable": "py .claude/skills/querying-diva-graph/scripts/query_neo4j.py --mode consolidate --request request.json --neo4j-status unavailable"
+  }
+}

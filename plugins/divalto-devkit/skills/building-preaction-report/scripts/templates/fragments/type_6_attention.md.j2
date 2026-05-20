@@ -1,0 +1,12 @@
+{% set overs = seeds.type_6.overwrites %}
+{% if overs | length > 0 %}
+## Points d'attention
+
+### Surcharges / Points d'extension detectes ({{ overs | length }})
+
+{% for o in overs %}
+- Pattern `{{ o.pattern }}` dans `{{ o.file }}`{% if o.context %} ({{ o.context | replace('\t', ' ') | replace('\n', ' ') | trim }}){% endif %}{{ '\n' }}
+{% endfor %}
+
+---
+{% endif %}

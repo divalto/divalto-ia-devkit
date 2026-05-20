@@ -1,0 +1,24 @@
+; Gttokk.dhsq -- RecordSql fictif pour l'entite OKK
+; Fixture de test pour reviewing-erp-doc / detect_misalign (E2)
+;
+Record RecordSql Public OKKSelect
+  Public ExpressionSQL
+    Fields OKK.OKK_ID, OKK.Nom, OKK.Bloque
+    From OKK
+    Where Dos = MZ.Dos
+  EndX
+
+  Public Procedure LoadByID
+  BeginP
+    Collate OKKSelect By OKK.OKK_ID
+    ; Recherche un OKK par son identifiant
+    ; L'entite OKK est au coeur du module TST
+    ; Bloque != 0 => client inactif, a ignorer en selection par defaut
+  EndP
+
+  Public Procedure LoadAllActifs
+  BeginP
+    ; Parcourt les OKK actifs (Bloque = 0)
+    Collate OKKSelect By OKK.Bloque = 0
+  EndP
+EndRec

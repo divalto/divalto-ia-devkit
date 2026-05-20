@@ -1,0 +1,72 @@
+{
+  "_skeleton_name": "zoom-piece-53",
+  "_description": "Zoom piece exhaustif : pattern X.12 a 53 tables, 168 RSQL. Tables canoniques : MOUV, ART, CLI, FOU, ENT, MVTL, VRP, DEPO, TAR, DEV + 43 autres.",
+  "_source_x13": "LignePDP dans gtrspdp.dhsq (53 tables). Pour copie exhaustive, extraire FROM/WHERE de ce fichier source.",
+  "_signature_nb_tables": 53,
+  "_note": "Squelette avec 8 jointures canoniques. Le pattern complet X.13 en utilise 53 mais la majorite sont des lookups T006/T007/T017/T020 repetitifs ou tables tres specialisees. Ce squelette capture le noyau semantique.",
+  "joined_tables": [
+    {
+      "table_sql": "ART",
+      "alias": "ART",
+      "join_type": "left_join",
+      "join_condition": "ART.Dos = MZ.Dos AND ART.ArtCod = {MAIN}.ArtCod",
+      "columns_selected": ["ART.ArtLib"]
+    },
+    {
+      "table_sql": "CLI",
+      "alias": "CLI",
+      "join_type": "left_join",
+      "join_condition": "CLI.Dos = MZ.Dos AND CLI.CliCod = {MAIN}.CliCod",
+      "columns_selected": ["CLI.CliLib"]
+    },
+    {
+      "table_sql": "FOU",
+      "alias": "FOU",
+      "join_type": "left_join",
+      "join_condition": "FOU.Dos = MZ.Dos AND FOU.FouCod = {MAIN}.FouCod",
+      "columns_selected": ["FOU.FouLib"]
+    },
+    {
+      "table_sql": "ENT",
+      "alias": "ENT",
+      "join_type": "implicit",
+      "join_condition": "ENT.Dos = MZ.Dos AND ENT.NumPce = {MAIN}.NumPce",
+      "columns_selected": ["ENT.DatePce", "ENT.MntHT"]
+    },
+    {
+      "table_sql": "DEPO",
+      "alias": "DEPO",
+      "join_type": "left_join",
+      "join_condition": "DEPO.Dos = MZ.Dos AND DEPO.DepoCod = {MAIN}.DepoCod",
+      "columns_selected": ["DEPO.DepoLib"]
+    },
+    {
+      "table_sql": "VRP",
+      "alias": "VRP",
+      "join_type": "left_join",
+      "join_condition": "VRP.Dos = MZ.Dos AND VRP.VrpCod = {MAIN}.VrpCod",
+      "columns_selected": ["VRP.VrpLib"]
+    },
+    {
+      "table_sql": "DEV",
+      "alias": "DEV",
+      "join_type": "left_join",
+      "join_condition": "DEV.Dos = MZ.Dos AND DEV.DevCod = {MAIN}.DevCod",
+      "columns_selected": ["DEV.DevLib"]
+    },
+    {
+      "table_sql": "T007",
+      "alias": "T007",
+      "join_type": "left_join",
+      "join_condition": "T007.Dos = MZ.Dos AND T007.Code = {MAIN}.TypePce",
+      "columns_selected": ["T007.Lib"]
+    }
+  ],
+  "additional_cases": [
+    {"name": "Equal_ArtCod", "field": "ArtCod", "type": "equal", "param": "char"},
+    {"name": "Equal_CliCod", "field": "CliCod", "type": "equal", "param": "char"},
+    {"name": "Equal_NumPce", "field": "NumPce", "type": "equal", "param": "char"},
+    {"name": "Between_DatePce", "field": "DatePce", "type": "between", "param": "date"},
+    {"name": "Like_Ref", "field": "Ref", "type": "like", "param": "char"}
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "skill": "analyzing-diva-request",
+  "description": "Scenarios end-to-end de l'orchestrateur d'analyse pre-action.",
+  "scenarios": [
+    {
+      "id": "feature-famille-reglement",
+      "description": "User story Retail complete -> rapport confiance forte.",
+      "input_text": "En tant que gestionnaire reglement, je veux saisir la famille de reglement sur la fiche client, afin de regrouper les reglements par famille.\n\nCriteres d'acceptation :\n- Le zoom famille reglement est accessible depuis le menu Retail\n- La saisie de la famille est obligatoire sur la fiche client\n- La suppression d'une famille est bloquee si des reglements existent",
+      "expected": {
+        "cp1_comprehension": {"type": "feature", "domaine": "RT_", "ca_count": 3},
+        "cp3_candidats_min": 1,
+        "cp4_confirmed_min": 2,
+        "cp5_report_sections": 7,
+        "confiance_globale_at_least": "moyenne"
+      }
+    },
+    {
+      "id": "ticket-myservice-anomalie",
+      "description": "Ticket anomalie avec message d'erreur entre quotes.",
+      "input_text": "Ticket myService #45678 : le zoom article affiche l'erreur \"Fichier LIVRE non trouve\" lors de la creation d'une nouvelle fiche. L'anomalie se produit systematiquement en mode Creation depuis le menu Achat-Vente.",
+      "expected": {
+        "cp1_comprehension": {"type": "ticket", "domaine": "GT_",
+                              "message_erreur_contains": "Fichier LIVRE"},
+        "cp3_candidats_min": 1,
+        "cp5_report_sections": 7
+      }
+    },
+    {
+      "id": "neo4j-indispo",
+      "description": "MCP diva-mcp non disponible -> mode direct avec couverture absente.",
+      "input_text": "En tant que developpeur, je veux ajouter un champ 'Libelle Long' de 60 caracteres sur la table RTFTAB, afin d'avoir un libelle plus descriptif.\n\nCriteres d'acceptation :\n- Le champ est disponible sur la fiche\n- La migration SQL est compatible",
+      "mcp_mode": "unavailable",
+      "expected": {
+        "cp3_neo4j_status": "unavailable",
+        "cp5_report_sections": 7,
+        "couverture_neo4j": "absente",
+        "report_contains": "Couverture Neo4j : absente"
+      }
+    }
+  ],
+  "execution": {
+    "command_note": "Cet orchestrateur est LLM-driven. Les scenarios sont executes via la conversation Claude avec les 5 CP."
+  }
+}

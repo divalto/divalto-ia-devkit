@@ -1,0 +1,56 @@
+{
+  "category": "E2",
+  "generated_at": "2026-04-22T18:40:00+00:00",
+  "items": [
+    {
+      "entity": "OKK",
+      "severity": "info",
+      "title": "Source citee introuvable",
+      "yaml_path": "business.business_rules[0]",
+      "excerpt_deliverable": "Un OKK bloque ne peut plus etre facture.",
+      "excerpt_source": "<source_not_found>",
+      "source_ref": "Gttmchkokk.dhop:55",
+      "challenge": "Le fichier cite est introuvable sous erp-root. Impossible de verifier l'alignement narratif/source. A confirmer que la citation pointe un fichier existant."
+    },
+    {
+      "entity": "OKK",
+      "severity": "warning",
+      "title": "Desalignement narratif vs source (inversion logique)",
+      "yaml_path": "business.business_rules[2]",
+      "excerpt_deliverable": "Les OKK dont Bloque = 0 sont rejetes automatiquement de la selection par defaut.",
+      "excerpt_source": "; Parcourt les OKK actifs (Bloque = 0) / Collate OKKSelect By OKK.Bloque = 0",
+      "source_ref": "Gttokk.dhsq:22",
+      "challenge": "Inversion : la source selectionne les OKK avec Bloque=0 comme actifs (commentaire et Collate explicites 'LoadAllActifs'), le narratif affirme qu'ils sont rejetes."
+    },
+    {
+      "entity": "OKK",
+      "severity": "info",
+      "title": "Paraphrase deductive a confirmer (contexte .dhsd structurel)",
+      "yaml_path": "technical.fields[0].business_note",
+      "excerpt_deliverable": "Identifiant unique du client OKK.",
+      "excerpt_source": "[CHAMPS] Nom=OKK_ID,1,20,... (+ [INDEX] Nom=IdxOKK_ID,Ce1,Dos,OKK_ID)",
+      "source_ref": "Gttokk.dhsd:15",
+      "challenge": "Le contexte cite est la declaration .dhsd du champ OKK_ID. La qualification 'identifiant unique' est plausible (nom suffixe _ID + index dedie) mais n'est pas explicitement sourcee dans les lignes citees. A renforcer par une reference au mchk ou un marquage metier."
+    },
+    {
+      "entity": "OKK",
+      "severity": "info",
+      "title": "Contexte source insuffisant pour evaluation E2",
+      "yaml_path": "technical.fields[4].business_note",
+      "excerpt_deliverable": "Drapeau annulation, source: Gttokk.dhsd:99",
+      "excerpt_source": "<contexte vide : ligne au-dela du fichier source>",
+      "source_ref": "Gttokk.dhsd:99",
+      "challenge": "La ligne citee (99) est au-dela de la fin du fichier source (~23 lignes). Citation probablement incorrecte -- a verifier."
+    },
+    {
+      "entity": "OKK",
+      "severity": "info",
+      "title": "Contexte source insuffisant pour evaluation E2",
+      "yaml_path": "technical.performance_notes",
+      "excerpt_deliverable": "Index recommande sur (OKK_ID, Dos) pour volumetrie > 100k.",
+      "excerpt_source": "<contexte vide : ligne au-dela du fichier source>",
+      "source_ref": "Gttokk.dhsd:120",
+      "challenge": "La ligne citee (120) est au-dela de la fin du fichier source (~23 lignes). Citation probablement incorrecte -- a verifier."
+    }
+  ]
+}

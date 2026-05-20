@@ -1,0 +1,12 @@
+{
+  "name": "divalto",
+  "description": "Divalto's internal Claude Code marketplace — plugins, skills and agents for our Divalto Partners.",
+  "owner": { "name": "Divalto" },
+  "plugins": [
+    {
+      "name": "divalto-devkit",
+      "source": "./plugins/divalto-devkit",
+      "description": "Mandatory technical foundation for Divalto Harmony. Diva coding integrators."
+    }
+  ]
+}

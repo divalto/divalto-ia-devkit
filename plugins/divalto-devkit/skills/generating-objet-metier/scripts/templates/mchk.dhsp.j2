@@ -1,0 +1,780 @@
+;>xdiva
+SetModuleInfo('$Id: {{ fichier_mchk }} 1 {{ date }} user $')
+;*
+;*		Module fonctions et procedures de controle objet tables {{ Description }}
+;*
+;@!<ZETA
+;
+;@!>
+
+OverWrittenBy "{{ overwrittenby_mchk }}"
+
+; declaration constantes communes
+Include   "a5tczoom.dhsp"
+include 	"{{ domaine_2l }}tcficsql.dhsp"
+include  "gttcdav000.dhsp"
+include  "a5tcchk000.dhsp"
+;; declaration modules
+Module	"A5PM000.dhop"
+Module 	"A5PMCHK000.dhop"
+Module	"{{ domaine_2l }}pmficsql.dhop"
+Module   "{{ domaine_2l }}tmchk000.dhop"
+{% for fk in fks %}{% if fk.module_dhop %}Module   "{{ fk.module_dhop }}"
+{% endif %}{% endfor %}
+
+
+
+; declaration variables publiques
+
+Shared   Record '{{ DICT }}.dhsd'	{{ table_minuscule }} {{ table_minuscule }}_INIT
+
+
+; declaration constantes
+
+
+; declarations variables globales
+
+Record 'a5dd.dhsd'   A5ChkData   ChkData_{{ TABLE_MAJUSCULE }}
+{% if has_libelle %}Define	{{ TABLE_MAJUSCULE }}_FieldNames_Min   = '{{ CHAMPCLE }};{{ ChampLibelleMaj }}'
+{% else %}Define	{{ TABLE_MAJUSCULE }}_FieldNames_Min   = '{{ CHAMPCLE }}'
+{% endif %}
+1  FieldNames_Min	S = {{ TABLE_MAJUSCULE }}_FieldNames_Min
+
+Declaration_{{ NomVue }}	RS_{{ NomVue }}		;instance globale objet {{ Description }}
+
+
+;1	Nom_Entite	S
+
+;*
+; * proto
+;*
+Proto function int Initialize_{{ TABLE_MAJUSCULE }}_New(&{{ TABLE_MAJUSCULE }})
+Record {{ DICT }}.dhsd {{ TABLE_MAJUSCULE }} {{ TABLE_MAJUSCULE }}
+EndProto
+;*
+Function int Init_Module
+; Permet d'initialiser des variables globales et permanentes au chargement du module
+
+beginF
+	Init_Module_DAV				 											;pour forcer les initialisations generales necessaires au module
+	ChkData_{{ TABLE_MAJUSCULE }}={{ PREFIX_ }}Get_CheckObject_Data(RS_{{ NOMVUE_MAJUSCULE }}	)
+	ChkData_{{ TABLE_MAJUSCULE }}.ImportTableurFl = OUI
+	;Nom_Entite = A5_Get_CheckObject_Name (RS_{{ NomVue }})			;nom pour message erreur exists
+	Initialize_{{ table_minuscule }}_New({{ table_minuscule }}_INIT)						;initialisation enreg de reference pour connaitre les valeurs par defaut dans le PostFetch
+	FReturn(0)
+endF
+
+1	InitModule 1,0 = Init_Module()
+;*
+public function char Get_{{ TABLE_MAJUSCULE }}_ChkData()
+;STATIC CALL
+;retourne les proprietes de l'objet metier
+beginf
+	FReturn (ChkData_{{ TABLE_MAJUSCULE }})
+endf
+
+;*
+public procedure Get_{{ TABLE_MAJUSCULE }}_FieldProperties(FieldCod,&ExtProp)
+;donne les proprietes metier au champ FieldCod. Les valeurs par defaut sont deja positionnees
+1	FieldCod					>A5DD.dhsd FieldCod
+Record	A5DD.dhsd	A5ChkFieldExt ExtProp
+beginP
+	SwitchString FieldCod
+		case "DOS"					| ExtProp.FieldIsKey = true	| ExtProp.FieldIsMandatory = true 	| ExtProp.FieldRank = 1
+		case "{{ CHAMPCLE }}"				| ExtProp.FieldIsKey = true	| ExtProp.FieldIsMandatory = true	| ExtProp.FieldRank = 2
+{% if has_libelle %}		case "{{ ChampLibelleMaj }}"														| ExtProp.FieldIsMandatory = true	| ExtProp.FieldRank = 2
+{% endif %}
+
+	endswitch
+
+endP
+
+;*
+public function int Set_{{ TABLE_MAJUSCULE }}_Cache_Mode(activer,mode)
+;active ou desactive le mode cache sur fonction Load et Give
+1   activer        1,0         ; true/false. True active le cache pour le mode
+1   mode           1,0 = 1     ;1=mode cache pour lecture Allcolumns seulement, 2=mode cache pour lecture sans Allcolumns, 3=mode cache pour les 2
+beginF
+	FReturn(A5Chk_CacheMode_Set(ChkData_{{ TABLE_MAJUSCULE }},activer,mode))
+endF
+;*
+public function int Put_{{ TABLE_MAJUSCULE }}_Cache_Data({{ TABLE_MAJUSCULE }},allcolumns)
+;place l'enregistrement d'entree dans le cache, selon le mode 'allcolumns'
+Record {{ DICT }}.dhsd	{{ TABLE_MAJUSCULE }}	{{ TABLE_MAJUSCULE }}
+1   allcolumns     1,0                  ;indique si l'enreg est complet (allcolumns=true) ou pas
+beginF
+	FReturn(A5Chk_CacheMode_Add(ChkData_{{ TABLE_MAJUSCULE }},allcolumns,{{ TABLE_MAJUSCULE }}))
+endF
+
+;*
+Public Function Int Seek_{{ NomVue }}(&{{ NomVue }}, {{ ChampCle_lower }})	; Recherche
+; Renvoie :	0	ok
+;				1	enregistrement non trouve
+Declaration_{{ NomVue }}
+1		{{ ChampCle_lower }}				>{{ DICT }}.dhsd {{ ChampCle }}
+
+Beginf
+	{{ PREFIX_ }}DeactivateJoin({{ NomVue }})
+	{{ PREFIX_ }}Clearallcondition({{ NOMVUE_MAJUSCULE }})
+
+	{{ NomVue }}.Where.PK({{ ChampCle_lower }})
+	{{ NOMVUE_MAJUSCULE }}.where.addcondition('PK')
+
+	FReturn( {{ PREFIX_ }}Select_recordSql({{ NomVue }}) )
+Endf
+
+;*
+
+;*
+;*
+;* Methodes d'exposition champs {{ Description }}
+;*
+;*
+
+;*
+Public function char Get_{{ table_minuscule }}_Record
+;retourne le record entier de l'instance courante de {{ Description }}
+
+beginf
+
+	FReturn(RS_{{ NomVue }}.{{ table_minuscule }})
+
+endf
+
+{% if has_libelle %};*
+Public function char Get_{{ TABLE_MAJUSCULE }}_Lib
+;retourne le champ libelle de l'instance courante de {{ TABLE_MAJUSCULE }}
+beginf
+	FReturn(RS_{{ NOMVUE_MAJUSCULE }}.{{ ChampLibelle }})
+endf
+{% endif %}
+;*
+public function char GET_{{ TABLE_MAJUSCULE }}_INIT_Record
+;retourne le record avec les donnees initiales
+beginf
+	freturn({{ TABLE_MAJUSCULE }}_init)
+endf
+;*
+public procedure Set_{{ TABLE_MAJUSCULE }}_init_record({{ TABLE_MAJUSCULE }})
+;remplace le record contenant les donnees initiales
+Record {{ DICT }}.DHSD {{ TABLE_MAJUSCULE }} {{ TABLE_MAJUSCULE }}
+beginp
+	{{ TABLE_MAJUSCULE }}_init = {{ TABLE_MAJUSCULE }}
+endp
+;*
+Public function char Get_{{ table_minuscule }}_Reservation (&{{ table_minuscule }})
+;retourne la chaine de reservation de l'instance courante
+Record {{ DICT }}.dhsd {{ table_minuscule }}	{{ table_minuscule }}
+
+1	chres	  S
+1	Dos		>{{ DICT }}.dhsd	Dos
+beginf
+	chres = [ Formater_Res('{{ PREFIXRES }}') Mz.dos  {{ table_minuscule }}.{{ ChampCle }} ]
+	FReturn(chRes)
+endf
+
+;*
+Public function char Get_{{ table_minuscule }}_Key (&{{ table_minuscule }})
+;retourne une chaine qui concatene les champs qui constituent la cle primaire
+Record {{ DICT }}.dhsd {{ table_minuscule }}	{{ table_minuscule }}
+
+beginf
+	FReturn([{{ table_minuscule }}.Dos {{ table_minuscule }}.{{ ChampCle }}])
+endf
+;*
+Public Function char Get_{{ TABLE_MAJUSCULE }}_FieldNames_Min()
+;champs du select au minimum
+beginf
+	freturn (FieldNames_Min)
+endf
+;*
+Public Procedure Stack_{{ TABLE_MAJUSCULE }}_FieldNames_Min(fieldName)
+;ajout d'une colonne aux champs minimum par son nom de champ. Faire appel au reset pour retrouver l'etat initial
+1  fieldName         S
+beginp
+	{{ PREFIX_ }}Stack_FieldNames_Min(fieldName,FieldNames_Min)
+endp
+;*
+Public Procedure Reset_{{ TABLE_MAJUSCULE }}_FieldNames_Min()
+;champs du select au minimum
+1  chaine     S
+beginp
+	FieldNames_Min = {{ TABLE_MAJUSCULE }}_FieldNames_Min
+endp
+;*
+Public Function char Get_{{ TABLE_MAJUSCULE }}_FieldNames_All()
+;champs du select de toute la table
+beginf
+	freturn ("{{ TABLE_MAJUSCULE }}.$ALL")
+endf
+;*
+
+
+;*
+;*
+;* Methodes de recherche et controle pour {{ Description }}
+;*
+function int SeekAndLoad_{{ TABLE_MAJUSCULE }}(&{{ NOMVUE_MAJUSCULE }},{{ ChampCle }},allcolumns)
+Declaration_{{ NOMVUE_MAJUSCULE }}
+Record {{ DICT }}.dhsd {{ TABLE_MAJUSCULE }}  {{ TABLE_MAJUSCULE }}_Seek
+1     {{ ChampCle }}             >{{ DICT }}.dhsd {{ ChampCle }}
+1     allcolumns     1,0 = false
+1     ret            1,0
+beginf
+
+	if A5Chk_CacheMode_Active(ChkData_{{ TABLE_MAJUSCULE }}, allcolumns)
+	; key pour le listseek
+		{{ TABLE_MAJUSCULE }}_Seek.Dos     = MZ.dos
+		{{ TABLE_MAJUSCULE }}_Seek.{{ ChampCle }} = {{ ChampCle }}
+		if A5Chk_CacheMode_Seek(ChkData_{{ TABLE_MAJUSCULE }}, allcolumns, {{ TABLE_MAJUSCULE }}_Seek, {{ NOMVUE_MAJUSCULE }}.{{ TABLE_MAJUSCULE }})
+			freturn(0)
+		endif
+	endif
+	{{ PREFIX_ }}Check_ActivateColumns(ChkData_{{ TABLE_MAJUSCULE }},{{ NOMVUE_MAJUSCULE }},allcolumns,Condition(allcolumns,Get_{{ TABLE_MAJUSCULE }}_FieldNames_All,Get_{{ TABLE_MAJUSCULE }}_FieldNames_Min))
+	ret = Seek_{{ NOMVUE_MAJUSCULE }}({{ NOMVUE_MAJUSCULE }},{{ ChampCle }})
+	if ret = 0
+		A5Chk_CacheMode_Insert(ChkData_{{ TABLE_MAJUSCULE }}, allcolumns, {{ NOMVUE_MAJUSCULE }}.{{ TABLE_MAJUSCULE }})
+	else
+		{{ NOMVUE_MAJUSCULE }}.Init()
+	endif
+	FReturn(ret)
+endf
+;*
+Public function int Load_{{ TABLE_MAJUSCULE }}_Record(&{{ NOMVUE_MAJUSCULE }},{{ TABLE_MAJUSCULE }})
+;charge record sql a partir des donnees de cle du record
+Declaration_{{ NOMVUE_MAJUSCULE }}
+Record {{ DICT }}.dhsd {{ TABLE_MAJUSCULE }} {{ TABLE_MAJUSCULE }}
+1 ret 1,0
+1     allcolumns     1,0 = false
+beginf
+	ret = SeekAndLoad_{{ TABLE_MAJUSCULE }}({{ NOMVUE_MAJUSCULE }},{{ TABLE_MAJUSCULE }}.{{ ChampCle }},allcolumns= true)
+	FReturn(ret)
+endf
+;*
+Public function int Load_{{ TABLE_MAJUSCULE }}({{ ChampCle }},allcolumns)
+1     {{ ChampCle }}             >{{ DICT }}.dhsd {{ ChampCle }}
+1 ret 1,0
+1     allcolumns     1,0 = false
+beginf
+	ret = SeekAndLoad_{{ TABLE_MAJUSCULE }}(RS_{{ NOMVUE_MAJUSCULE }},{{ ChampCle }},allcolumns)
+	FReturn(ret)
+endf
+;*
+public function int Give_{{ TABLE_MAJUSCULE }}(&{{ TABLE_MAJUSCULE }},{{ ChampCle }})
+;recherche instance par cle primaire et remplissage de l'enreg
+Record {{ DICT }}.dhsd  {{ TABLE_MAJUSCULE }}
+1 {{ ChampCle }} >{{ DICT }}.dhsd {{ ChampCle }}
+1 ret 1,0
+beginf
+	ret  = Load_{{ TABLE_MAJUSCULE }}({{ ChampCle }},allcolumns = true)
+	{{ TABLE_MAJUSCULE }} = Get_{{ TABLE_MAJUSCULE }}_Record ()
+	FReturn(ret)
+endf
+;*
+function int Find_{{ TABLE_MAJUSCULE }}_PK(&{{ NOMVUE_MAJUSCULE }},{{ ChampCle }},allcolumns,context)
+;recherche instance par cle primaire
+Declaration_{{ NOMVUE_MAJUSCULE }}
+1    allcolumns    1,0 = false
+1     context           1,0 = false    ; context true/false
+1 {{ ChampCle }} >{{ DICT }}.dhsd {{ ChampCle }}
+beginf
+	If SeekAndLoad_{{ TABLE_MAJUSCULE }}({{ NOMVUE_MAJUSCULE }},{{ CHAMPCLE }},allcolumns) = 0
+		FReturn(0)
+	else
+		{{ PREFIX_ }}GererErreurCheck(30002,{{ ChampCle }},context=context)
+		FReturn(1)
+	endif
+endf
+{% if has_libelle %};*
+function int Find_{{ TABLE_MAJUSCULE }}_Lib(&{{ NOMVUE_MAJUSCULE }}	,{{ ChampCle }},allcolumns,context)
+;recherche instance par libelle
+Declaration_{{ NOMVUE_MAJUSCULE }}
+1    allcolumns    1,0 = false
+1     context           1,0 = false    ; context true/false
+1     {{ ChampCle }}          A
+1     vCondition     S = ' '
+1     nCondition     S = '{{ NOMVUE_MAJUSCULE }}	'
+1     nom            S
+beginf
+	{{ PREFIX_ }}Check_ActivateColumns(ChkData_{{ TABLE_MAJUSCULE }},{{ NOMVUE_MAJUSCULE }},allcolumns,Condition(allcolumns,Get_{{ TABLE_MAJUSCULE }}_FieldNames_All,Get_{{ TABLE_MAJUSCULE }}_FieldNames_Min))
+	; il faut une clause where et un tri sur le libelle
+	{{ NOMVUE_MAJUSCULE }}	.OrderBy.Par_{{ ChampLibelle }}()
+	{{ NOMVUE_MAJUSCULE }}	.Where.Like_{{ ChampLibelle }}((Banaliser_Condition({{ ChampCle }}, TRUE)))
+	{{ NOMVUE_MAJUSCULE }}	.Where.Like_{{ ChampLibelle }}.AddAndCondition(vcondition)
+	{{ NOMVUE_MAJUSCULE }}	.Where.AddCondition(nCondition, vCondition)
+	If Select_{{ NOMVUE_MAJUSCULE }}	({{ NOMVUE_MAJUSCULE }}	) = 0
+		FReturn(0)
+	Else
+		{{ PREFIX_ }}GererErreurCheck(30002,{{ ChampCle }},context=context)
+		FReturn(5)
+	EndIf
+Endf
+{% endif %};*
+Public function int Find_{{ TABLE_MAJUSCULE }}(&{{ ChampCle }},allcolumns,context)
+;controle instance par cle primaire
+1     {{ ChampCle }}             >{{ DICT }}.dhsd {{ ChampCle }}
+1     allcolumns     1,0 = false
+1     context           1,0 = false    ; context true/false
+1     ret            1,0
+beginf
+	if ( {{ CHAMPCLE }} = ' ' )   |RS_{{ NomVue }}.init() | FReturn(0) | endif
+	; preparation selection
+{% if has_libelle %}	SwitchString Left({{ ChampCle }},1)
+		case '-'     | ret = Find_{{ TABLE_MAJUSCULE }}_Lib(RS_{{ NOMVUE_MAJUSCULE }}	,Mid({{ ChampCle }}, 2, datasize({{ ChampCle }})-1),allcolumns,context=context)
+		default      | ret = Find_{{ TABLE_MAJUSCULE }}_PK(RS_{{ NOMVUE_MAJUSCULE }}	,{{ ChampCle }},allcolumns,context=context)
+	endswitch
+{% else %}	ret = Find_{{ TABLE_MAJUSCULE }}_PK(RS_{{ NOMVUE_MAJUSCULE }}	,{{ ChampCle }},allcolumns,context=context)
+{% endif %}
+	if RET <> 0
+		; la recherche a echoue
+		RS_{{ NOMVUE_MAJUSCULE }}.INIT()
+	else
+		; la recherche a reussi
+		{{ ChampCle }} = RS_{{ NOMVUE_MAJUSCULE }}.{{ ChampCle }}
+		; controles supplementaires si necessaires
+	endif
+	FReturn(Ret)
+endf
+;*
+Public function int Exists_{{ TABLE_MAJUSCULE }}({{ ChampCle }})
+;controle d'existence simple, mais qui ne garni aucun donnee
+;retour true=existe, false = n'existe pas
+1     {{ ChampCle }} >{{ DICT }}.dhsd {{ ChampCle }}
+1     ret            1,0
+Declaration_{{ NOMVUE_MAJUSCULE }}	 {{ NOMVUE_MAJUSCULE }}_loc
+beginf
+	ret = SeekAndLoad_{{ TABLE_MAJUSCULE }}({{ NOMVUE_MAJUSCULE }}_loc,{{ ChampCle }},false)
+	If ret = 0
+		;existe deja, c'est pas ce qu'on veut
+		{{ PREFIX_ }}GererErreurCheck(9500,{{ ChampCle }},ChkData_{{ TABLE_MAJUSCULE }})
+		FReturn(true)
+	else
+		FReturn(false)
+	EndIf
+endf
+;*
+Public function int Exists_{{ TABLE_MAJUSCULE }}_Record({{ TABLE_MAJUSCULE }})
+;STATIC_CALL
+Record {{ DICT }}.dhsd {{ TABLE_MAJUSCULE }} {{ TABLE_MAJUSCULE }}
+beginf
+	freturn (Exists_{{ TABLE_MAJUSCULE }}({{ TABLE_MAJUSCULE }}.{{ ChampCle }}))
+endf
+;*
+;*
+
+
+
+;*
+;*
+;* Methodes d'exposition champs {{ Description }}
+;*
+;*
+
+
+
+
+;*
+;*
+;* Methodes de controle champs {{ Description }}
+;*
+;*
+
+
+
+;*
+;*
+;* Methodes de controle champs cles
+;*
+;*
+
+Public function int Check_{{ TABLE_MAJUSCULE }}_Key (&{{ TABLE_MAJUSCULE }})
+;controle des champs cle
+;STATIC_CALL
+Record {{ DICT }}.dhsd {{ TABLE_MAJUSCULE }} {{ TABLE_MAJUSCULE }}
+1     retchk   1,0 = 0
+beginf
+	;parcourir les champs cles dans l'ordre : obligatoires puis non obligatoires par rang
+	retchk = {{ PREFIX_ }}Check_Fields (RS_{{ NomVue }} ,{{ TABLE_MAJUSCULE }}, true, 1)
+	freturn (retchk)
+endf
+;*
+;*
+
+
+
+
+;*
+;*
+;* Methodes de controle objet {{ Description }}
+;*
+;*
+
+Public function int Check_{{ TABLE_MAJUSCULE }}(&{{ TABLE_MAJUSCULE }}, arretPremiereErreur)
+;controle des champs de {{ TABLE_MAJUSCULE }}
+;!SOC, MZ et ETS doivent etre bons
+; sorties : 0 si ok
+;           1 si une erreur sur un champ au moins
+;           2 si une erreur sur un champ mandatory
+;STATIC_CALL
+Record {{ DICT }}.dhsd {{ TABLE_MAJUSCULE }} {{ TABLE_MAJUSCULE }}
+1     arretPremiereErreur  1,0 = true
+1     retchk   1,0 = 0
+1     modeControle_sv         1,0
+beginf
+	;parcourir les champs non cles dans l'ordre : obligatoires puis non obligatoires par rang
+	retchk = {{ PREFIX_ }}Check_Fields (RS_{{ NomVue }} ,{{ TABLE_MAJUSCULE }}, arretpremiereerreur)
+	freturn (retchk)
+endf
+;*
+Public function int Check_{{ table_minuscule }}_FieldCod(&{{ table_minuscule }}, FieldCod,ind1,ind2,ind3,ind4)
+;controle du champ FieldCod de {{ table_minuscule }}
+;!SOC, MZ et ETS doivent etre bons
+; sorties : 0 si ok
+;				1 si une erreur sur un champ au moins
+;				2 si une erreur sur un champ mandatory
+Record {{ DICT }}.dhsd {{ table_minuscule }} {{ table_minuscule }}
+1	FieldCod				S
+1  ind1              x=0
+1  ind2              x=0
+1  ind3              x=0
+1  ind4              x=0
+
+1		ret		1,0 = 0
+
+beginf
+	;A usage des distributeurs pour eviter de declarer les modules U dans des masques ecran/zoom
+	ret = {{ PREFIX_ }}Check_FieldCod (RS_{{ NomVue }},{{ table_minuscule }}, FieldCod,ind1,ind2,ind3,ind4)
+	freturn(ret)
+endf
+
+;*
+;*
+;* Methodes d'initialisations objet {{ Description }}
+;*
+;*
+
+
+;*
+Public Procedure Initialize_{{ table_minuscule }}_CE(&{{ table_minuscule }})
+;initialisation des champs CE, note, joint, telcle
+Record {{ DICT }}.dhsd {{ table_minuscule }} {{ table_minuscule }}
+beginp
+	{{ table_minuscule }}.Ce1 = '5'
+endp
+
+;*
+Public function int Initialize_{{ table_minuscule }}_New(&{{ table_minuscule }})
+;initialisation d'un enreg memoire pour une creation d'une nouvelle instance
+;NOTE : a utiliser dans un prog qui initialise un enreg complet (zoom, import, interco)
+Record {{ DICT }}.dhsd {{ table_minuscule }} {{ table_minuscule }}
+
+beginf
+	; on reinitialise une nouvelle instance de l'objet
+	; avec valeurs champs par defaut
+	Init {{ table_minuscule }} 		      = ' '
+	{{ table_minuscule }}.Dos 				= MZ.dos
+	{{ table_minuscule }}.Ce1					= '5'
+
+	freturn (0)
+endf
+
+;*
+Public function int Initialize_{{ table_minuscule }}_PostFetch(&{{ table_minuscule }})
+;verification d'un enreg memoire	et correction avec valeurs par defaut
+;NOTE : a utiliser dans un prog qui initialise un enreg complet (zoom, import, interco)
+Record {{ DICT }}.dhsd {{ table_minuscule }} {{ table_minuscule }}
+
+beginf
+
+	A5_Stack_OutputMode
+	A5_Set_OutputMode(C_SORTIE_AUCUNE)
+
+	If {{ table_minuscule }}.Dos = ' '												| {{ table_minuscule }}.Dos    				= MZ.dos						    	| EndIf
+;	If Check_{{ table_minuscule }}_FieldCod({{ table_minuscule }},'Ce1') <> 0 	   | {{ table_minuscule }}.Ce1 				   = {{ table_minuscule }}_INIT.Ce1		   | Endif
+
+	A5_UnStack_OutputMode
+	freturn (0)
+endf
+
+;*
+Public function int Initialize_{{ table_minuscule }}_Duplication(&{{ table_minuscule }})
+;reinitialisation d'un enreg memoire lors d'une action de duplication
+Record {{ DICT }}.dhsd {{ table_minuscule }} {{ table_minuscule }}
+
+beginf
+
+	; il faut corriger car on n'est pas sur de la conformite de l'origine
+	Initialize_{{ table_minuscule }}_PostFetch({{ table_minuscule }})
+
+	{{ table_minuscule }}.UserMoDh 	= ' '		 ; Initialisation specifique des donnees
+	{{ table_minuscule }}.UserMo 	= ' '
+
+	freturn (0)
+endf
+
+;*
+Public procedure Initialize_{{ table_minuscule }}_PreInsert(&{{ table_minuscule }})
+;initialisation des donnees 'administratives' d'un enreg memoire juste avant une action de creation en base
+;NOTE : a utiliser dans un prog qui initialise un enreg complet (zoom, import, interco)
+Record {{ DICT }}.dhsd {{ table_minuscule }} {{ table_minuscule }}
+
+beginp
+	Initialize_{{ table_minuscule }}_CE({{ table_minuscule }})
+endp
+
+;*
+Public procedure Initialize_{{ table_minuscule }}_PreUpdate(&{{ table_minuscule }})
+;initialisation des donnees 'administratives' d'un enreg memoire juste avant une action de mise a jour en base
+;NOTE : a utiliser dans un prog qui initialise un enreg complet (zoom, import, interco)
+Record {{ DICT }}.dhsd {{ table_minuscule }} {{ table_minuscule }}
+
+beginp
+	Initialize_{{ table_minuscule }}_CE({{ table_minuscule }})
+endp
+
+
+;*
+Public procedure Initialize_{{ table_minuscule }}_PostInsert(&{{ table_minuscule }})
+;initialisation des donnees 'administratives' d'un enreg memoire juste apres une action de creation en base
+;NOTE : a utiliser dans un prog qui initialise un enreg complet (zoom, import, interco)
+Record {{ DICT }}.dhsd {{ table_minuscule }} {{ table_minuscule }}
+beginp
+
+endp
+
+;*
+Public procedure Initialize_{{ table_minuscule }}_PostUpdate(&{{ table_minuscule }})
+;initialisation des donnees 'administratives' d'un enreg memoire juste apres une action de mise a jour en base
+;NOTE : a utiliser dans un prog qui initialise un enreg complet (zoom, import, interco)
+Record {{ DICT }}.dhsd {{ table_minuscule }} {{ table_minuscule }}
+beginp
+
+
+endp
+;*
+Public procedure Initialize_{{ table_minuscule }}_PreDelete(&{{ table_minuscule }})
+;initialisation des donnees 'administratives' d'un enreg memoire juste avant une action de suppression en base
+;NOTE : a utiliser dans un prog qui initialise un enreg complet (zoom, import, interco)
+Record {{ DICT }}.dhsd {{ table_minuscule }} {{ table_minuscule }}
+
+beginp
+
+endp
+
+;*
+Public procedure Initialize_{{ table_minuscule }}_PostDelete(&{{ table_minuscule }})
+;initialisation des donnees 'administratives' d'un enreg memoire juste apres une action de suppression en base
+;NOTE : a utiliser dans un prog qui initialise un enreg complet (zoom, import, interco)
+Record {{ DICT }}.dhsd {{ table_minuscule }} {{ table_minuscule }}
+beginp
+
+endp
+
+
+;*
+;*
+;* Methodes de controle autorisation action sur objet
+;*
+;*
+
+;*
+Public function int Authorize_{{ table_minuscule }}_Insert(&{{ table_minuscule }})
+;verification faisabilite operation de creation
+Record {{ DICT }}.dhsd {{ table_minuscule }} {{ table_minuscule }}
+1	ret	2,0 = 0
+beginf
+	freturn (ret)
+endf
+
+
+;*
+Public function int Authorize_{{ table_minuscule }}_Update(&{{ table_minuscule }})
+;verification faisabilite operation de modification
+Record {{ DICT }}.dhsd {{ table_minuscule }} {{ table_minuscule }}
+1	ret	2,0 = 0
+beginf
+	freturn (ret)
+endf
+
+;*
+Public function int Authorize_{{ table_minuscule }}_Delete(&{{ table_minuscule }})
+;verification faisabilite operation de suppression
+Record {{ DICT }}.dhsd {{ table_minuscule }} {{ table_minuscule }}
+1	ret	2,0 = 0
+
+beginf
+	freturn (ret)
+endf
+
+
+;*
+Public Function Int Reservation_{{ table_minuscule }}_Lock(&{{ table_minuscule }},err, f)
+; Reserve l'entite
+; Renvoie :	0		ok
+;				<> 0	echec reservation
+Record {{ DICT }}.dhsd {{ table_minuscule }} {{ table_minuscule }}
+1		err			5,0	= C_MsgErr_Res_Generique			; Numero du message d'erreur
+1		f				N		= 0				; 0			pour fonctionnement normal
+													; NoStatus	pour retour que si ok
+													; NoWait		pour retour immediat si reserve
+Beginf
+	FReturn({{ PREFIX_ }}Proc_Lock_SQL(RS_{{ NomVue }}, Get_{{ table_minuscule }}_Reservation({{ table_minuscule }}), err,{{ table_minuscule }}.{{ ChampCle }}, f))
+Endf
+;*
+Public Function Int Res_{{ table_minuscule }}_Lock({{ ChampCle }},err, f)
+; Reserve l'entite
+; Renvoie :	0		ok
+;				<> 0	echec reservation
+1		{{ ChampCle }}		>{{ DICT }}.dhsd	 {{ ChampCle }}
+1		err			5,0	= C_MsgErr_Res_Generique			; Numero du message d'erreur
+1		f				N		= 0				; 0			pour fonctionnement normal
+													; NoStatus	pour retour que si ok
+													; NoWait		pour retour immediat si reserve
+Record {{ DICT }}.dhsd {{ table_minuscule }} {{ table_minuscule }}
+Beginf
+	{{ table_minuscule }}.{{ ChampCle }}	=	{{ ChampCle }}
+	FReturn(Reservation_{{ table_minuscule }}_Lock({{ table_minuscule }},err, f))
+Endf
+
+;*
+Public Function Int Reservation_{{ table_minuscule }}_Shift(&{{ table_minuscule }}, err, f)
+; Reserve l'entite apres un autre partage
+; Renvoie :	0		ok
+;				<> 0	echec reservation
+Record {{ DICT }}.dhsd {{ table_minuscule }} {{ table_minuscule }}
+1		err			5,0	= C_MsgErr_Res_Generique			; Numero du message d'erreur
+1		f				N		= 0				; 0			pour fonctionnement normal
+													; NoStatus	pour retour que si ok
+													; NoWait		pour retour immediat si reserve
+Beginf
+	FReturn({{ PREFIX_ }}Proc_Shift_SQL(RS_{{ NomVue }}, Get_{{ table_minuscule }}_Reservation({{ table_minuscule }}), err,{{ table_minuscule }}.{{ ChampCle }}, f))
+Endf
+;*
+Public Function Int Res_{{ table_minuscule }}_Shift({{ ChampCle }}, err, f)
+; Reserve l'entite apres un autre partage
+; Renvoie :	0		ok
+;				<> 0	echec reservation
+1		{{ ChampCle }}		>{{ DICT }}.dhsd	 {{ ChampCle }}
+1		err			5,0	= C_MsgErr_Res_Generique			; Numero du message d'erreur
+1		f				N		= 0				; 0			pour fonctionnement normal
+													; NoStatus	pour retour que si ok
+													; NoWait		pour retour immediat si reserve
+Record {{ DICT }}.dhsd {{ table_minuscule }} {{ table_minuscule }}
+Beginf
+	{{ table_minuscule }}.{{ ChampCle }}	=	{{ ChampCle }}
+	FReturn(Reservation_{{ table_minuscule }}_Shift({{ table_minuscule }}, err, f))
+Endf
+
+;*
+Public Function Int Reservation_{{ table_minuscule }}_Share(&{{ table_minuscule }}, err, f)
+; Partage l'entite
+; Renvoie :	0		ok
+;				<> 0	echec reservation
+Record {{ DICT }}.dhsd {{ table_minuscule }} {{ table_minuscule }}
+1		err			5,0	= C_MsgErr_Res_Generique			; Numero du message d'erreur
+1		f				N		= 0				; 0			pour fonctionnement normal
+													; NoStatus	pour retour que si ok
+													; NoWait		pour retour immediat si reserve
+Beginf
+	FReturn({{ PREFIX_ }}Proc_Share_SQL(RS_{{ NomVue }}, Get_{{ table_minuscule }}_Reservation({{ table_minuscule }}), err,{{ table_minuscule }}.{{ ChampCle }}, f))
+Endf
+;*
+Public Function Int Res_{{ table_minuscule }}_Share({{ ChampCle }}, err, f)
+; Partage l'entite
+; Renvoie :	0		ok
+;				<> 0	echec reservation
+1		{{ ChampCle }}		>{{ DICT }}.dhsd	 {{ ChampCle }}
+1		err			5,0	= C_MsgErr_Res_Generique			; Numero du message d'erreur
+1		f				N		= 0				; 0			pour fonctionnement normal
+													; NoStatus	pour retour que si ok
+													; NoWait		pour retour immediat si reserve
+Record {{ DICT }}.dhsd {{ table_minuscule }} {{ table_minuscule }}
+Beginf
+	{{ table_minuscule }}.{{ ChampCle }}	=	{{ ChampCle }}
+	FReturn(Reservation_{{ table_minuscule }}_Share({{ table_minuscule }}, err, f))
+Endf
+
+;*
+Public Function Int Reservation_{{ table_minuscule }}_UnLock(&{{ table_minuscule }})
+; Libere l'entite
+; Renvoie :	0		ok
+;				<> 0	echec liberation
+Record {{ DICT }}.dhsd {{ table_minuscule }} {{ table_minuscule }}
+Beginf
+	FReturn({{ PREFIX_ }}Proc_Unlock_SQL(RS_{{ NomVue }}, Get_{{ table_minuscule }}_Reservation({{ table_minuscule }})))
+Endf
+;*
+Public Function Int Res_{{ table_minuscule }}_UnLock({{ ChampCle }})
+; Libere l'entite
+; Renvoie :	0		ok
+;				<> 0	echec liberation
+1		{{ ChampCle }}		>{{ DICT }}.dhsd	 {{ ChampCle }}
+Record {{ DICT }}.dhsd {{ table_minuscule }} {{ table_minuscule }}
+Beginf
+	{{ table_minuscule }}.{{ ChampCle }}	=	{{ ChampCle }}
+	FReturn(Reservation_{{ table_minuscule }}_UnLock({{ table_minuscule }}))
+Endf
+;*
+Public Function int Call_{{ TABLE_MAJUSCULE }}_OpenZoom(lastItem)
+;ouvre le zoom 'naturel'
+1   lastItem    1,0 = false                ;true se place sur le dernier lu par l'om (false:pas de filtre zoom classique)
+1   ret         1,0 = 1
+BeginF
+	;TODO: definir la constante C_ZOOM_{{ NomVue }}_ dans a5tczoom.dhsp avant de decommenter
+	;If lastItem
+	;	ret = A5_Chk_OpenZoom_SearchMode(ChkData_{{ TABLE_MAJUSCULE }}, C_ZOOM_{{ NomVue }}_, RS_{{ NomVue }})
+	;Else
+	;	ret = A5_Chk_OpenZoom_NoFilter(ChkData_{{ TABLE_MAJUSCULE }}, C_ZOOM_{{ NomVue }}_)
+	;EndIf
+	freturn (ret)
+EndF
+;*
+Public Function int Load_{{ TABLE_MAJUSCULE }}_ID(IdSql,allcolumns)
+;chargement par ID
+1   IdSql          10,0                        ;ID sql
+1  allcolumns     1,0 = false                 ;indique si l'enreg est complet (allcolumns=true) ou pas
+BeginF
+	FReturn({{ PREFIX_ }}Load_ID(ChkData_{{ TABLE_MAJUSCULE }}, RS_{{ NomVue }}, allcolumns, Condition(allcolumns,Get_{{ TABLE_MAJUSCULE }}_FieldNames_All,Get_{{ TABLE_MAJUSCULE }}_FieldNames_Min), IdSql))
+EndF
+{% if has_libelle %};*
+Public function char GET_{{ TABLE_MAJUSCULE }}_TRANSLATE_{{ ChampLibelleMaj }}
+;retourne le champ libelle traduit de l'instance courante
+beginf
+	FReturn(TranslateData(RS_{{ NomVue }}.{{ ChampLibelleMaj }}))
+endf
+{% endif %}
+{% if fks %}
+;*
+;*		Procedures de controle des champs FK (auto-generees via --fk)
+;*		Cf. docs/FK-ZOOM-BINDING.md section 2 (cardinalite simple 1:1)
+;*
+{% for fk in fks %}
+;*
+Public function int Check_{{ TABLE_MAJUSCULE }}_Field_{{ fk.champ }}(&{{ TABLE_MAJUSCULE }})
+;controle du champ {{ fk.champ }} (FK vers {{ fk.target }})
+Record {{ DICT }}.dhsd {{ TABLE_MAJUSCULE }}	{{ TABLE_MAJUSCULE }}
+1	ret		3,0
+beginf
+	if (ret := {{ PREFIX_ }}CheckField(RS_{{ NomVue }}, {{ TABLE_MAJUSCULE }}, "{{ fk.champ }}")) <> 0
+		freturn(ret)
+	endif
+	freturn({{ fk.find_fn }}({{ TABLE_MAJUSCULE }}.{{ fk.champ }}, context=true))
+endf
+
+;*
+Public function int Check_{{ TABLE_MAJUSCULE }}_Field_{{ fk.champ }}_Lib(&{{ TABLE_MAJUSCULE }}, &Lib)
+;controle du champ {{ fk.champ }} + libelle retourne ({{ fk.get_lib_fn }})
+Record {{ DICT }}.dhsd {{ TABLE_MAJUSCULE }}	{{ TABLE_MAJUSCULE }}
+1	Lib		A
+1	ret		3,0
+beginf
+	ret = Check_{{ TABLE_MAJUSCULE }}_Field_{{ fk.champ }}({{ TABLE_MAJUSCULE }})
+	if ret = 0
+		Lib = {{ fk.get_lib_fn }}
+	else
+		Lib = ' '
+	endif
+	freturn(ret)
+endf
+{% endfor %}
+{% endif %}

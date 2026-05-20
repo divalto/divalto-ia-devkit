@@ -1,0 +1,685 @@
+;>xwin4obj                              7.0       20260412000000
+[masque]
+;-- ADAPTER : libelle, utilisateur, date_modification
+ libelle="Zoom sur MonEntite"
+ utilisateur="ROOT"
+ date_modification="12/04/2026"
+ feuille_style="fstylewpf.dhfi"
+ id_traitements=44
+ type_masque=2
+;-- ADAPTER : dernier_id >= plus grand id utilise
+ dernier_id=30
+ dernier_id_page=12
+[defaut]
+ [aide_page]
+  aide=0
+;-- ADAPTER : fichier aide du domaine (gtfaide, gafaide, ccfaide...)
+  fichier="gtfaide"
+ [touches]
+  f7=135
+  shift_f6=10000
+[enregistrements]
+;-- OBLIGATOIRE : ddsys.dhsd pour le zoom
+ "ddsys.dhsd",,rowinfo,zoomselection,120,0
+;-- ADAPTER : remplacer par le RecordSql de l entite
+ "monrecordsql.dhoq",,mavue,mavue,1024,1
+ "monrecordsql.dhoq",,mavue,mavue_sel,1024,1
+;-- =====================================================================
+;-- ONGLETS : FICHE (detail) + LISTE (tableau recherche)
+;-- =====================================================================
+[onglet]
+ [presentation]
+  position=0,0
+  taille=225,280
+  attache_lgx=oui
+  attache_lgy=oui
+  id=1
+ [param_onglet]
+  nom="FICHE"
+  multi_lignes=non
+  arret=2
+  wnom_police="ONGLET"
+  wnom_padding="ONGLET"
+[onglet]
+ [presentation]
+  position=0,0
+  taille=36,320
+  id=2
+ [param_onglet]
+  nom="LISTE"
+  multi_lignes=non
+  arret=1
+  wnom_police="ONGLET"
+  wnom_padding="ONGLET"
+;-- =====================================================================
+;-- PAGE 1 : conteneur principal
+;-- =====================================================================
+[page]
+ numero=1
+ fond="STD"
+ nature=double
+ nb_lig=25
+ nb_col=120
+ offset_lig=1
+ offset_col=1
+ attache_lgx=oui
+ attache_lgy=oui
+ ident_unique=1
+;-- =====================================================================
+;-- PAGE 2 : popup saisie cle (creation)
+;-- =====================================================================
+[page]
+ numero=2
+ libelle="Saisie cle/creation"
+ fond="ZOOM"
+ nature=double
+ type=fenetre
+;-- ADAPTER : titre de la fenetre de creation
+ titre="Entite a creer"
+ nb_lig=3
+ nb_col=50
+ offset_lig=8
+ offset_col=20
+ ident_unique=2
+ [obj_texte]
+  [presentation]
+   position=8,5
+   taille=9,50
+   id=3
+   wstyle="STD"
+  [texte]
+;-- ADAPTER : libelle du champ cle
+   texte="Code"
+ [champ]
+  [presentation]
+   position=8,56
+   taille=9,32
+   id=4
+   wstyle="ZOOM_SAISI"
+  [description]
+;-- ADAPTER : champ cle de l entite
+   donnee=mavue,codecle,mavue
+  [param_saisie]
+   obligatoire=oui
+  [touches]
+   f1=1
+  [traitements]
+   microbol_click=8002
+;-- =====================================================================
+;-- PAGE 3 : tableau zoom + filtres (onglet LISTE)
+;-- =====================================================================
+[page]
+ numero=3
+ fond="STD"
+ efface=partiel
+ nb_lig=25
+ nb_col=50
+ offset_lig=1
+ offset_col=1
+ attache_lgx=oui
+ attache_lgy=oui
+ ident_unique=12
+ [groupbox]
+  [presentation]
+   position=0,0
+   taille=48,199
+   attache_lgx=oui
+   id=5
+   wstyle="GROUPE"
+  [param_groupbox]
+   texte="Selection"
+   couleur_fond="ZOOM"
+ [tableau]
+  [presentation]
+   position=50,0
+   taille=175,200
+   attache_lgx=oui
+   attache_lgy=oui
+   id=6
+   wstyle="TABLEAU_AFF"
+  [param_tableau]
+   nom="zoom"
+   point_arret=3
+   fl_trait_lig=non
+   col_depl=3
+   hauteur_lig=11
+   hauteur_entete=10
+   largeur_controle=8
+   var_controle=oui
+   separation=66
+  [description]
+   donnee=rowinfo,rowinfo,zoomselection
+   minmaj=majuscules
+   saisie=non
+;-- ADAPTER : colonnes du tableau ci-dessous
+;-- Colonne 1 : code (lecture seule)
+  [champ_tableau]
+   [presentation]
+    position=12,168
+    taille=8,18
+    id=7
+    wstyle="TABLEAU_AFF"
+   [description]
+    donnee=mavue,codecle,mavue
+    saisie=non
+   [traitements]
+    microbol_click=8002
+   [info_bulle]
+   texte="Code"
+   [param_colonne]
+    titre="Code"
+    largeur_col=34
+    wstyle="ENTETE_COLONNE"
+;-- Colonne 2 : libelle (saisissable)
+  [champ_tableau]
+   [presentation]
+    position=15,40
+    taille=10,160
+    id=8
+    wstyle="TABLEAU_SAISI"
+   [description]
+    donnee=mavue,lib,mavue
+   [touches]
+    f1=1
+    f7=135
+    shift_f6=10000
+   [traitements]
+    microbol_click=8002
+   [info_bulle]
+   texte="Libelle"
+   [param_colonne]
+    titre="Libelle"
+    fl_aff=oui
+    largeur_col=151
+    wstyle="ENTETE_COLONNE"
+;-- ADAPTER : filtres de selection (IMPORTANT : alias = mavue_sel, PAS mavue)
+ [obj_texte]
+  [presentation]
+   position=16,5
+   taille=9,43
+   id=9
+   wstyle="STD"
+  [texte]
+   texte="Code"
+ [champ]
+  [presentation]
+   position=16,50
+   taille=9,32
+   id=10
+   wstyle="CHAMP_SAISI"
+  [description]
+   donnee=mavue,codecle,mavue_sel
+  [touches]
+   f1=1
+  [traitements]
+   microbol_click=8002
+ [obj_texte]
+  [presentation]
+   position=26,5
+   taille=9,43
+   id=11
+   wstyle="STD"
+  [texte]
+   texte="Libelle"
+ [champ]
+  [presentation]
+   position=26,50
+   taille=9,144
+   id=12
+   colonnes_saisie=40
+   wstyle="CHAMP_SAISI"
+  [description]
+   donnee=mavue,lib,mavue_sel
+  [param_saisie]
+   type_date=jj/mm/aaaa
+  [touches]
+   f7=135
+   shift_f6=10000
+[page]
+ numero=4
+ fond="STD"
+ efface=complet
+ nb_lig=25
+ nb_col=90
+ offset_lig=1
+ offset_col=1
+ ident_unique=14
+[page]
+ numero=5
+ fond="STD"
+ efface=complet
+ nb_lig=25
+ nb_col=90
+ offset_lig=1
+ offset_col=1
+ ident_unique=17
+[page]
+ numero=6
+ fond="STD"
+ efface=complet
+ nb_lig=25
+ nb_col=90
+ offset_lig=1
+ offset_col=1
+ ident_unique=16
+[page]
+ numero=7
+ fond="STD"
+ efface=complet
+ nb_lig=25
+ nb_col=90
+ offset_lig=1
+ offset_col=1
+ ident_unique=15
+[page]
+ numero=8
+ fond="STD"
+ efface=complet
+ nb_lig=25
+ nb_col=90
+ offset_lig=1
+ offset_col=1
+ ident_unique=13
+[page]
+ numero=9
+ fond="STD"
+ efface=complet
+ nb_lig=25
+ nb_col=90
+ offset_lig=1
+ offset_col=1
+ ident_unique=19
+[page]
+ numero=10
+ fond="STD"
+ efface=complet
+ nb_lig=25
+ nb_col=90
+ offset_lig=1
+ offset_col=1
+ ident_unique=18
+;-- =====================================================================
+;-- PAGE 11 : fiche Definition (onglet FICHE, 1er sous-onglet)
+;-- =====================================================================
+[page]
+ numero=11
+ libelle="Fiche zoom"
+ fond="STD"
+ titre="Zoom"
+ efface=partiel
+ nb_lig=25
+ nb_col=70
+ offset_lig=1
+ offset_col=1
+ suiv=12
+ attache_x=oui
+ attache_lgy=oui
+ ident_unique=3
+ [onglet_page]
+  [param_onglet_page]
+   nom="FICHE"
+   libelle="Definition"
+   couleur_fond="STD"
+;-- ADAPTER : champs de la fiche
+ [obj_texte]
+  [presentation]
+   position=26,5
+   taille=9,45
+   id=13
+   wstyle="STD"
+  [texte]
+   texte="Code"
+ [champ]
+  [presentation]
+   position=26,51
+   taille=9,32
+   id=14
+   wstyle="CHAMP_NON_SAISI"
+  [description]
+   donnee=mavue,codecle,mavue
+   saisie=non
+ [obj_texte]
+  [presentation]
+   position=40,5
+   taille=9,45
+   id=15
+   wstyle="STD"
+  [texte]
+   texte="Libelle"
+ [champ]
+  [presentation]
+   position=40,51
+   taille=9,144
+   id=16
+   wstyle="CHAMP_SAISI"
+  [description]
+   donnee=mavue,lib,mavue
+  [touches]
+   f1=1
+   f7=135
+   shift_f6=10000
+  [traitements]
+   microbol_click=8002
+;-- =====================================================================
+;-- PAGE 12 : fiche Identifiants (onglet FICHE, 2e sous-onglet)
+;-- =====================================================================
+[page]
+ numero=12
+ fond="STD"
+ efface=partiel
+ nb_lig=25
+ nb_col=70
+ offset_lig=1
+ offset_col=1
+ prec=11
+ attache_x=oui
+ attache_lgy=oui
+ ident_unique=4
+ [onglet_page]
+  [param_onglet_page]
+   nom="FICHE"
+   libelle="Identifiants"
+   couleur_fond="STD"
+ [groupbox]
+  [presentation]
+   position=26,5
+   taille=38,131
+   id=17
+   wstyle="GROUPE"
+  [param_groupbox]
+   texte="Creation"
+   couleur_fond="GROUPE_FOND"
+ [groupbox]
+  [presentation]
+   position=26,144
+   taille=38,131
+   id=18
+   wstyle="GROUPE"
+  [param_groupbox]
+   texte="Derniere modification"
+   couleur_fond="GROUPE_FOND"
+ [obj_texte]
+  [presentation]
+   position=42,10
+   taille=9,18
+   id=19
+   wstyle="STD"
+  [texte]
+   texte="Par"
+ [obj_texte]
+  [presentation]
+   position=42,149
+   taille=9,18
+   id=20
+   wstyle="STD"
+  [texte]
+   texte="Par"
+ [obj_texte]
+  [presentation]
+   position=52,10
+   taille=9,18
+   id=21
+   wstyle="STD"
+  [texte]
+   texte="Le"
+ [obj_texte]
+  [presentation]
+   position=52,149
+   taille=9,18
+   id=22
+   wstyle="STD"
+  [texte]
+   texte="Le"
+ [champ]
+  [presentation]
+   position=42,30
+   taille=9,74
+   id=23
+   wstyle="CHAMP_AFF"
+  [description]
+   donnee=mavue,usercr,mavue
+   format="1"
+   saisie=non
+  [param_saisie]
+   type_date=jj/mm/aaaa
+ [champ]
+  [presentation]
+   position=52,30
+   taille=9,56
+   id=24
+   wstyle="CHAMP_AFF"
+  [description]
+   donnee=mavue,usercrdh,mavue
+   saisie=non
+  [param_saisie]
+   type_date=jj/mm/aaaa+hh:mm:ss
+ [champ]
+  [presentation]
+   position=42,169
+   taille=9,74
+   id=25
+   wstyle="CHAMP_AFF"
+  [description]
+   donnee=mavue,usermo,mavue
+   format="1"
+   saisie=non
+  [param_saisie]
+   type_date=jj/mm/aaaa
+ [champ]
+  [presentation]
+   position=52,169
+   taille=9,56
+   id=26
+   wstyle="CHAMP_AFF"
+  [description]
+   donnee=mavue,usermodh,mavue
+   saisie=non
+  [param_saisie]
+   type_date=jj/mm/aaaa+hh:mm:ss
+;-- =====================================================================
+;-- RESSOURCES : toolbars zoom standard (ne pas modifier)
+;-- =====================================================================
+[ressources]
+ [toolbar]
+  ident="ZOOM"
+  [item]
+   [param_bouton]
+    wnom="PREMIER"
+    wid_ressource="PREMIER"
+    wetype_trait=arret
+    warret=8
+   [info_bulle]
+   texte="Premiere fiche <Home>"
+  [item]
+   [param_bouton]
+    wnom="PRECEDENT"
+    wid_ressource="PRECEDENT"
+    wtrait_chaine="#shift_f2"
+   [info_bulle]
+   texte="Fiche precedente <Shift+F2>"
+  [item]
+   [param_bouton]
+    wnom="SUIVANT"
+    wid_ressource="SUIVANT"
+    wtrait_chaine="#f2"
+   [info_bulle]
+   texte="Fiche suivante <F2>"
+  [item]
+   [param_bouton]
+    wnom="DERNIER"
+    wid_ressource="DERNIER"
+    wetype_trait=arret
+    warret=9
+   [info_bulle]
+   texte="Derniere fiche <End>"
+  [item]
+   [param_bouton]
+    wnom="FILTRE"
+    wid_ressource="FILTRE"
+    wetype_trait=arret
+    warret=10
+   [info_bulle]
+   texte="Filtrer"
+  [item]
+   type=sep
+   dessin=sep
+   [param_bouton]
+    wnom=""
+    wid_ressource="SEPARATEUR_1"
+  [item]
+   [param_bouton]
+    wnom="DUPLIQ"
+    wid_ressource="DUPLIQ"
+    warret=5
+    wtrait_chaine="#ctrl_insert"
+   [info_bulle]
+   texte="Dupliquer <Ctrl+Inser>"
+  [item]
+   [param_bouton]
+    wnom="CREATION"
+    wid_ressource="CREATION"
+    wtrait_chaine="#insert"
+   [info_bulle]
+   texte="Creer une fiche <Inser>"
+  [item]
+   [param_bouton]
+    wnom="MODIF"
+    wid_ressource="MODIF"
+    wtrait_chaine="#f4"
+   [info_bulle]
+   texte="Modifier <F4>"
+  [item]
+   [param_bouton]
+    wnom="SUPP"
+    wid_ressource="SUPP"
+    wtrait_chaine="#delete"
+   [info_bulle]
+   texte="Supprimer <Suppr>"
+  [item]
+   type=sep
+   dessin=sep
+   [param_bouton]
+    wnom=""
+    wid_ressource="SEPARATEUR_3"
+  [item]
+   [param_bouton]
+    wnom="NOTE"
+    wid_ressource="NOTE"
+    wtrait_chaine="#shift_f6"
+   [info_bulle]
+   texte="Note"
+  [item]
+   type=sep
+   dessin=sep
+   [param_bouton]
+    wnom=""
+    wid_ressource="SEPARATEUR_6"
+  [item]
+   [param_bouton]
+    wnom="ZOOM"
+    wid_ressource="ZOOM"
+    wnom_sel="zoom"
+    wtrait_chaine="#f8"
+   [info_bulle]
+   texte="Zoom <F8>"
+  [item]
+   [param_bouton]
+    wnom="ZOOMG"
+    wid_ressource="ZOOMG"
+    wtrait_chaine="#f7"
+   [info_bulle]
+   texte="Zoom generalise <F7>"
+  [item]
+   type=sep
+   dessin=sep
+   [param_bouton]
+    wnom=""
+    wid_ressource="SEPARATEUR_7"
+  [item]
+   [param_bouton]
+    wnom="ABANDON"
+    wid_ressource="ABANDON"
+    wtrait_chaine="#escape"
+   [info_bulle]
+   texte="Abandonner <Echap>"
+  [item]
+   [param_bouton]
+    wnom="OK"
+    wid_ressource="OK"
+    wtrait_chaine="#return"
+   [info_bulle]
+   texte="Valider <Entree>"
+  [item]
+   [param_bouton]
+    wnom="SORTIR"
+    wid_ressource="SORTIR"
+    wtrait_chaine="#f12"
+   [info_bulle]
+   texte="Renvoyer les donnees <F12>"
+  [item]
+   type=sep
+   dessin=sep
+   [param_bouton]
+    wnom=""
+    wid_ressource="SEPARATEUR_7__1"
+  [item]
+   [param_bouton]
+    wnom="IMPRIMER"
+    wid_ressource="IMPRIMER"
+    warret=6
+    wtrait_chaine="#ctrl_p"
+   [info_bulle]
+   texte="Imprimer <Ctrl+P>"
+  [item]
+   [param_bouton]
+    wnom="AIDE"
+    wid_ressource="AIDE"
+    wtrait_chaine="#shift_f1"
+   [info_bulle]
+   texte="Aide <Shift+F1>"
+  [item]
+   dessin=vide
+   [param_bouton]
+    wnom=""
+ [toolbar]
+  ident="ZOOMCREATION"
+  [item]
+   [param_bouton]
+    wnom="ABANDON"
+    wid_ressource="ABANDON"
+    wtrait_chaine="#escape"
+   [info_bulle]
+   texte="Abandonner <Echap>"
+  [item]
+   [param_bouton]
+    wnom="OK"
+    wid_ressource="OK"
+    wtrait_chaine="#return"
+   [info_bulle]
+   texte="Valider <Entree>"
+  [item]
+   [param_bouton]
+    wnom="AIDE"
+    wid_ressource="AIDE"
+    wtrait_chaine="#shift_f1"
+   [info_bulle]
+   texte="Aide <Shift+F1>"
+  [item]
+   dessin=vide
+   [param_bouton]
+    wnom=""
+;-- =====================================================================
+;-- DIVA : declarations
+;-- =====================================================================
+[diva]
+;-- ADAPTER : remplacer par le $Id du fichier reel
+SetModuleInfo('$Id: template_zoom_sql.dhsf $')
+
+;-- OBLIGATOIRE : record ddsys
+Public Record "ddsys.dhsd" rowinfo zoomselection
+;-- ADAPTER : RecordSql de l entite (noms en CamelCase)
+Public RecordSql "monrecordsql.dhoq" MaVue MaVue
+Public RecordSql "monrecordsql.dhoq" MaVue MaVue_Sel
+[/diva]
+[diva_base]
+[/diva]

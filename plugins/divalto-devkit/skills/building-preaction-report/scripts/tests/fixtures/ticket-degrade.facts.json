@@ -1,0 +1,73 @@
+{
+  "schema_version": "1.0",
+  "slug": "fixture-degrade",
+  "date": "2026-04-23",
+  "request": {
+    "type": "ticket",
+    "domaine": "GT_",
+    "titre": "Fixture degrade pour tester le validator",
+    "resume": "Contient volontairement 4 erreurs : claim sans source, layer invalide, edge vers node inconnu, selection incoherente."
+  },
+  "verdict": {
+    "kind": "investigate",
+    "one_line": "Ce fixture ne doit jamais passer le validator."
+  },
+  "coverage": {
+    "neo4j_status": "unavailable",
+    "signal_ratio": 0.0,
+    "confiance": "faible"
+  },
+  "claims": [
+    {
+      "id": "C1",
+      "content_type_id": 1,
+      "layer": "tactical",
+      "kind": "example",
+      "claim": "Erreur 1 : ce claim n'a aucune source (doit declencher F1-structurel).",
+      "confidence": "high",
+      "sources": []
+    },
+    {
+      "id": "C2",
+      "content_type_id": 4,
+      "layer": "wrong_layer",
+      "kind": "action_site",
+      "claim": "Erreur 2 : layer 'wrong_layer' n'est pas dans l'enum strategic|tactical|technical.",
+      "confidence": "high",
+      "sources": [
+        {
+          "status": "CONFIRME_X13",
+          "path": "C:/Developpements harmony/Standard/Version X.13/somefile.dhsp",
+          "line": 100
+        }
+      ]
+    },
+    {
+      "id": "C3",
+      "content_type_id": 3,
+      "layer": "tactical",
+      "kind": "call_chain",
+      "claim": "Erreur 3 : call_chain avec un edge vers un node inexistant.",
+      "confidence": "high",
+      "sources": [],
+      "nodes": [
+        { "id": "N0", "kind": "ui", "label": "Entry point" },
+        { "id": "N1", "kind": "fn", "name": "SomeFn", "source_ref": "C99_inexistant" }
+      ],
+      "edges": [
+        ["N0", "N1"],
+        ["N0", "N_inexistant"]
+      ]
+    }
+  ],
+  "selection": [
+    {
+      "id": 7,
+      "slug": "constantes_metier",
+      "score": 1.0,
+      "included": true,
+      "layer": "technical",
+      "reason": "Erreur 4 : type 7 inclus mais aucun claim n'a content_type_id=7 (coherence KO)."
+    }
+  ]
+}

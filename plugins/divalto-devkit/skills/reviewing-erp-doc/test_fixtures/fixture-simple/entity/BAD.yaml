@@ -1,0 +1,39 @@
+kind: entity
+code: BAD
+label: Entite avec affirmations non sourcees
+module: TST
+base: GTFTST
+status: stable
+
+business:
+  role: "BAD est une entite critique du processus de vente, pivot pour les commissions."
+  criticality: core
+  business_rules:
+    - "Les entites BAD sont recalculees a chaque cloture mensuelle automatiquement."
+    - "Les BAD archivees sont conservees 10 ans puis supprimees de la base."
+
+schema:
+  primary_table: BAD
+  primary_key: [BAD_ID]
+
+technical:
+  dictionary_source: Gttbad.dhsd
+  record_name: BAD
+  field_count: 5
+  performance_notes: "La table BAD doit etre partitionnee par annee pour performance."
+  fields:
+    - name: BAD_ID
+      nature: C20
+      sql_type: char(20)
+      nullable: false
+      business_note: "Identifiant fonctionnel issu d'un compteur applicatif."
+    - name: Montant
+      nature: Fl
+      sql_type: decimal(15,2)
+      nullable: false
+      business_note: "Montant TTC arrondi au centime superieur."
+
+meta:
+  last_reviewed: 2026-04-22
+  reviewed_by: test
+  a_verifier: []
