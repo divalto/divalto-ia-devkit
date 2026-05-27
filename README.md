@@ -5,13 +5,15 @@ Ce dépôt contient la marketplace de plugins, skills, agents et hooks Claude Co
 ## Prérequis
 
 - Claude Code installé — https://claude.com/claude-code
-- Compte GitHub avec accès à l'organisation **Divalto**
+- Compte GitHub, Le site est public, inutile d'avoir un accès à l'organisation **Divalto**
 - GitHub CLI (`gh`) installé et authentifié
 - Windows / macOS / Linux
 
-## Installation
+## Installation de GitHub CLI
 
-### 1. Installer GitHub CLI
+Cet outil est indispensable pour faire remonter les RETEX via des Issues dans GitHub
+
+### 1. Installer 
 
 **Windows (winget)** — dans PowerShell :
 
@@ -27,18 +29,6 @@ $msi = "$env:TEMP\gh_installer.msi"
 Invoke-WebRequest -Uri $url -OutFile $msi
 Start-Process msiexec.exe -ArgumentList "/i `"$msi`" /quiet /norestart" -Wait
 Remove-Item $msi
-```
-
-**macOS** :
-
-```bash
-brew install gh
-```
-
-**Linux (Debian / Ubuntu)** :
-
-```bash
-sudo apt install gh
 ```
 
 ### 2. Recharger le PATH (Windows uniquement)
@@ -122,25 +112,15 @@ Sélectionner les plugins à installer dans la liste.
 
 ## Dépannage
 
-### « Permission denied » / 404 sur le dépôt
-
-- Demander à un admin de l'org Divalto une invitation au dépôt
-- Vérifier que le token a bien le scope `repo` activé
-
 ### Claude Code ne trouve pas `gh`
 
 Sur Windows : fermer et rouvrir le terminal après l'installation, ou recharger le PATH (voir étape 2).
-
-### Token expiré
-
-Régénérer un token sur https://github.com/settings/tokens et mettre à jour la variable d'environnement `GITHUB_TOKEN`.
 
 ## Support
 
 Pour toute question, contacter Le support Divalto.
 
 ## Mettre à jour
-
 
 `/reload-plugins` pour appliquer.
 
