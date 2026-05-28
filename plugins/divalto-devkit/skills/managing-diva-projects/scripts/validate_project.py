@@ -41,15 +41,32 @@ DHPT_REQUIRED_SECTIONS = {
 
 
 def detect_file_type(lines):
-    """Detecte si le fichier est un .dhpt ou .dhps d'apres l'en-tete."""
+    """Detecte si le fichier est un .dhpt ou .dhps d'apres l'en-tete.
+
+    Reconnait les 4 en-tetes valides :
+    - `xwin-projet`    -> .dhpt standard
+    - `xwin-s-projet`  -> .dhpt de surcharge
+    - `xwin-sprojet`   -> .dhps standard
+    - `xwin-s-sprojet` -> .dhps de surcharge
+    """
     if not lines:
         return None
     header = lines[0].strip()
+    # Ordre important : tester les variantes longues en premier
+    if header.startswith("xwin-s-sprojet"):
+        return "dhps"
     if header.startswith("xwin-sprojet"):
         return "dhps"
-    elif header.startswith("xwin-projet"):
+    if header.startswith("xwin-s-projet"):
+        return "dhpt"
+    if header.startswith("xwin-projet"):
         return "dhpt"
     return None
+
+
+def is_surcharge_header(header):
+    """True si l'en-tete designe une variante de surcharge (xwin-s-*)."""
+    return header.startswith("xwin-s-projet") or header.startswith("xwin-s-sprojet")
 
 
 def parse_sections(lines):
@@ -223,6 +240,7 @@ def validate_dhpt(lines, sections, file_path=None):
         })
     else:
         # P07 : syntaxe fic dans [sousprojets]
+        # P17 : aucune .dhps de surcharge (suffixe 'u') dans [sousprojets]
         for lineno, line in sections["sousprojets"]:
             if line.startswith("fic="):
                 if not re.match(r'^fic="[^"]+"(," "|,"<priv>\d+")', line):
@@ -231,6 +249,23 @@ def validate_dhpt(lines, sections, file_path=None):
                         "severity": "error",
                         "message": f"Ligne {lineno} : syntaxe invalide dans [sousprojets] : {line}"
                     })
+                # P17 : detection nom xxxu.dhps
+                m = re.match(r'^fic="([^"]+)"', line)
+                if m:
+                    fname = m.group(1)
+                    stem, ext = os.path.splitext(fname)
+                    if ext.lower() == ".dhps" and stem.endswith("u"):
+                        errors.append({
+                            "rule": "P17",
+                            "severity": "error",
+                            "message": (
+                                f"Ligne {lineno} : .dhps de surcharge '{fname}' "
+                                f"listee dans [sousprojets]. xwin7 la detecte "
+                                f"automatiquement via cheminbases et leve 'ne "
+                                f"peut etre charge directement' si elle est "
+                                f"declaree. Retirer cette ligne."
+                            )
+                        })
 
     # P14/P15 : verification accent dans profil (si profil present)
     if "profil" in sections:

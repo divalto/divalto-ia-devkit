@@ -1,15 +1,37 @@
 ---
 name: manipulating-dhsf-screens
-description: Parse, genere et modifie les masques ecran Divalto (.dhsf). Parse un .dhsf en arbre structurel JSON, genere un .dhsf depuis un template (zoom SQL, ecran CRUD, simple) avec remplacement de tokens, et effectue des modifications incrementales (ajout champ, colonne, page). A utiliser quand il faut creer ou modifier un masque ecran DIVA (zoom SQL, ecran de saisie, affichage d'une entite).
+description: Parse, genere, modifie et surcharge les masques ecran Divalto (.dhsf). Parse un .dhsf en arbre structurel JSON, genere un .dhsf depuis un template (zoom SQL, ecran CRUD, simple), effectue des modifications incrementales (ajout champ, colonne, page) et scaffolde des surcharges masque (xxx_sqlu.dhsf). A utiliser quand il faut creer, modifier ou surcharger un masque ecran DIVA (zoom SQL, ecran de saisie, affichage d'une entite).
 ---
 
 # manipulating-dhsf-screens
 
-Manipulation complete des fichiers masque ecran Divalto (.dhsf) : parsing structurel, generation par template, et modifications incrementales.
+Manipulation complete des fichiers masque ecran Divalto (.dhsf) : parsing structurel, generation par template, modifications incrementales, et **surcharge** d'un masque standard.
 
 ## References documentaires
 
-- **Ergonomie (UX)** : [reference/normes-graphiques.md](reference/normes-graphiques.md) -- espacements canoniques (X=5, Y=8/26), tailles autorisees, styles WPF, ordre onglet Identifiants, formules de placement.
+### Structure et surcharge
+
+- **Structure d'un .dhsf** : [reference/dhsf-structure.md](reference/dhsf-structure.md) -- les 8 sections d'un masque, convention de nommage universelle (`e` en position 3), section `[diva]` qui contient du code DIVA executable.
+- **Surcharge masque** : [reference/dhsf-overwrite-pattern.md](reference/dhsf-overwrite-pattern.md) -- pattern `<base>u.dhsf`, 3 proprietes a ajouter + 2 a modifier dans `[masque]`, compagnon `_base.dhsf`, mecanique `[diva]`/`[diva_base]`, edition en place vs ajout, integration avec `.dhps` de surcharge.
+
+### Composants graphiques (1 fichier par composant)
+
+- **Libelle statique** : [reference/composant-obj-texte.md](reference/composant-obj-texte.md) -- grammaire complete, datapoints valides empiriquement
+- **Saisie / affichage de donnee** : [reference/composant-champ.md](reference/composant-champ.md) -- wstyle vs saisie, distinction `[presentation].cadrage` vs `[description].cadrage`, triplet bouton zoom F8, cas `saisie=objgraph`, templates
+- **Cadre decoratif avec en-tete** : [reference/composant-groupbox.md](reference/composant-groupbox.md) -- 3 couleurs canoniques, imbrication + marges visuelles, comportement runtime au focus, regle z-order
+- **Element graphique pur** : [reference/composant-cadre.md](reference/composant-cadre.md) -- 19 valeurs `nature=`, `nature=vide` defaut implicite, `epaisseur=0` invisible, couleurs canoniques (piege `TRAIT_SIMPLE`=blanc), tri auto par surface
+- **Image fixe** : [reference/composant-bitmap-constante.md](reference/composant-bitmap-constante.md) -- 2 niveaux de referencement, 8 valeurs `actionbitmap=`, surcharges non exposees AGL
+- **Image dynamique** : [reference/composant-bitmap-variable.md](reference/composant-bitmap-variable.md) -- champ DIVA contient le chemin du fichier, pattern multi-dimensions, contraintes `saisie=non`
+
+### Regles transverses
+
+- **DIVA case-sensitivity** : [reference/diva-case-sensitivity.md](reference/diva-case-sensitivity.md) -- DIVA insensible / SQL Divalto sensible / convention AGL lowercase
+- **Feuilles de style** : [reference/surcharge-feuilles-style.md](reference/surcharge-feuilles-style.md) -- mecanisme `fstylewpfu.dhfi`, taxonomie complete des surcharges Divalto
+- **Pilotage dynamique** : [reference/xmesetattribut-dynamique.md](reference/xmesetattribut-dynamique.md) -- `noms=` + `XmeSetAttribut`, masquer/griser/restaurer des composants au runtime, liste des attributs `AN_*` et valeurs `AV_*`
+
+### Ergonomie (UX)
+
+- **Normes graphiques** : [reference/normes-graphiques.md](reference/normes-graphiques.md) -- espacements canoniques (X=5, Y=8/26), tailles autorisees, styles WPF, ordre onglet Identifiants, formules de placement.
 
 Lors de la generation ou de la modification d'un masque, appliquer systematiquement les regles de `reference/normes-graphiques.md` :
 - Toute page FICHE commence a X=5 (bord gauche), premier objet a Y=8 sans onglet ou Y=26 avec onglet.
@@ -17,12 +39,23 @@ Lors de la generation ou de la modification d'un masque, appliquer systematiquem
 - Les libelles accoles suivent `Pos X(libelle) = 1 + Pos X(champ) + Taille(champ)`.
 - Si le masque est associe a un dictionnaire contenant `Ce1`/`Note`/`Joint`/`UserCr`/`UserCrDh`/`UserMo`/`UserMoDh`, l'onglet Identifiants doit les exposer dans l'ordre canonique (Codes enregistrements -> [Protection/Derniere operation] -> Creation + Derniere modification).
 
+## Convention de nommage
+
+Tout masque `.dhsf` a `e` en **position 3** (regle universelle). Verification rapide d'un nom :
+
+```
+py scripts/is_dhsf_filename.py --filename gtez000_sql.dhsf
+```
+
+Decompose le nom en `{domain, type, id, is_surcharge}`. Voir [reference/dhsf-structure.md](reference/dhsf-structure.md) section "Convention de nommage".
+
 ## Quand utiliser ce skill
 
 - Creer un nouveau masque ecran (.dhsf) a partir d'un template
 - Ajouter un champ, une colonne de tableau, ou une page a un masque existant
 - Analyser la structure d'un masque (pages, elements, widgets, enregistrements)
 - Inspecter les liaisons donnees (vue, champ, alias) d'un masque
+- **Surcharger un masque standard** : creer un `<base>u.dhsf` qui ajoute / modifie des comportements sans toucher au standard
 
 ## Scripts
 
@@ -179,10 +212,59 @@ Dans un **masque zoom** (template `zoom`) :
 Regle generale : pour ajouter un champ de donnee dans un zoom, utiliser
 `page_numero=11`.
 
+### 5. surcharge_mask.py -- Scaffolder de surcharge masque
+
+Cree une surcharge `<base>u.dhsf` + son compagnon `<base>_base.dhsf` a partir du masque standard.
+
+```
+py scripts/surcharge_mask.py --standard <chemin_standard.dhsf> --output-dir <dest>
+```
+
+Actions :
+1. Lit le timestamp du standard depuis l'en-tete `;>xwin4obj 7.0 <TS>`
+2. Cree le compagnon `<base>_base.dhsf` (copie exacte du standard, gere par l'outillage -- ne pas editer)
+3. Cree le masque user `<base>u.dhsf` avec les 5 proprietes `[masque]` modifiees pour declarer la surcharge :
+   - AJOUTE   `surcharge=oui`
+   - AJOUTE   `date_modif_base="<TS_STANDARD>"`
+   - AJOUTE   `niveau_surcharge=1`
+   - REMPLACE `dernier_id` par `1000000`
+   - REMPLACE `dernier_id_page` par `100000`
+4. Preserve ISO-8859-1 + CRLF sur les deux fichiers
+
+Options :
+- `--niveau 2` pour surcharge de surcharge (analogue a `OverWrite uu` des `.dhsp`)
+- `--force` pour ecraser les fichiers cibles existants
+
+Sortie JSON : `{standard, user_mask, base_mask, date_modif_base, niveau_surcharge, proprietes_modifiees, rappels}`.
+
+Apres la generation, referencer le masque user dans `[fichiers]` d'un `.dhps` de surcharge (cf. skill `managing-diva-projects`). **Ne pas** lister dans `[sousprojets]` du `.dhpt` parent (P17). Voir [reference/dhsf-overwrite-pattern.md](reference/dhsf-overwrite-pattern.md) pour le workflow complet.
+
+### 6. is_dhsf_filename.py -- Verification de nom
+
+Verifie qu'un nom de fichier respecte la convention masque (`e` en position 3).
+
+```
+py scripts/is_dhsf_filename.py --filename gtez000_sql.dhsf
+```
+
+Sortie JSON : `{is_mask, domain, type, id, is_surcharge, reason}`. Exit 0 si masque valide, 1 sinon. Utile en garde-fou avant operation sur un fichier inconnu.
+
 ## Workflow typique
+
+### Creation / modification standard
 
 1. **Generer** le masque depuis un template : `dhsf_template.py --template zoom`
 2. **Valider** la structure : `dhsf_parser.py --summary`
 3. **Modifier** incrementalement : `dhsf_modify.py --action add-field`
 4. **Re-valider** : `dhsf_parser.py --summary`
 5. **Verifier l'encodage** : `writing-diva-files` skill (verify_encoding.py)
+
+### Surcharge d'un masque standard
+
+1. **Identifier** le masque standard dans le pack livre (`{CHEMIN_ERP_STANDARD}/sources/<base>_sql.dhsf` ou equivalent)
+2. **Scaffolder** la surcharge : `surcharge_mask.py --standard <chemin_standard> --output-dir <projet_surcharge>/sources`
+3. **Referencer** le masque user dans `[fichiers]` d'un `.dhps` de surcharge (`xwin-s-sprojet`, suffixe `u`, **PAS dans [sousprojets]**)
+4. **Editer** la surcharge (ajout de composants, callbacks dans `[diva]`, etc.) -- les IDs commencent a 1000000
+5. **Compiler** (`buildall`) et **verifier au runtime** que la surcharge est detectee
+
+Voir [reference/dhsf-overwrite-pattern.md](reference/dhsf-overwrite-pattern.md) pour le pattern complet et les anti-patterns.

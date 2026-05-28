@@ -82,3 +82,41 @@ mv script_iso.ps1 script.ps1
 ```
 
 Si le .ps1 est en UTF-8, l'accent `é` est encode en 2 octets (`0xC3 0xA9`) au lieu de 1 (`0xE9`). xwin7 compare le nom du profil en ISO-8859-1, donc la correspondance echoue → erreur "Profil absent du projet".
+
+### Pourquoi le passage en argument direct echoue
+
+PowerShell 5.1 (la version par defaut sous Windows 10/11 sans installation supplementaire) stocke les chaines en **UTF-16 LE en memoire**. Quand une session PowerShell normale lance `xwin7.exe` avec un argument litteral type `-profile "developpement"` (e accent aigu), la couche de conversion vers les arguments natifs du processus enfant ne preserve PAS l'octet `0xe9` (ISO-8859-1) attendu par xwin7 -- selon la code page console active, la chaine peut etre re-encodee en UTF-8 (`0xc3 0xa9`) ou en CP1252 selon les cas, et la comparaison echoue silencieusement cote xwin7 (qui lit les octets bruts en ISO-8859-1).
+
+**Symptomes terrain (R-005)** :
+- Tentative 1 -- PowerShell + `[char]0x00e9` pour construire la chaine -> ExitCode vide, log absent.
+- Tentative 2 -- PowerShell + `Start-Process` + ArgumentList contenant `'developpement'` litteral -> ExitCode=1, log absent.
+- Tentative 3 (reussie) -- creer un script `.ps1` en ISO-8859-1 + CRLF contenant `$Profil = "developpement"` litteral, puis l'executer via `powershell -File <script.ps1>`. xwin7 parvient enfin a matcher le nom de profil avec celui du `.dhpt`.
+
+### Pattern operationnel -- script .ps1 ISO-8859-1
+
+```powershell
+# script.ps1 -- a ecrire en ISO-8859-1 + CRLF !
+$ErrorActionPreference = 'Continue'
+Set-Location 'C:\divalto\sys'
+$proc = Start-Process -FilePath 'C:\divalto\sys\xwin7.exe' `
+    -ArgumentList '-action build -project "C:\...\projet.dhpt" -profile "developpement" -output "C:\...\log.txt" -outputall' `
+    -Wait -PassThru -NoNewWindow `
+    -RedirectStandardOutput 'C:\...\log\stdout.txt' `
+    -RedirectStandardError 'C:\...\log\stderr.txt'
+Write-Host "ExitCode: $($proc.ExitCode)"
+exit $proc.ExitCode
+```
+
+L'execution : `powershell -NoProfile -ExecutionPolicy Bypass -File script.ps1`. Le contenu du `.ps1` etant stocke en bytes ISO-8859-1, PowerShell lit l'octet `0xe9` natif et le transmet a xwin7 sans re-encodage casseur.
+
+### Recette automatisee -- `scripts/compile_project.py`
+
+Pour eviter de regenerer ce pattern a la main a chaque compilation, **utiliser `scripts/compile_project.py`** qui :
+1. Genere le `.ps1` en ISO-8859-1 + CRLF (cf. `write_iso()`)
+2. Le pose dans le meme repertoire que le log (ou `--ps1-dir` si specifie)
+3. L'execute via `powershell -ExecutionPolicy Bypass -File`
+4. Capture stdout / stderr / exit code
+5. Parse la ligne de resume du log pour determiner `success`
+6. Retourne un JSON structure
+
+Equivalent fonctionnel de `generate_harness.py` mais pour des projets reels (pas des harnesses standalone). Cf. SKILL.md section "Etape 3 -- Compiler" pour le mode d'emploi.

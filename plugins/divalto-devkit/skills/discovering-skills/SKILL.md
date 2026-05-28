@@ -1,17 +1,18 @@
 ---
 name: discovering-skills
 description: >
-  Aide le collaborateur a decouvrir les skills DIVA disponibles et a comprendre
-  leur portee. Fournit une vue panoramique (synthese des 31 skills classes par
-  workflow : analyser / creer / modifier / manipuler fichiers / ISAM / valider /
-  tester-documenter / reference), le detail d'un skill precis (description, quand
-  l'utiliser, scripts, references, skills lies, prerequis, nombre de checkpoints),
-  la recherche par mot-cle dans les descriptions et metadonnees, et le filtrage
-  par workflow ou par verbe. A utiliser quand le collaborateur demande "que
-  peux-tu faire ?", "liste les skills disponibles", "explique-moi le skill X",
-  "quel skill pour faire Y ?", "montre les skills de creation / validation /
-  analyse", ou toute formulation equivalente visant a explorer la boite a outils
-  avant de lancer une tache.
+  Point d'entree du devkit DIVA. Aide le collaborateur a decouvrir les skills
+  disponibles et leur portee : vue panoramique par workflow (analyse / creation
+  / modification / fichiers / ISAM / validation / test-doc / reference), detail
+  d'un skill precis, recherche par mot-cle, filtrage par workflow ou verbe. A
+  utiliser quand le collaborateur demande "que peux-tu faire ?", "liste des
+  skills", "explique-moi <X>", "quel skill pour faire Y ?". Porte aussi la
+  **discipline d'invocation** du devkit DIVA : (1) la documentation des skills
+  (`reference/*.md`) est la source autoritaire pour toute question de
+  convention/regle/nommage/structure -- le filesystem n'est jamais source
+  primaire ; (2) les skills DIVA sont prioritaires sur toute commande
+  improvisee -- si un skill couvre l'operation, l'invoquer plutot que
+  reproduire son resultat via `find` / `grep` / `cat`.
 ---
 
 # Discovering Skills
@@ -19,6 +20,7 @@ description: >
 ## Contenu
 
 - Utilisation
+- Discipline d'invocation
 - Modes du script query_catalog.py
 - Exemples de reponses
 - Catalog source de verite
@@ -42,6 +44,66 @@ Avant de lancer la commande, **reformuler la demande** pour choisir le mode :
 | "Quel skill pour <action libre>", "Comment faire <X>" | `search <mots-cles>` |
 | "Skills pour creer / analyser / valider / ..." | `workflow <id>` |
 | "Tous les skills qui generent / lisent / ecrivent" | `verb <verbe>` |
+
+---
+
+## Discipline d'invocation
+
+Ces deux regles encadrent l'usage de l'ensemble du devkit DIVA. Elles s'appliquent independamment des regles internes a chaque skill (P-A/P-B de `understanding-integrator-workspace`, 4PRINCIPLES, anti-patterns metier, etc.). Le `discovering-skills` est le **point d'entree** annonce du devkit -- il porte ces regles parce qu'elles concernent la **discipline d'invocation des skills**, pas un skill particulier.
+
+### Regle 1 -- Documentation skill = source autoritaire pour les conventions
+
+**Pour toute question de convention, regle, nommage, structure dans le perimetre DIVA, la source autoritaire est la documentation des skills (`reference/*.md`). Le filesystem n'est jamais source primaire -- au plus un cross-check de confirmation apres lecture de la doc.**
+
+Ordre correct quand le collaborateur pose une question de convention/structure :
+
+1. **`discovering-skills detail <skill-pertinent>`** -- identifier le skill qui couvre le sujet
+2. **Lecture des references du skill** (`reference/*.md` listees dans le SKILL.md)
+3. **Reponse appuyee sur la doc** -- avec citation des fichiers references
+4. **(Optionnel) cross-check filesystem** pour confirmer un point particulier
+
+Ordre erronne (a eviter) :
+
+1. ~~`find` / `grep` / `ls` dans le filesystem pour deduire la convention~~ -> donne une reponse moins fiable
+2. ~~Inference par symetrie/observation~~ -> peut etre un cas particulier, une coutume locale, ou une erreur historique
+3. Reponse formulee sans appui sur la doc
+
+**Pourquoi cette regle** : la doc skill est ecrite et revue. Le filesystem est un instantane de l'etat reel d'un workspace -- il peut contenir des conventions specifiques au partenaire, des erreurs heritees, des exceptions ponctuelles. Confondre les deux mene a des reponses qui semblent justes mais qui ne sont pas la regle generale.
+
+**Exception unique** : quand un skill annonce explicitement que la verite vit dans un fichier source (ex: `a5tczoom.dhsp` comme catalogue de constantes pour `allocating-zoom-numbers`, ou `gtfdd.dhsd` pour le dictionnaire), c'est ce fichier qui est consulte -- mais via le skill qui le rend autoritaire, pas via un `cat` direct.
+
+### Regle 2 -- Skills DIVA prioritaires sur toute commande improvisee
+
+**Si un skill DIVA couvre l'operation demandee, l'invoquer -- pas de raccourci `find` / `grep` / `cat` qui simulerait l'operation. Les skills ne sont pas des suggestions optionnelles, ils sont la maniere canonique d'operer sur l'ERP DIVA.**
+
+Examples concrets :
+
+| Tache demandee | Raccourci tentant (a eviter) | Skill a invoquer |
+|----------------|------------------------------|------------------|
+| Trouver la version standard d'un `.dhsd` | `find /Developpements/Standard -name gtfdd.dhsd` | `understanding-integrator-workspace` (R-13) |
+| Lister les zooms standards | `grep "C_ZOOM_" a5tczoom.dhsp` | `allocating-zoom-numbers` |
+| Verifier l'encodage d'un `.dhsp` | `file <chemin>` | `writing-diva-files` (verification + correction) |
+| Generer un fichier `.dhsq` | Copier-coller un template d'un autre RecordSql | `generating-recordsql` |
+| Lire un fichier ISAM | `head -c 1000 fichier.dhfi \| od` | `reading-isam-files` |
+| Modifier un masque `.dhsf` | Editer le bloc INI a la main | `manipulating-dhsf-screens` |
+
+**Pourquoi cette regle** : les skills encapsulent (a) les conventions de la plateforme, (b) les protocoles de validation (`check_*`, `validate_*`), (c) les pieges connus catalogues par RETEX. Court-circuiter un skill par une commande improvisee = reproduire des operations sans les garde-fous. Le resultat peut sembler equivalent mais perd la coherence et la tracabilite.
+
+**Quand cette regle ne s'applique pas** :
+
+- Question hors perimetre DIVA (ex: question sur Git, Docker, Python pur).
+- Operation explicitement non couverte par un skill et signalee comme telle (perimetre hors-scope documente dans le SKILL.md correspondant).
+- Reflexe d'observation rapide sur le workspace (un `ls` pour voir le contenu d'un dossier) qui n'engage pas une operation metier.
+
+Dans le doute : passer par `discovering-skills search <mots-cles>` pour verifier qu'aucun skill ne couvre la tache avant de la faire a la main.
+
+### Application a Claude
+
+Ces deux regles concernent **le comportement de Claude lors d'une session sur un workspace DIVA**. Elles ne demandent rien au collaborateur. Concretement :
+
+- Avant toute reponse a une question de convention/structure : Claude consulte la doc du skill pertinent.
+- Avant toute commande improvisee dans le perimetre DIVA : Claude verifie qu'un skill ne la couvre pas.
+- En cas de doute : `discovering-skills` est le point d'entree pour la verification.
 
 ---
 

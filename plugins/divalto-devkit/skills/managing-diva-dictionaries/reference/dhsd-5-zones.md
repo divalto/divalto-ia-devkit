@@ -208,18 +208,54 @@ Nom={Champ2},{pos},0,
 
 ### Format CLE
 
-`CLE={NomBase},{Lettre},{ChampCE},{flag},{ValeurCE},{Unique},{flag2},n`
+`CLE={NomBase},{Lettre},{ChampCE},{flag},{ValeurCE},{Unique},{TypeIndex},n`
 
-| Champ | Description |
-|-------|-------------|
-| NomBase | Nom de la base physique (de la zone [BASE]) |
-| Lettre | Lettre de l'index (A, B, C...) |
-| ChampCE | Champ code enregistrement (Ce1, Ce) |
-| flag | `2` (pour gtfdd) ou `1` (pour ccfdd) |
-| ValeurCE | Valeur CE de la table (meme que dans CE= de la [TABLE]) |
-| Unique | `o` (unique) ou `n` (non unique) |
-| flag2 | `1` (standard) |
-| dernier | Toujours `n` |
+| Pos | Champ | Description |
+|-----|-------|-------------|
+| 1 | NomBase | Nom de la base physique (de la zone [BASE]) |
+| 2 | Lettre | Lettre de l'index (A, B, C...) **OU espace** (cas surcharge avec `Alias=`) |
+| 3 | ChampCE | Champ code enregistrement (Ce1) ou colonne discriminante calculee (Ce4, Ce5...) |
+| 4 | flag | `2` (pour gtfdd) ou `1` (pour ccfdd) |
+| 5 | ValeurCE | Valeur CE de la table (meme que dans CE= de la [TABLE]) ou valeur filtree pour un index conditionnel |
+| 6 | Unique | `o` (unique) ou `n` (non unique) |
+| 7 | TypeIndex | `1` principal / `4` conditionnel-filtre / `5` avec identifiant (cf. ci-dessous) |
+| 8 | dernier | Toujours `n` |
+
+### Variantes position 7 -- 3 types d'index
+
+Position 7 = type d'index. Trois valeurs observees dans le standard :
+
+| Type | Position 7 | Particularite `[CHAMPS]` | Cas d'usage |
+|------|------------|--------------------------|-------------|
+| **Principal** | `1` | Champs metier (pas de Ce1 dans la cle) | Index principal de la table |
+| **Conditionnel / filtre** | `4` | Champs metier (pas de Ce1 dans la cle) | 1 seule table SQL, filtre via Ce<N> -> filtered index SQL |
+| **Avec identifiant** | `5` | **Ce1 present dans la cle** (offset 9 typiquement) | Plusieurs tables SQL partagent l'index, Ce1 discrimine |
+
+Exemple sur table ART (base GtfAt) : `Index_A` (principal, 1) sur Dos+Ref, `Index_I` (filtre, 4) sur Dos+Ean avec `Ce4='1'` (= avec EAN).
+
+### Filtered indexes Divalto
+
+Un index avec position 7 = `4` est materialise en SQL Server comme un **filtered index** (`CREATE INDEX ... WHERE <CeN> = '<valeur>'`). Le filtre passe par une colonne discriminante `Ce<N>` calculee par le mchk a chaque ecriture :
+
+```diva
+; Dans le mchk standard de la table ART (gttmchkart.dhsp)
+ART.Ce4 = Condition(ART.Ean <> ' ', '1', ' ')
+```
+
+`Ce4` est un champ ordinaire de la table ART, automatiquement maintenu par le mchk. L'index correspondant filtre sur `Ce4='1'` -> ne contient que les articles ayant un EAN.
+
+Pour creer un nouvel index filtre custom dans une surcharge, voir [dhsd-surcharge-indexes.md](dhsd-surcharge-indexes.md) section "Filtered indexes Divalto".
+
+### Format `CLE=` en surcharge -- espace + Alias=
+
+Dans un fichier de surcharge `.dhsd`, la position 2 (`Lettre`) peut etre un **espace** (caractere `0x20`), suivi d'une ligne `Alias=<NomLogique>` qui donne le nom de l'index. Pattern observe :
+
+```ini
+CLE=GtfAt, ,Ce4,2,1,n,4,n
+Alias=miRajoutFl_ean
+```
+
+Detail complet du pattern de surcharge d'index : [dhsd-surcharge-indexes.md](dhsd-surcharge-indexes.md).
 
 ### Positions dans les CHAMPS d'index
 

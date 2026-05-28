@@ -1,12 +1,23 @@
 #!/usr/bin/env python3
 """Genere un fichier .dhps (sous-projet Divalto) au format INI.
 
-Le fichier genere est en texte brut (UTF-8) -- le skill writing-diva-files
-se charge de la conversion finale en ISO-8859-1 + CRLF.
+Le fichier genere est ecrit en ISO-8859-1 + CRLF (format natif Divalto).
+
+Deux modes :
+- **Standard** (par defaut) : en-tete `xwin-sprojet 2.0`
+- **Surcharge** : en-tete `xwin-s-sprojet 2.0` (xwin7 exige cette variante
+  pour une .dhps qui surcharge un sous-projet du standard livre).
+
+Mode surcharge declenche par :
+- Flag explicite `--surcharge` (prioritaire)
+- Auto-detection via `--parent-dhpt` : si le .dhpt parent a l'en-tete
+  `xwin-s-projet`, on bascule en mode surcharge
 
 Usage :
     py create_subproject.py --stdin < params.json
     py create_subproject.py --stdin --output mon_sous_projet.dhps < params.json
+    py create_subproject.py --stdin --surcharge --output gt_zoom_articleu.dhps < params.json
+    py create_subproject.py --stdin --parent-dhpt projet_surcharge.dhpt --output gt_zoom_articleu.dhps < params.json
 
 Entree JSON :
     {
@@ -68,19 +79,39 @@ def validate_params(params):
     return errors
 
 
-def generate_dhps(params):
+def detect_surcharge_from_parent(parent_dhpt_path):
+    """Detecte si le .dhpt parent est un projet de surcharge.
+
+    Renvoie True si l'en-tete commence par `xwin-s-projet`, False sinon
+    (y compris si le fichier est introuvable -- on retombe en mode standard).
+    """
+    try:
+        with open(parent_dhpt_path, "rb") as f:
+            first_line = f.readline().decode("iso-8859-1", errors="replace").strip()
+    except Exception:
+        return False
+    return first_line.startswith("xwin-s-projet")
+
+
+def generate_dhps(params, surcharge=False):
     """Genere le contenu d'un fichier .dhps.
 
     Args:
         params: dict avec name, util, communs, fichiers, includes, autres
+        surcharge: True pour generer une .dhps de surcharge (en-tete
+                   `xwin-s-sprojet 2.0` requis par xwin7 pour les surcharges
+                   de sous-projets standards)
 
     Returns:
         str: contenu complet du .dhps
     """
     lines = []
 
-    # En-tete
-    lines.append("xwin-sprojet       2.0")
+    # En-tete : variante surcharge si demandee (xwin7 distingue les deux)
+    if surcharge:
+        lines.append("xwin-s-sprojet     2.0")
+    else:
+        lines.append("xwin-sprojet       2.0")
 
     # [general]
     lines.append("[general]")
@@ -140,6 +171,16 @@ def main():
         "--output", default=None,
         help="Fichier de sortie (stdout si omis)"
     )
+    parser.add_argument(
+        "--surcharge", action="store_true",
+        help="Genere une .dhps de surcharge (en-tete xwin-s-sprojet)"
+    )
+    parser.add_argument(
+        "--parent-dhpt", default=None,
+        help="Chemin du .dhpt parent : si son en-tete est xwin-s-projet, "
+             "mode surcharge active automatiquement (sauf si --surcharge "
+             "explicite est deja fourni)"
+    )
     args = parser.parse_args()
 
     if not args.stdin:
@@ -158,7 +199,13 @@ def main():
             print(f"Erreur : {err}", file=sys.stderr)
         sys.exit(1)
 
-    content = generate_dhps(params)
+    # Mode surcharge : flag explicite prioritaire, sinon auto-detection
+    # depuis le .dhpt parent si fourni
+    surcharge = args.surcharge
+    if not surcharge and args.parent_dhpt:
+        surcharge = detect_surcharge_from_parent(args.parent_dhpt)
+
+    content = generate_dhps(params, surcharge=surcharge)
 
     if args.output:
         # Ecriture en mode binaire : ISO-8859-1 + CRLF (format natif Divalto)
@@ -168,6 +215,7 @@ def main():
         result = {
             "file": args.output,
             "name": params["name"],
+            "surcharge": surcharge,
             "sections": {
                 "communs": len(params.get("communs", [])),
                 "fichiers": len(params.get("fichiers", [])),

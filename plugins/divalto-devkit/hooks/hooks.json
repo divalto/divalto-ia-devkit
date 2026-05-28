@@ -1,0 +1,44 @@
+{
+  "description": "Hooks distribues avec le plugin divalto-devkit : protection skills/encoding + garde-fou version diva-mcp (PreToolUse) + push RETEX vers GitHub (PostToolUse).",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "py",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/protect_skills.py"]
+          },
+          {
+            "type": "command",
+            "command": "py",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/protect_encoding.py"]
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__.*diva-mcp.*__",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "py",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/check_mcp_version.py"]
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "py",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/push_retex_to_github.py"]
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -159,7 +159,7 @@ py .claude/skills/managing-diva-dictionaries/scripts/validate_dhsd.py \
 
 ## Validation
 
-Le script `validate_dhsd.py` verifie 11 regles (D01-D11, detail dans [reference/dhsd-anti-patterns.md](reference/dhsd-anti-patterns.md)) :
+Le script `validate_dhsd.py` verifie 16 regles (D01-D16, detail dans [reference/dhsd-anti-patterns.md](reference/dhsd-anti-patterns.md)) :
 
 | Regle | Severite | Quoi |
 |-------|----------|------|
@@ -174,10 +174,16 @@ Le script `validate_dhsd.py` verifie 11 regles (D01-D11, detail dans [reference/
 | D09 | error | [/INDEX] manquant |
 | D10 | error | CE incoherent dans l'index |
 | D11 | warning | Prefixe base incorrect |
+| D12 | error | `ce_value` invalide avec discriminator Ce1 (pre-generation) |
+| D13 | error | Lettre cle d'index non alphanumerique 1 char (pre-generation) |
+| D14 | error (avec `--dhsd-standard`) | Metadonnees [BASEU]/[TABLEU] divergentes du standard |
+| D15 | error (avec `--dhsd-standard`) | [CHAMPR] sur table sans U-container standard |
+| D16 | error (avec `--dhsd-standard`) | [CHAMP] surcharge redeclare un champ standard avec attributs differents (option C interdite) |
 
-Deux modes de validation :
+Trois modes de validation :
 - `--blocks` : valide les blocs generes (avant insertion)
 - `--path --table` : valide une table dans un .dhsd existant (apres insertion)
+- `--path --dhsd-standard <chemin_standard>` : valide une surcharge contre son .dhsd standard (D14/D15/D16)
 
 ---
 
@@ -186,14 +192,73 @@ Deux modes de validation :
 | Script | Role | Entree | Sortie |
 |--------|------|--------|--------|
 | `scripts/nature_to_size.py` | Convertit un code Nature en taille octets | `--nature "20"` ou `--stdin` JSON | JSON {nature, size, type, description} |
-| `scripts/generate_dhsd_block.py` | Genere les 5 blocs INI | JSON params (stdin ou fichier) | JSON {table, blocks, positions, taille, summary} |
+| `scripts/generate_dhsd_block.py` | Genere les 5 blocs INI (nouvelle table) | JSON params (stdin ou fichier) | JSON {table, blocks, positions, taille, summary} |
+| `scripts/generate_surcharge_field.py` | Ajoute un champ a une table standard via surcharge (mode `--output` creation ou `--append-to` ajout) | `--dhsd-standard --table --field-name --nature --label --user [--prefix]` | JSON {status, file, mode, field, nature, size_bytes, container, container_capacity, offset_in_container, capacity_remaining, table_metadata_source, bases_metadata_source, filetime_le} |
 | `scripts/insert_dhsd_blocks.py` | Insere les blocs dans un .dhsd (tri alpha, backup, validation) | `--dhsd` + `--blocks` [+ `--dry-run`] | JSON {success, insertions, validation} |
 | `scripts/validate_dhsd.py` | Valide blocs generes ou .dhsd existant | `--blocks` JSON ou `--path` .dhsd + `--table` | JSON {target, valid, errors, warnings, summary} |
 
 ---
 
+## Surcharge dictionnaire
+
+Le skill couvre aussi la **surcharge** d'un dictionnaire standard (ajout de champs custom sur des tables existantes via `<dict>u.dhsd`). Deux references dediees :
+
+- [reference/dhsd-surcharge-pattern.md](reference/dhsd-surcharge-pattern.md) -- pattern complet (structure `[CHAMP]/[CHAMPR]/[CHAMPL]/[TABLEU]/[BASEU]`, regle d'offset cumule dans le U-container, metadonnees recopiees du standard, options A/B/C)
+- [reference/dhsd-surcharge-indexes.md](reference/dhsd-surcharge-indexes.md) -- pattern d'ajout d'index custom en surcharge (les 6 ecarts marketplace, filtered indexes via `Ce<N>` calcules mchk, 3 types d'index principal/conditionnel/avec identifiant)
+
+### Ajouter un champ a une table standard via `generate_surcharge_field.py`
+
+Operation deterministe une fois `(table, champ, Nature)` connus. Le script `generate_surcharge_field.py` automatise le pattern complet (parse metadonnees standard pour D14, verif U-container et capacite D15, calcul offset cumule, FILETIME courant, ecriture ISO-8859-1+CRLF). Deux modes mutuellement exclusifs :
+
+**Mode `--output` -- creation d'une nouvelle surcharge :**
+
+```
+py .claude/skills/managing-diva-dictionaries/scripts/generate_surcharge_field.py \
+    --dhsd-standard "{CHEMIN_ERP_STANDARD}/dictionnaires/gtfdd.dhsd" \
+    --table T143 \
+    --field-name dgsTrajetKmMax \
+    --nature 5,0 \
+    --label "Plafond km deplacement" \
+    --user rootDGS \
+    --prefix dgs \
+    --output "{CHEMIN_SPECIFIQUE}/fichiers/gtfddu.dhsd"
+```
+
+**Mode `--append-to` -- ajout dans une surcharge existante :**
+
+```
+py .claude/skills/managing-diva-dictionaries/scripts/generate_surcharge_field.py \
+    --dhsd-standard "{CHEMIN_ERP_STANDARD}/dictionnaires/gtfdd.dhsd" \
+    --table T143 \
+    --field-name dgsTrajetKmMin \
+    --nature 5,0 \
+    --label "Plancher km deplacement" \
+    --user rootDGS \
+    --prefix dgs \
+    --append-to "{CHEMIN_SPECIFIQUE}/fichiers/gtfddu.dhsd"
+```
+
+Le script calcule automatiquement l'**offset cumule** en re-parsant la surcharge existante (`--append-to`) ou demarre a 1 (`--output`). Il genere `[BASEU]` pour **chaque** base concernee (cas multi-bases : `c3` ancre simultanement sur `CcfJCA` + `Ccfm`).
+
+**Argument `--prefix` (optionnel)** : garde-fou anti-typo uniquement. Il **n'existe aucune regle universelle** pour identifier un champ specifique depuis son nom -- selon les postes integrateur, le prefixe peut etre 1/2/3 caracteres, n'importe quelle casse, ou totalement absent (PascalCase pur identique au standard). Si `--prefix` est fourni, le script verifie juste que `field_name.startswith(prefix)`. Sans `--prefix`, n'importe quel nom est accepte. **Consequence linter** : D12 (PascalCase) reste un warning informatif structurel -- faux positifs frequents sur les surcharges avec prefixe poste.
+
+**Limitations v1** : champs tableau (`Nature=20*3`), multi-table composite (un meme champ ancre sur `U-A` et `U-B` simultanement), index custom en surcharge -- non couverts par le script. Pour ces cas, voir [reference/dhsd-surcharge-pattern.md](reference/dhsd-surcharge-pattern.md) et [reference/dhsd-surcharge-indexes.md](reference/dhsd-surcharge-indexes.md) (rédaction manuelle).
+
+**Validation post-ecriture** -- enchainer avec `validate_dhsd.py --dhsd-standard` :
+
+```
+py .claude/skills/managing-diva-dictionaries/scripts/validate_dhsd.py \
+    --path "<dict>u.dhsd" --dhsd-standard "{CHEMIN_ERP_STANDARD}/dictionnaires/{dict_name}.dhsd"
+```
+
+Verifie D14 (metadonnees divergentes), D15 (table sans U-container), D16 (option C interdite). Necessite l'acces au `.dhsd` standard de l'ERP livre (`{CHEMIN_ERP_STANDARD}/dictionnaires/`).
+
+---
+
 ## References
 
-- **Les 5 zones avec format et exemples** : Voir [reference/dhsd-5-zones.md](reference/dhsd-5-zones.md)
-- **Table Nature -> taille** : Voir [reference/nature-types.md](reference/nature-types.md)
-- **Anti-patterns D01-D11** : Voir [reference/dhsd-anti-patterns.md](reference/dhsd-anti-patterns.md)
+- **Les 5 zones avec format et exemples** : Voir [reference/dhsd-5-zones.md](reference/dhsd-5-zones.md) (Zone 4 documente les 3 types d'index et les filtered indexes Divalto)
+- **Surcharge -- pattern complet** : Voir [reference/dhsd-surcharge-pattern.md](reference/dhsd-surcharge-pattern.md)
+- **Surcharge -- index custom** : Voir [reference/dhsd-surcharge-indexes.md](reference/dhsd-surcharge-indexes.md)
+- **Table Nature -> taille** : Voir [reference/nature-types.md](reference/nature-types.md) (couverture ~40 % des Nature reelles du standard -- inviter a enrichir)
+- **Anti-patterns D01-D16** : Voir [reference/dhsd-anti-patterns.md](reference/dhsd-anti-patterns.md)

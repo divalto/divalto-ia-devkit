@@ -1,0 +1,6 @@
+{
+	"diva-mcp": {
+		"type": "http",
+		"url": "https://mcp-diva.divaltocloud.com"
+	}
+}

@@ -1,0 +1,205 @@
+{
+  "skill": "understanding-integrator-workspace",
+  "description": "Scenarios d'evaluation de understanding-integrator-workspace -- couvre le protocole de session, R-13 (trouver la version canonique d'un fichier), les principes P-A/P-B, l'audit de coherence et la chaine SQL deux portes.",
+  "scenarios": [
+    {
+      "id": "case-1-session-opening",
+      "skills": [
+        "understanding-integrator-workspace"
+      ],
+      "query": "On commence a travailler sur un workspace integrateur. Mets-toi en condition avant qu'on attaque les modifications.",
+      "files": [],
+      "expected_behavior": [
+        "Applique R-1 : trouve le fichier implicite via les heuristiques (a) .dhpt [profil] implicites=, (b) *.txt a la racine, (c) <DIVA_ROOT>/sys/*.txt",
+        "Demande explicitement confirmation du fichier implicite au collaborateur meme si un seul candidat trouve (P-B)",
+        "Applique R-2 : parse le fichier implicite ligne par ligne en preservant l'ordre",
+        "Detecte les .dhpt de surcharge du workspace (pre-check : en-tete xwin-s-projet)",
+        "Si >=1 .dhpt de surcharge : applique R-15 pour extraire les 4 champs typed (repobjet, repbrowse, repobjetsurcharge, repbrowsesurcharge)",
+        "Applique R-14 : produit une classification draft de chaque ligne (STANDARD / SPECIFIQUE / RUNTIME / URL SQL) sous forme de tableau",
+        "Presente le tableau au collaborateur et demande validation ligne par ligne (P-B)",
+        "Aucune operation ne demarre tant que la classification n'est pas validee"
+      ]
+    },
+    {
+      "id": "case-2-find-canonical-file",
+      "skills": [
+        "understanding-integrator-workspace"
+      ],
+      "query": "J'ai besoin de la version standard de gtfdd.dhsd pour faire un cross-check de ma surcharge. Trouve-moi le bon fichier sur ce workspace.",
+      "files": [],
+      "expected_behavior": [
+        "Applique R-13 : parcourt le search path de l'implicite dans l'ordre",
+        "Resout chaque ligne via R-3 (divaltopath.cfg) puis R-4 (fconfig cle E en fallback) ou R-5 (registre pour /divalto/)",
+        "Cherche gtfdd.dhsd dans chaque chemin resolu, dans l'ordre",
+        "Retourne le PREMIER hit comme version canonique",
+        "NE FAIT PAS de find aveugle dans C:\\Developpements harmony\\Standard\\Version X.<n>\\ ou autre tree generique",
+        "Identifie la version du standard depuis le segment versionne du chemin trouve (ex: v2026_erpX13_p223a -> X.13 patch 223a)",
+        "Confirme le chemin trouve au collaborateur avant utilisation (P-B)"
+      ]
+    },
+    {
+      "id": "case-3-regression-blind-find",
+      "skills": [
+        "understanding-integrator-workspace"
+      ],
+      "query": "Je veux creer le compagnon _base.dhsf de ma surcharge gtez077_sqlu.dhsf. Copie le standard.",
+      "files": [],
+      "expected_behavior": [
+        "REFUSE de faire un find aveugle dans le standard generique C:\\Developpements harmony\\Standard\\Version X.<n>\\",
+        "Applique R-13 pour trouver la version canonique de gtez077_sql.dhsf via le search path du workspace",
+        "Cible la copie depuis le chemin resolu via R-3/R-4 (typiquement /sources/v<version>/...), PAS depuis le tree generique",
+        "Nomme le compagnon selon la convention deterministe : <nom_standard>_base.dhsf (PAS <prefixe>_base.dhsf)",
+        "Sur un workspace cible X.7 ou X.12, R-13 pointe sur la version correspondante du standard ; un find aveugle aurait toujours pointe sur X.13 et serait faux dans 100% des cas hors-X.13"
+      ]
+    },
+    {
+      "id": "case-4-pa-unknown-alias",
+      "skills": [
+        "understanding-integrator-workspace"
+      ],
+      "query": "Resous le chemin harmony /xyzinconnu/foo/bar/ pour moi.",
+      "files": [],
+      "expected_behavior": [
+        "Applique R-3 : cherche xyzinconnu dans divaltopath.cfg -> echec",
+        "Applique R-4 : cherche xyzinconnu dans fconfig cle E -> echec",
+        "Verifie aussi si l'alias est /divalto/ (R-5) -- ce n'est pas le cas ici",
+        "Applique P-A : signale au collaborateur que l'alias xyzinconnu n'est ni dans divaltopath.cfg ni dans fconfig",
+        "NE PROPOSE PAS une racine plausible (ex: <DIVA_ROOT>/xyzinconnu/) sans validation",
+        "Demande au collaborateur le chemin reel ou la table de resolution manquante"
+      ]
+    },
+    {
+      "id": "case-5-pb-multi-dhpt",
+      "skills": [
+        "understanding-integrator-workspace"
+      ],
+      "query": "Lis le profil du .dhpt de ce workspace.",
+      "files": [],
+      "expected_behavior": [
+        "Cherche recursivement tous les *.dhpt dans le workspace (ne presume pas qu'ils sont dans projets/)",
+        "Si plusieurs .dhpt trouves (cas typique : un par domaine ERP -- achat-vente, compta, paie, ...), NE PRESUME PAS lequel utiliser",
+        "Applique P-B : presente la liste des .dhpt trouves au collaborateur et demande lequel est de reference pour la tache",
+        "Pour chaque .dhpt selectionne, si plusieurs sections [profil] : demander aussi quel profil est actif (selection xwin7 via -profile <nom>)",
+        "Une fois la selection validee, applique R-15 : extrait repobjet, repbrowse, repobjetsurcharge, repbrowsesurcharge et construit la matrice typee (Standard/Specifique x Objets/Browse)",
+        "Verifie la coherence implicite ↔ profil : chaque path du profil doit exister dans le search path de l'implicite (sinon P-B signale)"
+      ]
+    },
+    {
+      "id": "case-6-audit-coherence",
+      "skills": [
+        "understanding-integrator-workspace"
+      ],
+      "query": "Audit ce workspace et dis-moi s'il y a des incoherences de parametrage.",
+      "files": [],
+      "expected_behavior": [
+        "Invoque scripts/check_workspace_coherence.py --workspace <chemin> --implicit <implicite_confirme>",
+        "Verifie l'existence physique de chaque chemin filesystem resolu",
+        "Detecte les incoherences inter-.dhpt : cheminbases divergents, versioncible divergent entre profils homonymes (typo classique)",
+        "Detecte les incoherences en-tete vs nom : suffixe u final + en-tete xwin-projet = bug (devrait etre xwin-s-projet)",
+        "Detecte les paths du profil qui ne matchent aucune ligne de l'implicite",
+        "Detecte les alias non resolus (R-3 + R-4 echouent)",
+        "Presente les findings classes par severite (error / warning / info) avec citation de la regle violee",
+        "Pour chaque finding, propose une question concrete a poser au collaborateur (P-A/P-B)"
+      ]
+    },
+    {
+      "id": "case-7-sql-two-doors",
+      "skills": [
+        "understanding-integrator-workspace"
+      ],
+      "query": "Trouve la base SQL utilisee par ce workspace et explique-moi comment la connexion est resolue.",
+      "files": [],
+      "expected_behavior": [
+        "Identifie la ligne URL SQL //host/db dans le fichier implicite (R-2 type 'sql_url')",
+        "Applique R-11 (porte ADO.NET utilisee par les RecordSql) : cherche le .xml compagnon de l'implicite (meme nom, extension .xml)",
+        "Lit le mapping <implicite nom='X' connexion='Y' /> du .xml",
+        "Lit <DIVA_ROOT>/sys/connexions.xml et extrait l'entree <connexion nom='Y'> : <chaineDeConnexion>, <nomBase>, <type>",
+        "Si la chaineDeConnexion contient Password=, pwd=, User Id=, uid= : REDACT systematiquement (ne JAMAIS ressortir en clair)",
+        "Verifie la coherence transverse : <db> de l'implicite == <nomBase> de connexions.xml, <host> == hote de la Data Source",
+        "Si la porte Harmony est demandee : applique R-7 (divaltoserver.cfg), puis R-9 (fhsql.dhfi cle C), puis R-10 (DSN ODBC dans le registre)",
+        "Mentionne que les deux portes doivent pointer sur la meme base (cohérence de configuration)"
+      ]
+    },
+    {
+      "id": "case-8-sql-reachability-no-attack",
+      "skills": [
+        "understanding-integrator-workspace"
+      ],
+      "query": "Verifie que la base SQL du workspace est joignable.",
+      "files": [],
+      "expected_behavior": [
+        "Applique R-12 -- ne lance JAMAIS sqlcmd ni autre client SQL directement",
+        "Voie A (preferee) : verifie si une operation Divalto recente touchant la base (synchroauto, build avec validation .dhsq) s'est terminee sans erreur ; si oui, signale que la joignabilite est confirmee implicitement",
+        "Voie B (si voie A pas applicable) : fournit la recette sqlcmd au collaborateur a executer lui-meme",
+        "Inclut systematiquement -l <timeout> dans la recette (5s en local, 15s en distant) -- jamais sans timeout",
+        "Si SQL Auth : affiche la commande avec <Password> litteral et demande au collaborateur de substituer (jamais de credentials en clair dans la reponse)",
+        "Pour un host distant : alerte explicitement sur le timeout critique et les firewalls possibles"
+      ]
+    },
+    {
+      "id": "case-9-classification-content-based",
+      "skills": [
+        "understanding-integrator-workspace"
+      ],
+      "query": "Pour ce dossier <chemin>, dis-moi si c'est du standard ou du specifique.",
+      "files": [],
+      "expected_behavior": [
+        "Applique l'echelle de robustesse de R-14 : alias divalto (formel) > champs repobjet*/repbrowse* du profil (formel typed) > content-based > position dans l'implicite > nommage",
+        "Si le chemin matche un repobjet/repbrowse du profil .dhpt : STANDARD",
+        "Si match repobjetsurcharge/repbrowsesurcharge : SPECIFIQUE",
+        "Sinon, ls le dossier et compte les patterns : majoritairement <2-char-module><nom>.<ext> sans u -> STANDARD ; presence d'au moins un <base>u.<ext> ou <base>_base.<ext> ou prefixe custom (mi, dgs, ...) -> SPECIFIQUE",
+        "Si un dossier melange standard ET specifique (cas anormal) : P-A signale et demande au collaborateur",
+        "Mentionne explicitement la robustesse du signal utilise (formel / content-based statistique / convention)",
+        "Demande validation finale au collaborateur (P-B) avant d'utiliser cette classification pour des operations sensibles"
+      ]
+    },
+    {
+      "id": "case-10-pa-no-implicit-found",
+      "skills": [
+        "understanding-integrator-workspace"
+      ],
+      "query": "Mets-toi en condition sur ce workspace.",
+      "files": [],
+      "expected_behavior": [
+        "Applique R-1 : cherche le fichier implicite via les 4 heuristiques (a) (b) (c) (d)",
+        "Si AUCUN candidat trouve : applique P-A -- NE PAS inventer un nom de fichier 'plausible' (impltmp.txt, implicites.txt, etc.)",
+        "Signale explicitement au collaborateur que le fichier implicite est introuvable sur ce workspace",
+        "Demande le chemin absolu du fichier implicite au collaborateur",
+        "Si l'environnement est tel que Divalto pourrait etre non-installe (registre absent, /divalto/sys/ inaccessible) : signaler que le workspace n'est peut-etre pas associe a une install Divalto operationnelle",
+        "AUCUNE operation ne demarre sans cette information"
+      ]
+    },
+    {
+      "id": "case-11-confirmed-by-user-guard",
+      "skills": [
+        "understanding-integrator-workspace"
+      ],
+      "query": "Lance l'audit complet du workspace -- je viens de te donner le chemin du fichier implicite.",
+      "files": [],
+      "expected_behavior": [
+        "AVANT d'invoquer un script (parse_implicit.py, find_canonical_file.py, check_workspace_coherence.py), VERIFIE que le collaborateur a explicitement confirme le fichier implicite (R-1 / P-B)",
+        "Si la confirmation explicite a deja ete obtenue dans la session : invoque le script avec le flag --confirmed-by-user",
+        "Si la confirmation n'a PAS ete obtenue : NE PAS lancer le script (il refusera avec exit 3 et un warning explicite sur stderr)",
+        "Si Claude tente d'invoquer le script sans le flag : exit 3 + warning 'Selection du fichier implicite non confirmee par l'utilisateur (R-1/P-B)' -- garde-fou mecanique qui force Claude a transiter par le dialogue avec le collaborateur",
+        "Apres confirmation, ajouter --confirmed-by-user et relancer -- exit 0/1/2 selon le resultat normal de l'audit"
+      ]
+    },
+    {
+      "id": "case-12-sql-url-resolution",
+      "skills": [
+        "understanding-integrator-workspace"
+      ],
+      "query": "Le fichier implicite contient une ligne //localhost/DIVALTO_DEMO. Ou pointe-t-elle physiquement ?",
+      "files": [],
+      "expected_behavior": [
+        "Applique R-7 : parse divaltoserver.cfg et cherche l'entree dont NAME matche 'DIVALTO_DEMO' (insensible a la casse)",
+        "Si SQLPATH non vide : retourne ce chemin (source: 'cfg')",
+        "Si SQLPATH vide : applique le fallback <DIVA_ROOT>/<db>/ (source: 'fallback_diva_root')",
+        "Si la base n'est pas dans divaltoserver.cfg : tente R-8 (fconfig cle B) -- actuellement stub, retourne P-A 'R-8 non implemente'",
+        "Verifie que le chemin SQL resolu existe sur disque",
+        "Verifie que fhsql.dhfi + fhsql.dhfd sont presents (prerequis pour R-9 -- extraction DSN)",
+        "Genere un warning R-9 si fhsql.dhfi ou .dhfd absent"
+      ]
+    }
+  ]
+}

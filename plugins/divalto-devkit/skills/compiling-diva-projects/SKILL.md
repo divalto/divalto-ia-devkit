@@ -106,6 +106,17 @@ Avant compilation :
 
 ### Etape 3 -- Compiler
 
+> **Regle critique pour profils accentues** : si le nom du profil contient un accent (typique : `développement` avec `e` accent aigu), passer l'argument litteralement depuis une session PowerShell echoue silencieusement (encodage perdu lors du passage a xwin7). **Obligation** : passer par `scripts/compile_project.py` (recommande) ou ecrire manuellement un `.ps1` en ISO-8859-1 + CRLF. Cf. `reference/xwin7-syntax.md` section "Encodage du script PowerShell" pour le detail.
+>
+> Recette express avec `compile_project.py` :
+> ```bash
+> py .claude/skills/compiling-diva-projects/scripts/compile_project.py \\
+>     --project "<chemin .dhpt>" \\
+>     --profile "développement" \\
+>     --log-path "<chemin log.txt>"
+> ```
+> Le script genere le `.ps1` ISO-8859-1, l'execute, capture stdout/stderr, et retourne un JSON `{ps1_script, log_file, exit_code, success, summary, ...}`.
+
 **Cas standard -- compilation complete** (projet sans environnement) :
 ```powershell
 C:\divalto\sys\xwin7.exe -action buildall `
@@ -217,6 +228,7 @@ Les erreurs apparaissent dans le rapport avec la ligne precedente contenant le n
 | Script | Role | Entree | Sortie |
 |--------|------|--------|--------|
 | `generate_harness.py` | Genere un harness standalone | --source ou --sources --output-dir [--with-zdiva] [--with-communs] [--user] | JSON (chemins generes + log_file unique) |
+| `compile_project.py` | Compile un projet reel (.dhpt) via xwin7 avec gestion automatique du piege d'encodage profil accentue (R-005). Genere un .ps1 ISO-8859-1, l'execute, capture stdout/stderr, parse la ligne de resume du log. | --project --profile --log-path [--action build\|buildall] [--user] [--sousproject] [--source] [--xwin7-path] [--ps1-dir] [--no-execute] | JSON (ps1_script, log_file, exit_code, success, summary, ...) |
 | `parse_compilation.py` | Parse rapport build/buildall | --path fichier.txt [--check-outputs] [--errors-only] | JSON (success, summary, errors, warnings) |
 
 **generate_harness.py** :
@@ -226,6 +238,18 @@ Les erreurs apparaissent dans le rapport avec la ligne precedente contenant le n
 - `--with-communs` : inclure les communs framework (a5pm000, a5pmtab, gtpm000)
 - Le log de compilation est unique par run (`harness_YYYYMMDD_HHMMSS.txt`)
 - Exit codes : 0 = succes, 1 = erreur utilisateur, 2 = erreur interne
+
+**compile_project.py** :
+- Cas d'usage : compiler un projet **reel** (.dhpt) -- typiquement un projet de surcharge integrateur. Pas pour les harnesses standalone (utiliser `generate_harness.py` pour ca).
+- **Critique** : adresse le piege d'encodage R-005 -- passer `-profile "developpement"` (accent) directement depuis PowerShell echoue. Ce script genere automatiquement un `.ps1` en ISO-8859-1 + CRLF qui contient le profil litteral, puis l'execute via `powershell -File`. xwin7 recoit alors l'octet `0xe9` natif et matche correctement.
+- `--project` : chemin absolu du `.dhpt`
+- `--profile` : nom du profil (peut contenir accent)
+- `--log-path` : chemin du log que xwin7 doit produire
+- `--action` : `build` (defaut, incremental) ou `buildall` (complet)
+- `--sousproject`, `--source` : couplage `-sousproject`/`-source` pour compilation chirurgicale
+- `--user` : fallback `--user XX > X_USER > USERNAME` (idem `generate_harness.py`)
+- `--no-execute` : genere uniquement le .ps1 (debug, exit 3)
+- Exit codes : 0 = compilation reussie, 1 = erreurs ou input invalide, 2 = erreur interne, 3 = no-execute
 
 **parse_compilation.py** :
 - `--errors-only` : ne retourne que les erreurs (pas les warnings)

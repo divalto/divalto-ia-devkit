@@ -1,9 +1,10 @@
-# Anti-patterns Dictionnaire -- Regles D01-D13
+# Anti-patterns Dictionnaire -- Regles D01-D16
 
 ## Contenu
 
 - Regles verifiees par validate_dhsd.py
 - Detail des regles
+- Regles de surcharge (D14, D15, D16) -- verifiees avec `--dhsd-standard`
 - Validation croisee
 - Garde-fous integres dans generate_dhsd_block.py (D12, D13)
 
@@ -31,6 +32,9 @@ Source : `docs/ANTI-PATTERNS.md` (section dictionnaire).
 | D11 | warning | Base nommee sans le prefixe du dictionnaire | Verification prefixe |
 | D12 | **error** | `ce_value` invalide avec discriminator `Ce1` (Nature=1 char) | Garde-fou pre-generation |
 | D13 | **error** | Lettre cle d'index non alphanumerique 1 char | Garde-fou pre-generation |
+| D14 | warning (error si `--dhsd-standard`) | Metadonnees `[BASEU]`/`[TABLEU]` divergentes du standard | Cross-reference avec le `.dhsd` standard |
+| D15 | **error** | `[CHAMPR] nom=U<X>` sans container `U<X>` dans la table standard correspondante | Cross-reference avec le `.dhsd` standard |
+| D16 | **error** | Redeclaration d'un `[CHAMP]` global du standard avec Nature/Gel/Flags differents (option C interdite) | Cross-reference avec le `.dhsd` standard |
 
 ---
 
@@ -141,6 +145,76 @@ Le garde-fou est dans `generate_dhsd_block.py` (fonction
 
 ---
 
+## Regles de surcharge (D14, D15, D16)
+
+Ces regles ne s'appliquent qu'aux fichiers `.dhsd` de surcharge (`<dict>u.dhsd`). Elles necessitent un acces au `.dhsd` standard correspondant pour la verification croisee :
+
+```bash
+py validate_dhsd.py --path <surcharge>u.dhsd --dhsd-standard <standard>.dhsd
+```
+
+Sans `--dhsd-standard`, ces regles passent en mode warning (impossibilite de verifier) ou sont skippees selon le cas.
+
+### D14 -- Metadonnees [BASEU]/[TABLEU] divergentes du standard
+
+**Anti-pattern :** un bloc `[BASEU]` ou `[TABLEU]` dans la surcharge a un `Nom=`, `Version=` ou `DateM=` different du `[BASE]`/`[TABLE]` standard correspondant.
+
+**Risque :** corruption silencieuse du merge surcharge/standard. xwin7 peut interpreter la base comme obsolete (-> merge abandonne) ou en avance (-> incoherences runtime) selon les valeurs. Comportement non garanti et non deterministe.
+
+**Regle :** **toujours recopier** `Version=`, `Nom=` et `DateM=` du bloc standard correspondant. Seuls `DateMIndex=` (BASEU) et le 2e `DateM=` (TABLEU, FILETIME courant) sont propres a la surcharge.
+
+```ini
+; MAUVAIS -- libelle invente et DateM arbitraire
+[BASEU]
+Nom=GtfPcf,Tiers principaux,1                    <-- "Tiers principaux" invente
+DateM=0000000000000001                           <-- timestamp arbitraire
+
+; BON -- repris a l'identique du [BASE] standard
+[BASEU]
+Nom=GtfPcf,Tiers,1                               <-- libelle reel "Tiers"
+DateM=FEADA18CBB8CD901                           <-- DateM reel
+```
+
+Severite : warning si `--dhsd-standard` absent (cross-ref impossible), error sinon.
+
+### D15 -- Table sans U-container
+
+**Anti-pattern :** ajout dans `[CHAMPR] nom=U<X>` d'une surcharge alors que la table `<X>` standard **n'a pas** de container `U<X>` dans son `[CHAMPS]`.
+
+**Risque :** la table n'a pas ete concue pour etre surchargeable. La surcharge peut compiler "sans erreur" mais :
+- Au prochain upgrade du standard, l'offset choisi peut entrer en conflit avec un nouveau champ standard -> corruption silencieuse
+- Pattern non documente, non supporte par xwin7
+
+**Regle :** verifier que la table cible declare bien `Nom=U<NomTable>,<offset>,...` dans son `[CHAMPS]` du `.dhsd` standard. Sinon refuser la surcharge et proposer les options legitimes :
+
+- Demander a Divalto/Stephane Castelain d'ajouter un U-container dans une prochaine release
+- Rediriger vers une autre table surchargeable
+- Abandonner la demande
+
+Severite : error -- regle dure.
+
+### D16 -- Redeclaration de [CHAMP] standard avec attributs differents (option C)
+
+**Anti-pattern :** un bloc `[CHAMP]` dans la surcharge redeclare un champ qui existe deja dans le `.dhsd` standard, avec `Nature=`, `Gel=` ou `Flags=` differents.
+
+**Risque :** dans le meilleur cas, xwin7 rejette la redeclaration (compile echoue). Dans le pire cas, il accepte et **applique le changement globalement** -- toutes les tables qui utilisent ce champ heritent de la nouvelle Nature, casse silencieusement la chaine d'utilisateurs du champ.
+
+**Regle :** quand un champ existe deja cote standard, 3 options se presentent et **seules A et B sont valides** :
+
+| Option | Action | Valide ? |
+|--------|--------|----------|
+| A | Reutiliser le champ tel quel (Nature standard inchangee) | OK |
+| B | Creer un nouveau champ prefixe (`mi<X>`, `dgs<X>`...) avec Nature librement choisie | OK |
+| C | Redeclarer le `[CHAMP]` standard avec Nature/Gel/Flags differents | **INTERDIT** |
+
+Exemple : standard declare `Nom=Ref,Reference,1 Nature=25`. Pour ajouter un Ref Nature=8 sur la table CLI, refuser l'option C, proposer A (reutiliser Nature=25) ou B (creer `miRef` Nature=8).
+
+Severite : error.
+
+> Voir [dhsd-surcharge-pattern.md](dhsd-surcharge-pattern.md) section "Options A/B/C" pour le contexte complet.
+
+---
+
 ## Validation croisee
 
 Le script `validate_dhsd.py` effectue des verifications croisees entre les zones :
@@ -148,3 +222,8 @@ Le script `validate_dhsd.py` effectue des verifications croisees entre les zones
 - CLE de [INDEX] vs CE= de [TABLE] (D10)
 - [TABLES] de [BASE] vs [TABLE] existantes
 - [INDEXL] vs [INDEX] et [BASE] existants
+
+Avec `--dhsd-standard <path>`, des verifications supplementaires sont effectuees pour les regles de surcharge (sur un fichier `<dict>u.dhsd`) :
+- [BASEU]/[TABLEU] vs [BASE]/[TABLE] standards (D14)
+- [CHAMPR] nom=U<X> vs container U<X> dans la table standard (D15)
+- [CHAMP] surcharge vs [CHAMP] standard de meme nom (D16)

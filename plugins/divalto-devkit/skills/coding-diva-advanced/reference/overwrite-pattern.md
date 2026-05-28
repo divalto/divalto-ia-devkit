@@ -4,6 +4,9 @@
 
 - Principe
 - Hierarchie de surcharge
+- Declaration des procedures surchargees (sans Public/Private/Protected)
+- Visibilite des declarations dans une surcharge (records, fichiers, RSQL, constantes)
+- Pattern canonique de surcharge de procedure
 - Surcharge RecordSql
 - Regles
 - Advisory -- analyse d'impact avant surcharge (via diva-mcp)
@@ -38,6 +41,112 @@ Convention de nommage multi-niveaux :
 
 Chaque niveau fait `OverWrite` du niveau precedent et peut appeler `Standard.Fonction()` pour invoquer l'implementation originale.
 
+## Declaration des procedures surchargees
+
+Dans une `.dhsp` `OverWrite`, une procedure qui surcharge une procedure publique du standard **ne doit PAS porter de modificateur de visibilite** (`Public`, `Private`, `Protected`). La visibilite est heritee du module standard.
+
+```diva
+; MAUVAIS -- erreur compilateur xwin7 #210
+;   "La fonction/procedure ZoomAbandon est une surcharge.
+;    Elle ne peut etre PUBLIC"
+Public Procedure ZoomAbandon
+BeginP
+    ...
+EndP
+
+; BON -- la visibilite est heritee du standard
+Procedure ZoomAbandon
+BeginP
+    ...
+EndP
+```
+
+Verifier la declaration du standard (`Public Procedure ZoomAbandon` dans le module original) confirme la visibilite, mais ne pas la repeter dans la surcharge.
+
+## Visibilite des declarations dans une surcharge
+
+Les `Record`, fichiers, `RecordSql` et constantes utilises par une procedure surchargee **ne sont PAS herites** du module standard. Ils doivent etre **redeclares localement** au fichier de surcharge.
+
+```diva
+; Fichier standard : gtuz021.dhsp
+OverWrittenBy 'gtuz021u.dhop'
+Public Record DDSYS.dhsd ZOOM
+
+Public Procedure ZoomCreation
+BeginP
+    Zoom.Ok = 'O'
+    ...
+EndP
+
+; -----------------------------------------------------
+; Fichier de surcharge : gtuz021u.dhsp
+OverWrite 'gtuz021.dhop'
+
+Public Record DDSYS.dhsd ZOOM   ; <-- OBLIGATOIRE : redeclaration locale
+                                ;     sinon erreur compilateur xwin7 #99
+                                ;     "Mot inconnu : Zoom"
+
+Procedure ZoomCreation          ; <-- sans Public (cf. section precedente)
+BeginP
+    Standard.ZoomCreation()
+    if Zoom.Ok = 'O'
+        ; specifique
+    endif
+EndP
+```
+
+Regle : seules les `Procedure` / `Function` sont surchargees au sens runtime. Tout symbole non-procedural (record, file, RecordSql, constante, define) utilise dans le corps doit etre redeclare en haut de la `.dhsp` de surcharge, **identique a la declaration du standard**.
+
+## Pattern canonique de surcharge de procedure
+
+Trois regles, dans l'ordre :
+
+1. **Toujours appeler `Standard.<proc>()`** -- meme si le standard est vide aujourd'hui. L'omettre cree une dette de compatibilite ascendante invisible : ca casse au prochain upgrade de pack si Divalto enrichit la procedure (cleanup, journalisation, validation metier).
+2. **`Standard.<proc>()` en PREMIER**, code specifique ensuite. Le specifique observe l'etat post-standard et peut decider de ne pas s'executer si le standard a deja tranche (ex: standard a deja mis `Zoom.Ok = 'I'` -> ne pas afficher de pop-up de confirmation).
+3. **Structurer en "tester l'acceptation"** (`if <flag> = 'O'`) plutot qu'en "tester le refus avec preturn". Un seul `if`/`endif` imbrique, branchement unique, plus lisible.
+
+```diva
+; Pattern canonique
+Procedure ZoomAbandon
+BeginP
+
+    Standard.ZoomAbandon()
+
+    if Zoom.Ok = 'O'                       ; le standard accepte l'abandon
+        if MessageBox(...) = IDNO          ; on demande confirmation specifique
+            Zoom.Ok = 'I'                  ; on annule l'abandon
+        endif
+    endif
+
+EndP
+```
+
+A comparer au pattern "tester l'echec" (fonctionnellement equivalent mais moins lisible) :
+
+```diva
+Procedure ZoomAbandon
+BeginP
+
+    Standard.ZoomAbandon()
+
+    if Zoom.Ok = 'I'                       ; standard a refuse
+        preturn                            ; sortie precoce 1
+    endif
+
+    if MessageBox(...) = IDNO
+        Zoom.Ok = 'I'
+        preturn                            ; sortie precoce 2
+    endif
+
+EndP
+```
+
+Deux `preturn`, deux branches de sortie = code moins maintenable.
+
+**Le pattern s'applique a toutes les procedures surchargees**, pas seulement aux `Zoom*` : modules de pieces (`Pre/PostInsert`, `Pre/PostUpdate`, `Pre/PostDelete`), tarification, calcul, etc. L'ordre "Standard puis specifique" + test du flag d'acceptation est la convention solide.
+
+> Note : la grille des flags de retour (`'O'`, `'N'`, `'I'`, `'C'`...) varie selon le hook. Voir [zoom-hooks-reference.md](zoom-hooks-reference.md) pour les codes par hook Zoom*.
+
 ## Surcharge RecordSql
 
 ```xml
@@ -49,9 +158,10 @@ Convention de nommage : `gtrsart.dhoq` → `gtrsartu.dhoq` → `gtrsartuu.dhoq`
 
 La surcharge RecordSql peut ajouter :
 - Champs SELECT supplementaires
-- JOINs additionnels
-- Criteres WHERE
-- Ordres de tri
+- JOINs additionnels (avec restrictions, cf. delta strict)
+- Criteres WHERE / ORDERBY (avec restrictions)
+
+**Important** : la surcharge `.dhsq` obeit a une grammaire "delta strict" -- toute redeclaration du standard est interdite et provoque des erreurs explicites au compile. Voir la doc dediee du skill `generating-recordsql` : [dhsq-overwrite-pattern.md](../../generating-recordsql/reference/dhsq-overwrite-pattern.md) pour les 9 interdits empiriques, le pattern delta correct, et la convention de rattachement via groupe `[communs]`.
 
 ## Regles
 
@@ -59,6 +169,9 @@ La surcharge RecordSql peut ajouter :
 - Le fichier surcharge doit etre dans le meme sous-projet (ou un sous-projet de surcharge dedie)
 - `Standard.` est le seul moyen d'appeler la version originale depuis la surcharge
 - Convention stricte sur le nommage : suffixe `U` (puis `UU`) en majuscule dans le `OverWrittenBy`, minuscule dans le nom de fichier
+- Pas de modificateur de visibilite sur la procedure surchargee (heritage)
+- Redeclarer localement tout symbole non-procedural utilise (records, fichiers, RSQL, constantes)
+- Appeler `Standard.<proc>()` systematiquement, en premier, et structurer le test sur le flag d'acceptation
 
 ---
 

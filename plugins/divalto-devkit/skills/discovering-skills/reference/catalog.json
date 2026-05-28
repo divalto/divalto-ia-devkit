@@ -1,7 +1,7 @@
 {
-  "version": "2026-04-24",
-  "generated_at": "2026-04-24T14:25:43",
-  "total_skills": 32,
+  "version": "2026-05-21",
+  "generated_at": "2026-05-21T17:25:49",
+  "total_skills": 33,
   "workflows": [
     {
       "id": "analyze",
@@ -84,10 +84,11 @@
     },
     {
       "id": "reference",
-      "label": "Reference et consultation",
-      "description": "Consulter les patterns avances du langage DIVA (REST, JSON, .NET, mtab, tunnels, Harmony).",
+      "label": "Reference, consultation et protocoles de session",
+      "description": "Consulter les patterns avances du langage DIVA (REST, JSON, .NET, mtab, tunnels, Harmony) et appliquer les protocoles de session integrateur (identification du workspace, resolution des chemins harmony, classification standard/specifique).",
       "skills": [
-        "coding-diva-advanced"
+        "coding-diva-advanced",
+        "understanding-integrator-workspace"
       ]
     }
   ],
@@ -173,6 +174,9 @@
     "writing": [
       "writing-diva-files",
       "writing-isam-files"
+    ],
+    "understanding": [
+      "understanding-integrator-workspace"
     ]
   },
   "skills": {
@@ -990,6 +994,33 @@
         "SQL Server (base Divalto)",
         "xwin7.exe (compilateur Divalto)"
       ]
+    },
+    "understanding-integrator-workspace": {
+      "name": "understanding-integrator-workspace",
+      "description": "Quand utiliser : en debut de toute session sur un workspace integrateur Divalto (typiquement sous l'alias harmony /specifs/<workspace>/), avant toute lecture, copie ou generation de fichier. Particulierement critique sur un poste d'integrateur ou cohabitent systematiquement plusieurs versions de l'ERP, plusieurs bases de donnees clients et plusieurs projets d'integration -- ce sont precisement les contextes ou une copie ou lecture aveugle commence sur de mauvaises bases. Quoi faire : identifier le fichier implicite du workspace (search path declaratif), resoudre les chemins harmony (/specifs/, /sources/, /objets/, /fichiers/, /divalto/, ...) via divaltopath.cfg et fconfig, lire les profils typed du .dhpt, retrouver la connexion SQL (porte Harmony ODBC + porte ADO.NET), classifier les chemins standard / specifique avec validation utilisateur obligatoire. Evite les erreurs de version, les copies aveugles de fichiers compagnons et les generations contre une base mal identifiee.",
+      "summary": "Protocole de session pour un workspace integrateur : identifie le fichier implicite, resout les chemins harmony, lit les profils du .dhpt et classifie standard/specifique.",
+      "when_to_use": "En debut de toute session sur un workspace integrateur Divalto, avant toute lecture, copie ou generation de fichier qui depend de la distinction standard/specifique.",
+      "workflow": "reference",
+      "verb": "understanding",
+      "is_orchestrator": false,
+      "checkpoint_count": 0,
+      "scripts": [
+        "check_workspace_coherence.py",
+        "find_canonical_file.py",
+        "parse_implicit.py"
+      ],
+      "references": [
+        "classification.md",
+        "harmony-paths.md",
+        "implicit-file.md",
+        "profile.md",
+        "sql-resolution.md"
+      ],
+      "related_skills": [
+        "reading-isam-files",
+        "writing-diva-files"
+      ],
+      "prerequisites": []
     }
   }
 }

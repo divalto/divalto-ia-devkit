@@ -51,6 +51,43 @@
         "Verifie D05/D06 : encodage ISO-8859-1 + CRLF",
         "Rapport JSON avec le resultat de validation"
       ]
+    },
+    {
+      "id": "case-4-surcharge-field-creation",
+      "skills": [
+        "managing-diva-dictionaries"
+      ],
+      "query": "Cree une surcharge dictionnaire gtfddu.dhsd qui ajoute le champ dgsTrajetKmMax (Nature 5,0, libelle 'Plafond km deplacement') sur la table T143 du standard gtfdd.dhsd. Prefixe poste dgs, utilisateur rootDGS.",
+      "files": [],
+      "expected_behavior": [
+        "Utilise generate_surcharge_field.py avec --output (mode creation)",
+        "Verifie via le parser que la table T143 a un container UT143 dans son [CHAMPS] (sinon D15 -> table non surchargeable)",
+        "Recopie les metadonnees [TABLE]+[BASE] du standard pour les blocs [TABLEU]+[BASEU] (garantit D14)",
+        "Genere un bloc [BASEU] pour CHAQUE base concernee (cas multi-bases : un meme T-prefix peut etre ancre sur 2 bases en parallele)",
+        "Calcule offset_in_container = 1 (premier champ de surcharge)",
+        "Calcule capacity_remaining = capacite(UT143) - taille(5,0=5 octets)",
+        "Ecrit le fichier en ISO-8859-1 + CRLF avec [Dictionnaire] header + [CHAMP] global + [CHAMPR]/[CHAMPL] + [TABLEU] + [BASEU] x N",
+        "Sortie JSON status=ok avec file, mode=create, field, container, offset_in_container, capacity_remaining, table_metadata_source, bases_metadata_source",
+        "Validation post-ecriture via validate_dhsd.py --dhsd-standard : 0 erreurs (D14/D15/D16 verts)"
+      ]
+    },
+    {
+      "id": "case-5-surcharge-field-append",
+      "skills": [
+        "managing-diva-dictionaries"
+      ],
+      "query": "Dans la surcharge gtfddu.dhsd existante (qui contient deja dgsTrajetKmMax), ajoute un second champ dgsTrajetKmMin (Nature 5,0). Offset cumule a recalculer automatiquement.",
+      "files": [],
+      "expected_behavior": [
+        "Utilise generate_surcharge_field.py avec --append-to (mode ajout)",
+        "Re-parse la surcharge existante pour identifier les [CHAMPR] actifs et leurs [CHAMPL] sur UT143",
+        "Calcule consumed_offset_in_container = 1 (offset du champ existant) + 5 (taille Nature 5,0) - 1 = 5 -> nouveau offset = 6",
+        "Insere le nouveau [CHAMP] global avant le 1er [CHAMPR] existant",
+        "Insere une nouvelle ligne Nom=dgsTrajetKmMin,6,0,0,N,1 dans le sous-bloc [CHAMPL] du container UT143",
+        "Ne dedouble PAS le [TABLEU] ni les [BASEU] (deja presents)",
+        "Sortie JSON mode=append, offset_in_container=6, capacity_remaining mis a jour",
+        "Validation post-ecriture : 0 erreurs"
+      ]
     }
   ]
 }

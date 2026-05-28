@@ -180,6 +180,7 @@ Avec `--tokens`, des verifications croisees supplementaires sont effectuees (R03
 
 - **Structure complete d'un RecordSql** : Voir [reference/recordsql-structure.md](reference/recordsql-structure.md)
 - **Regles R01-R06 avec exemples** : Voir [reference/recordsql-anti-patterns.md](reference/recordsql-anti-patterns.md)
+- **Surcharge .dhsq (delta strict, groupe `[communs]`)** : Voir [reference/dhsq-overwrite-pattern.md](reference/dhsq-overwrite-pattern.md) — entetes overwrite/overwrittenby, les 9 interdits empiriques, convention de rattachement
 - **Callbacks, MandatoryColumns, jointures avancees** : Voir [reference/recordsql-api-reference.md](reference/recordsql-api-reference.md)
 - **Patterns observes dans le corpus (advisory, snapshot de fraicheur inconnue)** : Voir [reference/corpus-patterns.md](reference/corpus-patterns.md) — signatures de jointure, super-patterns, angles morts du generateur. **Croiser avec le filesystem X.13 avant decision.**
 - **Bibliotheque de squelettes G-022** : Voir [reference/skeletons-catalogue.md](reference/skeletons-catalogue.md) — 8 super-patterns pre-configures (fichiers .skel.json dans `reference/skeletons/`).

@@ -41,7 +41,7 @@ Ce skill ne couvre PAS la syntaxe de base (types, procedures, fonctions, boucles
 | 1 | HTTP/REST | Appel API externe, WebRequest, WebServiceDiva | [http-rest.md](reference/http-rest.md) |
 | 2 | JSON/XML | Parsing JSON (JsonOpen), lecture XML (XmlRead), HMP | [json-xml.md](reference/json-xml.md) |
 | 3 | Integration .NET | Appel DLL .NET (AssemblyLoad/Invoke) | [dotnet-integration.md](reference/dotnet-integration.md) |
-| 4 | Surcharge | OverWrittenBy/OverWrite, convention nommage U/UU | [overwrite-pattern.md](reference/overwrite-pattern.md) |
+| 4 | Surcharge | OverWrittenBy/OverWrite, convention nommage U/UU, codes retour hooks Zoom* | [overwrite-pattern.md](reference/overwrite-pattern.md), [zoom-hooks-reference.md](reference/zoom-hooks-reference.md) |
 | 5 | Module table (mtab) | Controles en cascade Switch TRUE, initialisation defauts | [module-table.md](reference/module-table.md) |
 | 6 | RecordSql avance | Reader, Collate, Paging, Where fluent, RecordSqlPtr | [recordsql-advanced.md](reference/recordsql-advanced.md) |
 | 7 | Tunnels | Ping/Pong, PingLocal, ProgramCall | [tunnels.md](reference/tunnels.md) |
@@ -69,7 +69,8 @@ Ce skill ne couvre PAS la syntaxe de base (types, procedures, fonctions, boucles
 - [HTTP/REST](reference/http-rest.md) -- WebRequest API, WebServiceDiva
 - [JSON/XML](reference/json-xml.md) -- JsonOpen/Parse, XmlOpen/Read, HMP
 - [Integration .NET](reference/dotnet-integration.md) -- AssemblyLoad, codes erreur
-- [Surcharge](reference/overwrite-pattern.md) -- OverWrittenBy/OverWrite, convention U
+- [Surcharge](reference/overwrite-pattern.md) -- OverWrittenBy/OverWrite, convention U, pattern canonique de procedure surchargee
+- [Hooks Zoom*](reference/zoom-hooks-reference.md) -- grille de codes retour O/N/I/C, couverture validee, pattern d'utilisation
 - [Module table](reference/module-table.md) -- mtab, Switch TRUE, controles
 - [RecordSql avance](reference/recordsql-advanced.md) -- Reader, Collate, Paging, Direct, Transactions, Performance, Callbacks
 - [Tunnels](reference/tunnels.md) -- Ping/Pong, PingLocal, ProgramCall

@@ -1,0 +1,20 @@
+[
+  {
+    "skills": ["pushing-retex-to-github"],
+    "query": "Je viens d'ajouter une entree R-028 dans retex/RETEX-skills.md. Pousse-la sur GitHub.",
+    "files": ["retex/RETEX-skills.md", "retex/.retex-github.json", "retex/.retex-pushed.json"],
+    "expected_behavior": "Le skill invoque push_new_entries.py, detecte R-028 absent du tracking, appelle gh issue create avec le titre `[R-028] ...`, ajoute les labels selon la categorie/severite, et met a jour .retex-pushed.json."
+  },
+  {
+    "skills": ["pushing-retex-to-github"],
+    "query": "Configure le repo GitHub pour les RETEX du workspace.",
+    "files": ["retex/RETEX-skills.md"],
+    "expected_behavior": "Le skill lance init_config.py qui cree .retex-github.json (avec le repo cible saisi par le collaborateur) et .retex-pushed.json (toutes les entrees existantes marquees comme deja poussees, pas de backfill)."
+  },
+  {
+    "skills": ["pushing-retex-to-github"],
+    "query": "gh n'est pas installe sur ce poste, que fait le hook quand j'edite RETEX-skills.md ?",
+    "files": ["retex/RETEX-skills.md", "retex/.retex-push.log"],
+    "expected_behavior": "Le hook log 'gh CLI absent' dans .retex-push.log et exit 0. L'edition de RETEX-skills.md n'est pas bloquee. Aucune issue n'est creee."
+  }
+]

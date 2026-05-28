@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Valide les blocs generes ou un fichier .dhsd contre les regles D01-D11.
+"""Valide les blocs generes ou un fichier .dhsd contre les regles D01-D16.
 
 Usage:
     Valider des blocs generes (JSON) :
@@ -9,6 +9,10 @@ Usage:
     Valider une table dans un .dhsd existant :
     py .claude/skills/managing-diva-dictionaries/scripts/validate_dhsd.py \
         --path "chemin/dictionnaire.dhsd" --table NomTable
+
+    Valider une surcharge contre son .dhsd standard (regles D14/D15/D16) :
+    py .claude/skills/managing-diva-dictionaries/scripts/validate_dhsd.py \
+        --path "chemin/<dict>u.dhsd" --dhsd-standard "chemin/<dict>.dhsd"
 
 Sortie JSON: {target, valid, errors[], warnings[], summary}
 Exit codes: 0 = succes, 1 = erreur utilisateur, 2 = erreur interne
@@ -403,18 +407,325 @@ def validate_dhsd_file(path, table_name, dict_name=None):
     }
 
 
+# ----------------------------------------------------------------------------
+# Regles de surcharge D14/D15/D16 -- verifications croisees avec le .dhsd standard
+# ----------------------------------------------------------------------------
+
+# Detecte une section "Nom=<valeur>,..." (premier sous-element seulement)
+_BLOCK_NAME_RE = re.compile(r'^\s*Nom\s*=\s*([^,]+)', re.IGNORECASE)
+
+
+def _read_dhsd(path):
+    """Lit un .dhsd en ISO-8859-1 (encodage natif Divalto)."""
+    with open(path, "rb") as f:
+        raw = f.read()
+    return raw.decode("iso-8859-1")
+
+
+def _parse_named_blocks(content, block_tag):
+    """Parse les blocs `[<block_tag>]` et retourne {name: {lines:[...]}}.
+
+    Le `name` est le 1er sous-element du `Nom=` du bloc.
+    Les blocs sans ligne `Nom=` sont ignores.
+    Cle insensible a la casse (stockee en lowercase) pour eviter les
+    divergences entre `nom=UArt` et `Nom=ART`.
+    """
+    blocks = {}
+    lines = content.splitlines()
+    in_block = False
+    current_lines = []
+    open_tag = f"[{block_tag}]"
+
+    def _index_current():
+        if not current_lines:
+            return
+        name = None
+        for cl in current_lines:
+            m = _BLOCK_NAME_RE.match(cl)
+            if m:
+                name = m.group(1).strip()
+                break
+        if name:
+            blocks[name.lower()] = {"name": name, "lines": list(current_lines)}
+
+    for line in lines:
+        stripped = line.strip()
+        if stripped == open_tag:
+            # Cloturer le bloc precedent (s'il etait du meme tag)
+            if in_block:
+                _index_current()
+            in_block = True
+            current_lines = []
+            continue
+        if in_block:
+            if stripped.startswith("[") and stripped.endswith("]"):
+                # Autre section -- cloturer le bloc courant
+                _index_current()
+                in_block = False
+                current_lines = []
+                continue
+            current_lines.append(line)
+    # Eventuel dernier bloc en fin de fichier
+    if in_block:
+        _index_current()
+    return blocks
+
+
+def _extract_field(lines, prefix):
+    """Retourne la 1ere ligne 'prefix=...' (apres strip), ou None."""
+    for line in lines:
+        s = line.strip()
+        if s.lower().startswith(prefix.lower() + "="):
+            return s.split("=", 1)[1].strip()
+    return None
+
+
+def _parse_table_u_containers(content):
+    """Pour chaque [TABLE] du standard, extrait {nom_table_lower: [containers U*]}.
+
+    Container detecte : ligne `Nom=U<NomTable>,...` dans le `[CHAMPS]` du bloc.
+    Cle table en lowercase pour matching insensible a la casse.
+    Containers stockes en lowercase pour la meme raison.
+    """
+    result = {}
+    lines = content.splitlines()
+    i = 0
+    while i < len(lines):
+        if lines[i].strip() == "[TABLE]":
+            # Lire le bloc TABLE jusqu'a la section suivante (hors [CHAMPS]/[/CHAMPS] qui sont des sous-sections)
+            block_lines = []
+            j = i + 1
+            while j < len(lines):
+                ls = lines[j].strip()
+                if ls.startswith("[") and ls.endswith("]") and ls != "[CHAMPS]" and ls != "[/CHAMPS]":
+                    if not ls.startswith("[/"):
+                        break
+                block_lines.append(lines[j])
+                j += 1
+            tname = None
+            for bl in block_lines:
+                m = _BLOCK_NAME_RE.match(bl)
+                if m:
+                    tname = m.group(1).strip()
+                    break
+            in_champs = False
+            containers = []
+            for bl in block_lines:
+                s = bl.strip()
+                if s == "[CHAMPS]":
+                    in_champs = True
+                    continue
+                if s == "[/CHAMPS]":
+                    in_champs = False
+                    continue
+                if in_champs and s.lower().startswith("nom=u"):
+                    m = re.match(r'(?i)^Nom=U([A-Za-z0-9_]+),', s)
+                    if m:
+                        containers.append(("U" + m.group(1)).lower())
+            if tname:
+                result[tname.lower()] = containers
+            i = j
+        else:
+            i += 1
+    return result
+
+
+def _parse_champ_attrs(lines):
+    """Pour un bloc [CHAMP], extrait {Nom, Nature, Gel, Flags}."""
+    attrs = {}
+    for line in lines:
+        s = line.strip()
+        if s.lower().startswith("nom="):
+            # Nom=<X>,<libelle>,1 -- on garde uniquement le 1er sous-element
+            attrs["Nom"] = s.split("=", 1)[1].split(",", 1)[0].strip()
+        elif s.lower().startswith("nature="):
+            attrs["Nature"] = s.split("=", 1)[1].strip()
+        elif s.lower().startswith("gel="):
+            attrs["Gel"] = s.split("=", 1)[1].strip()
+        elif s.lower().startswith("flags="):
+            attrs["Flags"] = s.split("=", 1)[1].strip()
+    return attrs
+
+
+def _parse_champr_targets(content):
+    """Parse le bloc [CHAMPR] et retourne la liste des `nom=U<X>` declares."""
+    targets = []
+    in_champr = False
+    for line in content.splitlines():
+        s = line.strip()
+        if s == "[CHAMPR]":
+            in_champr = True
+            continue
+        if s == "[/CHAMPR]":
+            in_champr = False
+            continue
+        if in_champr and s.lower().startswith("nom=u"):
+            m = re.match(r'(?i)^nom=U([A-Za-z0-9_]+)\s*$', s)
+            if m:
+                targets.append("U" + m.group(1))
+    return targets
+
+
+def validate_surcharge_against_standard(surcharge_path, standard_path):
+    """Verifie une surcharge .dhsd contre son .dhsd standard.
+
+    Regles :
+    - D14 : metadonnees [BASEU]/[TABLEU] divergentes du standard (Version, Nom, DateM)
+    - D15 : [CHAMPR] nom=U<X> sans container U<X> dans la table standard
+    - D16 : [CHAMP] surcharge redeclare un champ global standard avec Nature/Gel/Flags differents
+
+    Retourne (errors, warnings).
+    """
+    errors = []
+    warnings = []
+
+    try:
+        surcharge = _read_dhsd(surcharge_path)
+        standard = _read_dhsd(standard_path)
+    except Exception as e:
+        warnings.append({
+            "rule": "D14",
+            "severity": "warning",
+            "message": f"Verification croisee impossible (lecture echoue) : {e}",
+        })
+        return errors, warnings
+
+    # --- D14 : [BASEU] vs [BASE] et [TABLEU] vs [TABLE] ---
+    baseu_blocks = _parse_named_blocks(surcharge, "BASEU")
+    base_blocks = _parse_named_blocks(standard, "BASE")
+    for base_key, surcharge_block in baseu_blocks.items():
+        display = surcharge_block["name"]
+        std_block = base_blocks.get(base_key)
+        if not std_block:
+            errors.append({
+                "rule": "D14",
+                "severity": "error",
+                "message": f"[BASEU] '{display}' : aucune [BASE] standard correspondante.",
+            })
+            continue
+        for attr in ("Version", "Nom", "DateM"):
+            su_val = _extract_field(surcharge_block["lines"], attr)
+            std_val = _extract_field(std_block["lines"], attr)
+            if su_val is not None and std_val is not None and su_val != std_val:
+                errors.append({
+                    "rule": "D14",
+                    "severity": "error",
+                    "message": (
+                        f"[BASEU] '{display}' : {attr}= divergent du standard. "
+                        f"Surcharge='{su_val}' / Standard='{std_val}'. Recopier la valeur du standard."
+                    ),
+                })
+
+    tableu_blocks = _parse_named_blocks(surcharge, "TABLEU")
+    table_blocks = _parse_named_blocks(standard, "TABLE")
+    for table_key, surcharge_block in tableu_blocks.items():
+        display = surcharge_block["name"]
+        std_block = table_blocks.get(table_key)
+        if not std_block:
+            errors.append({
+                "rule": "D14",
+                "severity": "error",
+                "message": f"[TABLEU] '{display}' : aucune [TABLE] standard correspondante.",
+            })
+            continue
+        for attr in ("Version", "Nom"):
+            su_val = _extract_field(surcharge_block["lines"], attr)
+            std_val = _extract_field(std_block["lines"], attr)
+            if su_val is not None and std_val is not None and su_val != std_val:
+                errors.append({
+                    "rule": "D14",
+                    "severity": "error",
+                    "message": (
+                        f"[TABLEU] '{display}' : {attr}= divergent du standard. "
+                        f"Surcharge='{su_val}' / Standard='{std_val}'. Recopier la valeur du standard."
+                    ),
+                })
+        # DateM : 1ere partie doit etre identique au standard (la 2eme est le FILETIME courant de la surcharge)
+        su_datem = _extract_field(surcharge_block["lines"], "DateM")
+        std_datem = _extract_field(std_block["lines"], "DateM")
+        if su_datem and std_datem:
+            su_origin = su_datem.split(",", 1)[0].strip()
+            std_origin = std_datem.split(",", 1)[0].strip()
+            if su_origin != std_origin:
+                errors.append({
+                    "rule": "D14",
+                    "severity": "error",
+                    "message": (
+                        f"[TABLEU] '{display}' : 1ere partie de DateM= divergente du standard. "
+                        f"Surcharge='{su_origin}' / Standard='{std_origin}'. Recopier du standard."
+                    ),
+                })
+
+    # --- D15 : [CHAMPR] nom=U<X> vs container U<X> dans la table standard ---
+    targets = _parse_champr_targets(surcharge)
+    table_containers = _parse_table_u_containers(standard)
+    for u_target in targets:
+        if not u_target.lower().startswith("u"):
+            continue
+        table_name = u_target[1:]
+        std_containers = table_containers.get(table_name.lower())
+        if std_containers is None:
+            errors.append({
+                "rule": "D15",
+                "severity": "error",
+                "message": (
+                    f"[CHAMPR] nom={u_target} : la table '{table_name}' n'existe pas "
+                    f"dans le standard. Surcharge invalide."
+                ),
+            })
+        elif u_target.lower() not in std_containers:
+            errors.append({
+                "rule": "D15",
+                "severity": "error",
+                "message": (
+                    f"[CHAMPR] nom={u_target} : la table standard '{table_name}' n'a "
+                    f"pas de container '{u_target}' dans son [CHAMPS]. Table non "
+                    f"surchargeable -- voir dhsd-surcharge-pattern.md."
+                ),
+            })
+
+    # --- D16 : [CHAMP] surcharge vs [CHAMP] standard de meme nom ---
+    surcharge_champs = _parse_named_blocks(surcharge, "CHAMP")
+    standard_champs = _parse_named_blocks(standard, "CHAMP")
+    for champ_key, su_block in surcharge_champs.items():
+        std_block = standard_champs.get(champ_key)
+        if not std_block:
+            continue  # nouveau champ -- OK
+        display = su_block["name"]
+        su_attrs = _parse_champ_attrs(su_block["lines"])
+        std_attrs = _parse_champ_attrs(std_block["lines"])
+        divergent = []
+        for k in ("Nature", "Gel", "Flags"):
+            if k in su_attrs and k in std_attrs and su_attrs[k] != std_attrs[k]:
+                divergent.append(f"{k}: surcharge='{su_attrs[k]}' / standard='{std_attrs[k]}'")
+        if divergent:
+            errors.append({
+                "rule": "D16",
+                "severity": "error",
+                "message": (
+                    f"[CHAMP] '{display}' : redeclaration du champ standard avec "
+                    f"attributs differents ({'; '.join(divergent)}). Option C interdite -- "
+                    f"renommer le champ avec un prefixe (option B) ou reutiliser le standard (option A)."
+                ),
+            })
+
+    return errors, warnings
+
+
 def main():
     parser = argparse.ArgumentParser(
-        description="Valide les blocs generes ou un fichier .dhsd contre les regles D01-D11"
+        description="Valide les blocs generes ou un fichier .dhsd contre les regles D01-D16"
     )
     parser.add_argument("--blocks", default=None,
                         help="Chemin vers le JSON des blocs generes (sortie de generate_dhsd_block.py)")
     parser.add_argument("--path", default=None,
                         help="Chemin vers un fichier .dhsd existant")
     parser.add_argument("--table", default=None,
-                        help="Nom de la table a valider dans le .dhsd (requis avec --path)")
+                        help="Nom de la table a valider dans le .dhsd (requis avec --path sauf si --dhsd-standard)")
     parser.add_argument("--dict-name", default=None,
                         help="Nom du dictionnaire pour verifier le prefixe base (D11)")
+    parser.add_argument("--dhsd-standard", default=None,
+                        help="Chemin vers le .dhsd standard pour activer les checks de surcharge D14/D15/D16")
 
     args = parser.parse_args()
 
@@ -429,15 +740,41 @@ def main():
         report = validate_blocks(blocks_data)
 
     elif args.path:
-        if not args.table:
-            print("--table est requis avec --path", file=sys.stderr)
-            sys.exit(1)
-
         if not os.path.exists(args.path):
             print(f"Fichier non trouve : {args.path}", file=sys.stderr)
             sys.exit(1)
 
-        report = validate_dhsd_file(args.path, args.table, args.dict_name)
+        # Mode 1 : validation classique d'une table (D01-D11) si --table fourni
+        if args.table:
+            report = validate_dhsd_file(args.path, args.table, args.dict_name)
+        else:
+            # Mode 2 : surcharge sans table specifique, on fait D14/D15/D16 sur tout le fichier
+            report = {
+                "target": f"{os.path.basename(args.path)} (mode surcharge)",
+                "valid": True,
+                "errors": [],
+                "warnings": [],
+                "summary": {"total": 0, "errors": 0, "warnings": 0},
+            }
+
+        # Verifications croisees surcharge vs standard (D14/D15/D16) si demande
+        if args.dhsd_standard:
+            if not os.path.exists(args.dhsd_standard):
+                print(f"Fichier standard non trouve : {args.dhsd_standard}", file=sys.stderr)
+                sys.exit(1)
+            su_errors, su_warnings = validate_surcharge_against_standard(args.path, args.dhsd_standard)
+            report["errors"].extend(su_errors)
+            report["warnings"].extend(su_warnings)
+            report["valid"] = len(report["errors"]) == 0
+            report["summary"] = {
+                "total": len(report["errors"]) + len(report["warnings"]),
+                "errors": len(report["errors"]),
+                "warnings": len(report["warnings"]),
+            }
+
+        if not args.table and not args.dhsd_standard:
+            print("--table ou --dhsd-standard requis avec --path", file=sys.stderr)
+            sys.exit(1)
 
     else:
         parser.print_help()

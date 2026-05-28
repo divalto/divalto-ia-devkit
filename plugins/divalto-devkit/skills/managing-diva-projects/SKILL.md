@@ -62,11 +62,12 @@ py .claude/skills/managing-diva-projects/scripts/validate_project.py \
 ### Etape 1 -- Preparer les parametres
 
 Collecter :
-- **name** : nom du sous-projet (convention `<prefixe>_<type> <entite>`)
+- **name** : nom du sous-projet (convention `<prefixe>_<type> <entite>` ; suffixe `u` si surcharge -- ex: `gt_zoom articleu`)
 - **util** : initiales utilisateur
 - **communs** : groupes du .dhpt parent a inclure (dictionnaires, bases, sql)
 - **fichiers** : fichiers sources propres (.dhsf, .dhsp, .dhsq)
 - **includes** : dependances de compilation (.dhsp framework)
+- **standard vs surcharge** : voir bloc ci-dessous
 
 **Prefixes domaine** :
 
@@ -84,6 +85,25 @@ Collecter :
 | `a5_` | Transverse/Outils |
 
 **Types courants** : `zoom`, `table`, `base`, `outil`, `impression`, `administration`, `rf`, `search`.
+
+### Standard vs surcharge
+
+Un projet de surcharge (`.dhpt` avec en-tete `xwin-s-projet`) heberge des `.dhps` qui surchargent les sous-projets du standard livre. Les regles different :
+
+| Aspect | .dhps standard | .dhps de surcharge |
+|--------|----------------|--------------------|
+| Nom | `gt_zoom article.dhps` | `gt_zoom articleu.dhps` (suffixe `u`) |
+| En-tete | `xwin-sprojet 2.0` | `xwin-s-sprojet 2.0` |
+| .dhpt parent | `xwin-projet 2.0` | `xwin-s-projet 2.0` |
+| Dans [sousprojets] du .dhpt | Oui (P08) | **Non** (P17) -- auto-detectee via `cheminbases` |
+
+`create_subproject.py` bascule en mode surcharge via :
+- `--surcharge` (flag explicite)
+- `--parent-dhpt <projet.dhpt>` (auto-detection : si en-tete `xwin-s-projet`, mode surcharge)
+
+`add_to_project.py` refuse l'ajout d'une `.dhps` de surcharge dans `[sousprojets]` (garde-fou P17).
+
+Voir [reference/dhps-structure.md](reference/dhps-structure.md) section "En-tete" pour les regles xwin7 exactes.
 
 **Check SVN pre-modification** (optionnel) : avant de modifier un fichier projet .dhpt/.dhps existant, verifier les modifs locales non committees et l'activite recente pour detecter un refactor en cours.
 
@@ -112,12 +132,13 @@ py .claude/skills/managing-diva-projects/scripts/validate_project.py \
 ```
 
 Verifications effectuees :
-- En-tete correct (`xwin-sprojet` pour .dhps, `xwin-projet` pour .dhpt)
+- En-tete correct (`xwin-sprojet`/`xwin-s-sprojet` pour .dhps, `xwin-projet`/`xwin-s-projet` pour .dhpt)
 - Sections obligatoires presentes
 - Syntaxe `fic=` correcte ([fichiers] avec `," "`, [includes] sans)
 - `zdiva.dhsp` present dans [includes]
 - Encodage ISO-8859-1 et CRLF
 - Reference dans [sousprojets] du parent (si `--dhpt` fourni)
+- Aucune `.dhps` de surcharge (`<base>u.dhps`) dans [sousprojets] (P17)
 
 Si erreurs : corriger et re-valider.
 
@@ -125,15 +146,15 @@ Si erreurs : corriger et re-valider.
 
 ## Validation
 
-### Anti-patterns verifies (P01-P16)
+### Anti-patterns verifies (P01-P17)
 
 | Code | Severite | Regle |
 |------|----------|-------|
 | P01 | error | Encodage UTF-8 interdit (ISO-8859-1 requis) |
 | P02 | error | Fins de ligne LF interdites (CRLF requis) |
 | P03 | error | Ne pas utiliser Edit/Write de Claude Code sur fichiers avec accents |
-| P04 | error | En-tete `xwin-projet` interdit dans .dhps |
-| P05 | error | En-tete `xwin-sprojet` interdit dans .dhpt |
+| P04 | error | En-tete `xwin-projet` interdit dans .dhps (utiliser `xwin-sprojet` ou `xwin-s-sprojet`) |
+| P05 | error | En-tete `xwin-sprojet` interdit dans .dhpt (utiliser `xwin-projet` ou `xwin-s-projet`) |
 | P06 | error | `fic="nom"," "` interdit dans [includes] |
 | P07 | error | `fic="nom"` sans `," "` interdit dans [fichiers] |
 | P08 | error | .dhps non reference dans [sousprojets] du .dhpt parent |
@@ -145,8 +166,9 @@ Si erreurs : corriger et re-valider.
 | P14 | error | Accent manquant dans `developpement` (profil) |
 | P15 | error | Accent manquant dans `developpement_x13.txt` (implicites) |
 | P16 | warning | Pas de verification d'encodage finale |
+| P17 | error | `.dhps` de surcharge (`<base>u.dhps`) listee dans [sousprojets] |
 
-Detail complet : [reference/project-anti-patterns.md](reference/project-anti-patterns.md)
+Detail complet : [reference/project-anti-patterns.md](reference/project-anti-patterns.md) (P01-P17)
 
 ### Difference critique : [fichiers] vs [includes]
 

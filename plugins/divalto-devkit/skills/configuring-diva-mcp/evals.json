@@ -1,0 +1,20 @@
+[
+  {
+    "skills": ["configuring-diva-mcp"],
+    "query": "Je viens d'installer le plugin divalto-devkit. Comment je configure ma cle API diva-mcp ?",
+    "files": [".mcp.json"],
+    "expected_behavior": "Le skill localise le .mcp.json du plugin, demande site / env / apikey au partenaire en langage naturel, appelle write_credentials.py, et indique qu'un redemarrage Claude Code est necessaire."
+  },
+  {
+    "skills": ["configuring-diva-mcp"],
+    "query": "diva-mcp me retourne 401 Unauthorized sur tous les outils",
+    "files": [".mcp.json"],
+    "expected_behavior": "Le skill diagnostique (URL joignable + format header). S'il s'agit d'une cle expiree ou rotated, il demande les nouvelles valeurs et patche le .mcp.json."
+  },
+  {
+    "skills": ["configuring-diva-mcp"],
+    "query": "J'ai change d'environnement de TEST a PROD pour diva-mcp",
+    "files": [".mcp.json"],
+    "expected_behavior": "Le skill repatche le bloc headers avec le nouveau env (et eventuellement nouvelle apikey si elle differe par env)."
+  }
+]

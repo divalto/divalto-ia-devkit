@@ -4,6 +4,14 @@
 Lit le .dhpt, verifie que le sous-projet n'est pas deja reference,
 et produit le contenu mis a jour.
 
+En-tetes .dhpt acceptes :
+- `xwin-projet 2.0` (projet standard)
+- `xwin-s-projet 2.0` (projet de surcharge)
+
+Garde-fou surcharge : une .dhps de surcharge (suffixe `u.dhps`) ne doit
+PAS etre listee dans [sousprojets] -- xwin7 leve "ne peut etre charge
+directement". Le script refuse l'ajout dans ce cas.
+
 Usage :
     py add_to_project.py --dhpt chemin.dhpt --dhps "gt_zoom article.dhps"
     py add_to_project.py --dhpt chemin.dhpt --dhps "gt_zoom article.dhps" --output updated.dhpt
@@ -19,7 +27,7 @@ Sortie JSON (stdout) :
 
 Exit codes :
     0 = succes
-    1 = erreur utilisateur (fichier introuvable, deja present)
+    1 = erreur utilisateur (fichier introuvable, deja present, surcharge refusee)
     2 = erreur interne
 """
 
@@ -70,6 +78,21 @@ def get_existing_subprojects(lines, start, end):
     return subprojects
 
 
+def is_surcharge_dhps(dhps_name):
+    """Detecte une .dhps de surcharge via la convention de nommage.
+
+    xwin7 fait une auto-detection : `<nom>u.dhps` dans le repertoire `projets/`
+    surcharge automatiquement `<nom>.dhps` du standard via `cheminbases`.
+    La .dhps de surcharge ne doit PAS etre listee dans [sousprojets] sinon
+    xwin7 leve "ne peut etre charge directement" (cf. anti-pattern P17).
+
+    `gt_zoom articleu.dhps` -> True
+    `gt_zoom article.dhps`  -> False
+    """
+    stem = os.path.splitext(dhps_name)[0]
+    return stem.endswith("u")
+
+
 def add_subproject(dhpt_path, dhps_name, output_path=None):
     """Ajoute un .dhps dans [sousprojets] d'un .dhpt.
 
@@ -86,6 +109,19 @@ def add_subproject(dhpt_path, dhps_name, output_path=None):
     # Extraire le nom simple : xwin7 -sousproject attend le basename
     dhps_name = os.path.basename(dhps_name)
 
+    # Garde-fou P17 : refuser une .dhps de surcharge (suffixe `u`).
+    # Elle est auto-detectee par xwin7 via `cheminbases`, l'ajouter dans
+    # [sousprojets] casse la compilation ("ne peut etre charge directement").
+    if is_surcharge_dhps(dhps_name):
+        return {
+            "error": (
+                f"{dhps_name} est une .dhps de surcharge (suffixe 'u'). "
+                f"xwin7 la detecte automatiquement via cheminbases : elle ne "
+                f"doit PAS etre listee dans [sousprojets] du .dhpt parent "
+                f"(anti-pattern P17). Aucune modification appliquee."
+            )
+        }
+
     # Lire le fichier en mode binaire pour preserver CRLF + ISO-8859-1
     try:
         with open(dhpt_path, "rb") as f:
@@ -98,9 +134,16 @@ def add_subproject(dhpt_path, dhps_name, output_path=None):
 
     lines = content.split("\r\n")
 
-    # Verifier l'en-tete
-    if not lines or not lines[0].strip().startswith("xwin-projet"):
-        return {"error": "Ce fichier n'est pas un .dhpt valide (en-tete manquant)"}
+    # Verifier l'en-tete : accepter standard (xwin-projet) et surcharge (xwin-s-projet)
+    header = lines[0].strip() if lines else ""
+    if not (header.startswith("xwin-projet") or header.startswith("xwin-s-projet")):
+        return {
+            "error": (
+                f"Ce fichier n'est pas un .dhpt valide : en-tete attendu "
+                f"'xwin-projet' (standard) ou 'xwin-s-projet' (surcharge), "
+                f"obtenu : {header!r}"
+            )
+        }
 
     # Trouver [sousprojets]
     section = find_sousprojets_section(lines)
