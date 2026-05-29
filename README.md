@@ -63,7 +63,7 @@ Copier le code à usage unique affiché et le coller dans la page web qui s'ouvr
 ### 4. Vérifier l'accès au dépôt
 
 ```bash
-gh repo view Divalto/DivaltoMarketPlace
+gh repo view Divalto/divalto-ia-devkit
 ```
 
 - Si le README s'affiche → vous avez accès, passez à l'étape suivante.
