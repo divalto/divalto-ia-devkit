@@ -72,6 +72,6 @@
     }
   ],
   "execution": {
-    "command": "py .claude/skills/searching-erp-sources/scripts/verify_x13.py --candidates c.json --request r.json --erp-root \"C:/Developpements harmony/Standard/Version X.13\""
+    "command": "py .claude/skills/searching-erp-sources/scripts/verify_x13.py --candidates c.json --request r.json --erp-root \"{CHEMIN_ERP_STANDARD}\""
   }
 }

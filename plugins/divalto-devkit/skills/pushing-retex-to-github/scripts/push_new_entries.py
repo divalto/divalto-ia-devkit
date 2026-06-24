@@ -95,7 +95,8 @@ def parse_entries(retex_file: Path) -> list:
     )
     if r.returncode != 0:
         raise RuntimeError(f"parse_retex_entries.py echec : {r.stderr}")
-    return json.loads(r.stdout)["entries"]
+    data = json.loads(r.stdout)
+    return {"entries": data.get("entries", []), "warnings": data.get("warnings", [])}
 
 
 def push_one(entry: dict, config_path: Path, source_file: Path, pushed_by: str, update_issue: int | None) -> dict:
@@ -122,6 +123,11 @@ def push_one(entry: dict, config_path: Path, source_file: Path, pushed_by: str, 
 
 
 def main() -> int:
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except (AttributeError, ValueError):
+        pass
+
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--retex-file", required=True, help="Chemin vers RETEX-skills.md")
     parser.add_argument("--config", help="Chemin vers .retex-github.json (defaut : a cote du retex-file)")
@@ -143,27 +149,33 @@ def main() -> int:
         return 1
 
     retex_dir = retex_file.parent
-    config_path = Path(args.config) if args.config else retex_dir / ".retex-github.json"
+    # Resolution de config en cascade : --config explicite, sinon config LOCALE
+    # (a cote du RETEX), sinon config GLOBALE utilisateur (~/.claude/).
+    # Le tracking, lui, reste TOUJOURS local : la numerotation R-NNN est propre a
+    # chaque workspace, un tracking partage provoquerait des collisions d'ID.
+    local_config = retex_dir / ".retex-github.json"
+    global_config = Path.home() / ".claude" / ".retex-github.json"
+    if args.config:
+        config_path = Path(args.config)
+    elif local_config.exists():
+        config_path = local_config
+    else:
+        config_path = global_config
     tracking_path = Path(args.tracking) if args.tracking else retex_dir / ".retex-pushed.json"
     log_path = Path(args.log) if args.log else retex_dir / ".retex-push.log"
 
     if not config_path.exists():
-        print(
-            json.dumps(
-                {
-                    "errors": [
-                        {
-                            "error": (
-                                f"Config absente : {config_path}. "
-                                f"Lancer init_config.py d'abord."
-                            )
-                        }
-                    ]
-                },
-                ensure_ascii=False,
-            )
+        msg = (
+            "RETEX push NON CONFIGURE -- aucune config trouvee "
+            f"(ni locale '{local_config}', ni globale '{global_config}'). "
+            "Lancer : py .../init_config.py --retex-file <RETEX-skills.md> --repo <owner/name> "
+            "(ajouter --global pour une config partagee entre workspaces). "
+            f"Aucun RETEX n'est perdu : les entrees restent dans '{retex_file}' et restent "
+            "poussables ensuite (--backfill --yes-i-want-to-push-everything si elles ont ete "
+            "ecrites avant la configuration)."
         )
-        log(log_path, f"Abort: config absente ({config_path})")
+        print(json.dumps({"errors": [{"error": msg}]}, ensure_ascii=False))
+        log(log_path, "Abort: RETEX push non configure (config locale+globale absentes)")
         return 1
 
     if args.backfill and not args.yes_i_want_to_push_everything:
@@ -189,11 +201,14 @@ def main() -> int:
             log(log_path, f"WARN: tracking illisible, repart de zero ({tracking_path})")
 
     try:
-        entries = parse_entries(retex_file)
+        parsed = parse_entries(retex_file)
     except Exception as e:
         log(log_path, f"ERROR: parse_entries : {e}")
         print(json.dumps({"errors": [{"error": str(e)}]}, ensure_ascii=False))
         return 1
+    entries = parsed["entries"]
+    for w in parsed.get("warnings", []):
+        log(log_path, f"WARN parsing: {w}")
 
     # Resolution de l'identite (auto-detection si non specifie)
     pushed_by = args.user_email or detect_pushed_by()

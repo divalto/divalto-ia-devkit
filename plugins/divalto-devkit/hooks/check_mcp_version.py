@@ -142,9 +142,11 @@ def main() -> None:
 
     if not raw_version and not raw_versions:
         deny(
-            f"L'appel a {basename} ne specifie pas de 'version'. "
-            f"Demande explicitement a l'utilisateur la version ERP cible "
-            f"(une parmi {sorted(VALID_VERSIONS)}) avant de relancer cet outil."
+            f"L'appel a {basename} ne specifie pas de 'version' ERP. "
+            f"Propose les versions plausibles via AskUserQuestion (version installee + "
+            f"cible de migration le cas echeant ; valides : "
+            f"{sorted(VALID_VERSIONS, key=lambda v: int(v.split('.')[1]))}) et laisse "
+            f"l'utilisateur choisir, puis relance avec la version retenue."
         )
 
     if raw_version is not None and raw_versions:
@@ -183,17 +185,19 @@ def main() -> None:
 
     if not mentioned:
         deny(
-            f"L'appel cible {sorted(wanted)} mais aucune version ERP n'a ete "
-            f"explicitement mentionnee par l'utilisateur dans la conversation recente. "
-            f"Demande-lui la/les version(s) cibles avant de relancer l'outil."
+            f"L'appel cible {sorted(wanted)} mais cette version n'a pas ete validee par "
+            f"l'utilisateur dans la session. Confirme-la via AskUserQuestion (propose la "
+            f"version installee et, en migration, la cible) -- ou attends qu'il l'enonce -- "
+            f"avant de relancer l'outil."
         )
 
     unaligned = wanted - mentioned
     if unaligned:
         deny(
-            f"L'appel cible {sorted(wanted)} mais l'utilisateur a mentionne "
-            f"{sorted(mentioned)}. Realigne avec ce qu'il a demande, ou demande "
-            f"confirmation s'il veut comparer plusieurs versions."
+            f"L'appel cible {sorted(wanted)} mais l'utilisateur a valide {sorted(mentioned)}. "
+            f"Realigne sur une version validee, ou fais confirmer la version cible via "
+            f"AskUserQuestion (cas migration : on peut viser une version differente de "
+            f"l'installee)."
         )
 
     sys.exit(0)

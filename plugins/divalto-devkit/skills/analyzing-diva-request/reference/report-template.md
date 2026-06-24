@@ -1,6 +1,6 @@
 # report-template.md -- Rappel de la structure du rapport final
 
-Le rapport markdown produit a la phase 4 suit la structure canonique definie dans `docs/ANALYSE-PRE-ACTION.md`. Ce fichier est un rappel rapide pour l'enrichissement LLM au CP5.
+Le rapport markdown produit a la phase 4 suit la structure canonique definie dans le gabarit d'analyse pré-action (interne). Ce fichier est un rappel rapide pour l'enrichissement LLM au CP5.
 
 ## 7 sections + annexe
 
@@ -26,11 +26,11 @@ Familles standard :
 - `Framework` : `Get_CheckObject_Data`, `Check_*_Field_*`, `Init_Zoom`, `Init_Module`
 - `RecordSql` : `Select`, `AddCondition`, `Orderby.Par_*`, `PreInsert`, `PostInsert`
 - `ISAM` : `HFileVersion`, `Load_*`, `Check_*`, `Exists_*`
-- `HTTP/REST` : `RestCall`, `JsonParse`, `XmlParse` -- voir `docs/LANGAGE-AVANCE.md`
+- `HTTP/REST` : `RestCall`, `JsonParse`, `XmlParse` -- voir la référence langage avancé (interne)
 - `UI/Masque` : methodes Zoom, callbacks cycle de vie
 - `Utilitaires` : `Translate`, `Formater_*`, `Trace_SOX_*`
 
-Sources : `docs/LANGAGE-AVANCE.md`, `docs/ARCHITECTURE-ENTITE.md`, `docs/SQUELETTES.md`.
+Sources : la référence langage avancé (interne), la référence architecture d'entité (interne), les squelettes (interne).
 
 ### Section 4.2 -- Propagation des changements
 
@@ -78,7 +78,7 @@ UC recommandations courantes :
 - Requete Cypher supplementaire (advisory) avec code copier-coller
 - Grep X.13 cible avec commande complete
 - Fichier X.13 a lire en entier
-- Document `docs/XXX.md` a consulter
+- Document de référence interne à consulter
 - Skill existant a invoquer (ex : `testing-erp` pour valider visuellement)
 
 ### Section 7 -- Points d'attention

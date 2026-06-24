@@ -1,6 +1,6 @@
 # Regle de non-collision RecordSql / Record
 
-Source : `docs/CONVENTIONS.md` (section Regle de non-collision RecordSql / Record).
+Source : référentiel interne -- conventions de nommage (règle de non-collision RecordSql / Record).
 
 ---
 

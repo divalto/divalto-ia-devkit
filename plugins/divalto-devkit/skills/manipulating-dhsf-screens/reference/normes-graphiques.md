@@ -1,6 +1,6 @@
 # Normes graphiques DIVA -- Fragment reference manipulating-dhsf-screens
 
-> Source canonique : `docs/NORMES-GRAPHIQUES.md` (workspace). Ce fragment extrait les regles necessaires a la generation / modification d'un masque .dhsf. Les valeurs sont en unites Divalto (le `position=Y,X` et `taille=H,L`).
+> Source : normes graphiques internes Divalto. Ce fragment extrait les regles necessaires a la generation / modification d'un masque .dhsf. Les valeurs sont en unites Divalto (le `position=Y,X` et `taille=H,L`).
 
 ## Sommaire
 
@@ -22,6 +22,18 @@
 | Entre champs dans un groupe | `10` (tasse), `12` (defaut), `14` (espace) | Choix selon densite |
 | Cle -> autres objets | `14` (16 si objet = groupe) | Offset de la cle |
 | Entre 2 groupes | `8` horizontal ou vertical | Sauf harmonie d'ecran |
+
+### Inserer un champ dans un masque existant -- pas de placement automatique (R-013)
+
+L'outillage ne **place pas** les nouveaux champs : la position (`position=Y,X`) est decidee par l'integrateur. Inserer un champ a une position non alignee sur la grille existante provoque un **chevauchement graphique** au runtime WPF.
+
+Procedure avant tout positionnement :
+
+1. **Lister toutes les positions existantes** de la page : `grep "position=" <masque>.dhsf` (ou via `dhsf_parser.py`). Reperer l'espacement reel entre champs.
+2. **Identifier une ligne libre** respectant cet espacement. L'espacement uniforme typique d'un formulaire SQL compact est **12** (9 unites de hauteur de champ + 3 de padding) -- ex. `42, 54, 66, ..., 138, 150`. Un nouveau champ se place a `150 + 12 = 162`, pas a `144` (milieu d'un intervalle -> chevauchement).
+3. **Si aucune ligne libre** : etendre la groupbox englobante (ex. hauteur `178 -> 182`), placer le champ apres le dernier existant, puis **decaler les elements suivants** (ex. cases a cocher decalees de `+6` : `174, 184, 194`) en preservant un gap suffisant avec la groupbox voisine.
+
+> **Formulaire SQL plus compact que non-SQL** : a contenu egal, la version `_sql` est souvent plus serree (groupbox "Selection en commun" hauteur 178 en SQL vs 205 en non-SQL), sans ligne libre. Ne pas presumer qu'un emplacement libre du masque non-SQL existe aussi dans le `_sql`.
 
 ## 2. Tailles d'ecran autorisees (page 1 `nb_lig,nb_col`)
 
@@ -116,6 +128,20 @@ sur les pages avec onglet : le header + footer reservent ~30 unites non
 comptabilisees dans `nb_lig`. Empiriquement, sur une page nb_lig=25
 (theorique 350), la saturation reelle commence vers max_Y=320. La constante
 `GRID_LIG_MARGE = 30` dans `scripts/dhsf_modify.py` reflete cette marge.
+
+> **Exemption des widgets tableau (R-014, R-015)** : R4/R5 ne s'appliquent **pas**
+> aux types de la famille tableau (`tableau`, `arbre`, `panel_wpf`, `champ_tableau`,
+> `multi_choix_tableau`). Pour ces widgets, `largeur_col` / `position_colonne` sont en
+> **unites de colonne**, pas en unites de grille -- les comparer a `nb_col * 4` produit des
+> faux positifs massifs (un zoom standard a 15 colonnes les declenche toutes alors qu'il
+> compile et tourne). `scripts/dhsf_modify.py` les exclut via l'ensemble `GRID_EXEMPT_TYPES`.
+> Si `validate` signale encore des violations R4/R5 sur ces types, ce sont des **faux positifs
+> pre-existants** (cf. baseline ci-dessous), pas des regressions.
+
+> **Baseline avant modification (R-008)** : lancer `dhsf_modify.py --action validate`
+> **avant** d'editer un masque pour figer la liste des violations pre-existantes. On distingue
+> ainsi une regression introduite par la modification d'une violation deja presente dans le
+> standard (souvent sur des groupbox ou tableaux acceptes en production).
 
 **Dimensions de groupes a largeur egale (mode FICHE zoom traditionnel)** :
 

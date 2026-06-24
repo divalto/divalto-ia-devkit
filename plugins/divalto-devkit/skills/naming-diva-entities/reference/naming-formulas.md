@@ -2,7 +2,7 @@
 
 Formules deterministes pour deriver tous les tokens a partir du triplet (domaine, entite, table SQL).
 
-Source : `docs/CONVENTIONS.md` et `docs/SQUELETTES.md`.
+Source : référentiel interne -- conventions de nommage + squelettes.
 
 ---
 

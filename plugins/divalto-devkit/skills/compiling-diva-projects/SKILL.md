@@ -12,6 +12,7 @@ description: >
 
 - Utilisation rapide
 - Workflow complet (3 etapes)
+- Quitus (compilation de livraison)
 - Parsing du rapport
 - Scripts disponibles
 - References
@@ -79,6 +80,12 @@ Avant compilation :
 - Tous les .dhps references existent
 - Tous les fichiers source en ISO-8859-1 + CRLF (P01, P02)
 - Nom de profil avec accent correct
+
+> **Découvrir le projet et le profil d'abord** : privilégier un `.dhpt` **existant** (le harness standalone est un dernier recours). Un `.dhpt` définit ses **propres** profils nommés — ne pas présumer « développement ». Lister/valider avant de compiler :
+> ```
+> py .claude/skills/compiling-diva-projects/scripts/compile_project.py --project "<dhpt>" --list-profiles
+> ```
+> `compile_project.py` **valide** le profil contre le `.dhpt` et **échoue tôt** (avant xwin7) s'il est absent, en listant les profils disponibles — évite l'échec tardif « Profil X inexistant ».
 
 > **Working directory obligatoire** : tout appel xwin7 doit etre lance
 > depuis `C:\divalto\sys` (`Set-Location "C:\divalto\sys"` en PowerShell). Cette
@@ -194,6 +201,43 @@ Si `success: false` → corriger les erreurs et recompiler.
 
 ---
 
+## Quitus (compilation de livraison)
+
+> Distinct de la **boucle de compilation de dev** (sections ci-dessus). Le **quitus**
+> est une passe de **livraison / pre-prod** : il (re)compile l'ensemble des `.dhpt`
+> puis lance un **controle de coherence**.
+
+> **Disponibilite** : `quitus.bat` / `quitus.dhop` ne fait **PAS partie du package
+> Divalto de base** -- c'est un outil des **PowerTools**, telecharge separement. Un
+> partenaire peut donc **ne pas l'avoir** : verifier sa presence avant de s'appuyer
+> dessus (a defaut, le controle de coherence se fait autrement / manuellement).
+
+`quitus.bat` (PowerTools) orchestre :
+1. la compilation de **tous les `.dhpt`** du perimetre ;
+2. si 0 erreur, l'ouverture de l'ERP via `xrtdiva.exe quitus.dhop`, qui **controle la
+   coherence objets <-> sources** (via horodatages) -- il detecte notamment le piege
+   **recompilation d'un standard APRES une surcharge** (la surcharge devient obsolete).
+
+**Caracteristiques** :
+- **Interactif** : `quitus.bat` lit des choix `set /p` (R/C/A) -> **non pilotable en
+  mode non-interactif**. Ne pas tenter de l'automatiser aveuglement.
+- **Resultats** : lire les fichiers **`quitus*.txt`** produits (le rapport n'est pas
+  sur stdout).
+
+> **Piege -- automatiser un `.bat` interactif par pipe stdin** : `echo R | quitus*.bat`
+> peut **boucler a l'infini**. Un `pause` lit la **console (CON)**, pas le pipe ; une
+> boucle `set /p` rappelee apres `pause` ne consomme donc jamais le pipe (EOF) ->
+> recursion jusqu'au stack overflow cmd. Si vous devez piper, fournir **deux** entrees
+> (`(echo R & echo A)`) pour que le second `set /p` declenche la sortie ; mieux : si
+> vous **possedez** le `.bat`, remplacer `pause` par `timeout /T 0 /NOBREAK >nul` ou
+> court-circuiter l'interactivite par une variable d'environnement.
+
+La **preparation de la livraison** elle-meme (mise en pack, reset de repertoires,
+filtrage des surcharges, zip...) depend du processus **propre a chaque projet /
+integrateur** et n'est pas couverte ici.
+
+---
+
 ## Parsing du rapport
 
 ### Ligne de resume
@@ -214,6 +258,8 @@ Duree=0:01:23
 | `Objets proteges=` | Objets proteges compiles |
 | `Duree=` | Temps total H:M:S |
 
+> **« Le projet est à jour, aucune compilation à effectuer »** : ce **n'est pas un échec** (build incrémental sans rien à recompiler, ou déjà compilé ailleurs). `parse_compilation.py` et `compile_project.py` le reconnaissent (`success:true`, `up_to_date:true`). Si tu attendais une recompilation, c'est que rien n'a changé côté source.
+
 ### Erreurs avec contexte
 
 Les erreurs apparaissent dans le rapport avec la ligne precedente contenant le nom du fichier source. Le script `parse_compilation.py` extrait automatiquement :
@@ -228,7 +274,7 @@ Les erreurs apparaissent dans le rapport avec la ligne precedente contenant le n
 | Script | Role | Entree | Sortie |
 |--------|------|--------|--------|
 | `generate_harness.py` | Genere un harness standalone | --source ou --sources --output-dir [--with-zdiva] [--with-communs] [--user] | JSON (chemins generes + log_file unique) |
-| `compile_project.py` | Compile un projet reel (.dhpt) via xwin7 avec gestion automatique du piege d'encodage profil accentue (R-005). Genere un .ps1 ISO-8859-1, l'execute, capture stdout/stderr, parse la ligne de resume du log. | --project --profile --log-path [--action build\|buildall] [--user] [--sousproject] [--source] [--xwin7-path] [--ps1-dir] [--no-execute] | JSON (ps1_script, log_file, exit_code, success, summary, ...) |
+| `compile_project.py` | Compile un projet reel (.dhpt) via xwin7 (gere le piege d'encodage profil accentue R-005). **Valide le profil** contre le .dhpt, **attend** la ligne de resume du log et conclut **succes des `Erreur(s)=0`** (ne depend plus de l'exit code/race), reconnait « projet a jour ». | --project [--profile --log-path] [--list-profiles] [--action build\|buildall] [--user] [--sousproject] [--source] [--xwin7-path] [--ps1-dir] [--no-execute] | JSON (ps1_script, log_file, exit_code, success, up_to_date, summary, ...) |
 | `parse_compilation.py` | Parse rapport build/buildall | --path fichier.txt [--check-outputs] [--errors-only] | JSON (success, summary, errors, warnings) |
 
 **generate_harness.py** :
@@ -248,7 +294,9 @@ Les erreurs apparaissent dans le rapport avec la ligne precedente contenant le n
 - `--action` : `build` (defaut, incremental) ou `buildall` (complet)
 - `--sousproject`, `--source` : couplage `-sousproject`/`-source` pour compilation chirurgicale
 - `--user` : fallback `--user XX > X_USER > USERNAME` (idem `generate_harness.py`)
+- `--list-profiles` : liste les profils declares dans le `.dhpt` (lecture seule) puis sort — a faire avant de choisir `--profile`
 - `--no-execute` : genere uniquement le .ps1 (debug, exit 3)
+- **Verdict robuste** : attend l'apparition du log (race possible), cible la ligne `Erreur(s)=` (pas une ligne de detail), et renvoie `success:true, up_to_date:true` sur « Le projet est a jour, aucune compilation a effectuer »
 - Exit codes : 0 = compilation reussie, 1 = erreurs ou input invalide, 2 = erreur interne, 3 = no-execute
 
 **parse_compilation.py** :

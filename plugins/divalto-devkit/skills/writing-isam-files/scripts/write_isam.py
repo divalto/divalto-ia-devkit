@@ -179,6 +179,164 @@ def _expand_entry(item):
 
 
 # ---------------------------------------------------------------------------
+# Garde-fou structure <-> dictionnaire (anti-corruption taille d'enregistrement)
+#
+# Un .dhfi peut contenir PLUSIEURS tables, chacune avec sa propre taille
+# d'enregistrement (ex. base A5f : M1=50, M4=1000, M7=508). Ecrire un buffer
+# dont la taille ne correspond a AUCUNE table reelle du fichier corrompt le
+# fichier en silence. Ce garde-fou verifie que la structure declaree
+# (Dictionnaire/Base/Table/TailleEnreg/Ce) correspond a une table reelle du
+# dictionnaire avant toute ecriture. Source de verite = la structure JSON
+# elle-meme (elle declare son dico/base/table) ; pas besoin de l'en-tete .dhfi
+# (dont le format n'est pas universel -- ex. gtfdmc.dhfi ne porte pas ce lien).
+#
+# Parseur .dhsd VENDORE (copie locale, aucune dependance cross-skill).
+# ---------------------------------------------------------------------------
+
+def _parse_dhsd_lines(path):
+    """Lit un .dhsd (ISO-8859-1 + CRLF) et retourne ses lignes strippees."""
+    with open(path, "rb") as f:
+        raw = f.read().decode("iso-8859-1", "replace")
+    sep = "\r\n" if "\r\n" in raw else "\n"
+    return [x.strip() for x in raw.split(sep)]
+
+
+def _base_tables(lines, base):
+    """Retourne la liste des tables du bloc [BASE] Nom=<base> via sa sous-section [TABLES].
+
+    Retourne None si la base est absente du dictionnaire.
+    """
+    i = 0
+    while i < len(lines):
+        if lines[i] == "[BASE]":
+            j = i + 1
+            nom = None
+            in_tables = False
+            tables = []
+            while j < len(lines) and lines[j] != "[BASE]":
+                s = lines[j]
+                if s.startswith("Nom=") and nom is None and not in_tables:
+                    nom = s[4:].split(",")[0]
+                elif s == "[TABLES]":
+                    in_tables = True
+                elif s == "[/TABLES]":
+                    in_tables = False
+                elif in_tables and s.startswith("Nom="):
+                    tables.append(s[4:].split(",")[0])
+                j += 1
+            if nom and nom.lower() == base.lower():
+                return tables
+            i = j
+            continue
+        i += 1
+    return None
+
+
+def _table_size_ce(lines, table):
+    """Retourne (ce, taille) en str du bloc [TABLE] Nom=<table>, ou None.
+
+    `ce` peut etre None (tables mono-table sans discriminant, ex. XErr/206, XQ).
+    """
+    k = 0
+    while k < len(lines):
+        if lines[k] == "[TABLE]":
+            m = k + 1
+            nom = ce = taille = None
+            while m < len(lines) and lines[m] != "[TABLE]":
+                s = lines[m]
+                if s.startswith("Nom=") and nom is None:
+                    nom = s[4:].split(",")[0]
+                elif s.startswith("CE="):
+                    rest = s[3:]
+                    ce = rest.split(",")[1] if "," in rest else None
+                elif s.startswith("Taille="):
+                    taille = s[7:].split(",")[0]
+                m += 1
+            if nom and nom.lower() == table.lower():
+                return ce, taille
+            k = m
+            continue
+        k += 1
+    return None
+
+
+def _locate_dico(dico_name, search_dirs):
+    """Cherche le fichier dico .dhsd dans les repertoires donnes (ordre prioritaire)."""
+    if not dico_name or not dico_name.lower().endswith(".dhsd"):
+        return None
+    for d in search_dirs:
+        if not d:
+            continue
+        candidate = os.path.join(d, dico_name)
+        if os.path.isfile(candidate):
+            return candidate
+    return None
+
+
+def verify_structure_vs_dico(structure, fichier, dico_paths):
+    """Verifie la coherence (Base, Table, TailleEnreg, Ce) de la structure vs le dictionnaire reel.
+
+    Retourne (verdict, message) avec verdict dans {"ok", "warn", "refuse"} :
+      - "refuse" : incoherence prouvee (table absente, taille != taille reelle, Ce != Ce reel)
+                   -> l'ecriture DOIT etre bloquee (corruption evitee).
+      - "warn"   : verification impossible (metadata manquante, dico introuvable/base absente)
+                   -> degradation gracieuse, l'ecriture est autorisee mais signalee.
+      - "ok"     : structure coherente avec une table reelle du fichier.
+
+    Le CE n'est verifie que s'il est present des deux cotes (tables mono-table sans CE).
+    """
+    dico_name = structure.get("Dictionnaire")
+    base = structure.get("Base")
+    table = structure.get("Table")
+    ce = structure.get("Ce")
+    size = structure.get("TailleEnreg")
+
+    if not dico_name or not base or not table:
+        return "warn", "structure sans Dictionnaire/Base/Table : verification dico impossible"
+
+    search = list(dico_paths or [])
+    if fichier:
+        search.append(os.path.dirname(os.path.abspath(fichier)))
+    dico_file = _locate_dico(dico_name, search)
+    if not dico_file:
+        dirs = [d for d in search if d]
+        return "warn", f"dictionnaire {dico_name!r} introuvable (cherche : {dirs}) : structure non verifiee (--dico-path pour preciser)"
+
+    lines = _parse_dhsd_lines(dico_file)
+    tables = _base_tables(lines, base)
+    if tables is None:
+        return "warn", f"base {base!r} absente de {dico_name} : structure non verifiee"
+    if not any(t.lower() == table.lower() for t in tables):
+        return "refuse", f"table {table!r} absente de la base {base!r} (tables reelles : {tables}) -- structure incompatible avec le fichier"
+
+    det = _table_size_ce(lines, table)
+    if not det or det[1] is None:
+        return "warn", f"taille reelle de {base}.{table} introuvable dans {dico_name} : structure non verifiee"
+    real_ce, real_ta = det
+    if str(size) != str(real_ta):
+        return "refuse", f"TailleEnreg={size} != taille reelle {real_ta} de {base}.{table} -- ecriture refusee (corruption evitee)"
+    if ce is not None and real_ce is not None and str(ce) != str(real_ce):
+        return "refuse", f"Ce={ce} != Ce reel {real_ce} de {base}.{table} -- structure incoherente avec le dictionnaire"
+    return "ok", f"{base}.{table} Taille={real_ta} Ce={real_ce} : coherent"
+
+
+def _guardrail_or_none(structure, fichier, dico_paths, skip_dict_check):
+    """Applique le garde-fou dico. Retourne un dict-resultat d'erreur si REFUS, sinon None.
+
+    Emet un warning stderr en cas de "warn" (degradation gracieuse) ; ne bloque jamais sur warn.
+    """
+    if skip_dict_check:
+        return None
+    verdict, msg = verify_structure_vs_dico(structure, fichier, dico_paths)
+    if verdict == "refuse":
+        return {"written": False, "skipped": False, "error_code": -2,
+                "message": f"Garde-fou dico : {msg}"}
+    if verdict == "warn":
+        print(f"  Warning garde-fou dico : {msg}", file=sys.stderr)
+    return None
+
+
+# ---------------------------------------------------------------------------
 # Construction d'enregistrement
 # ---------------------------------------------------------------------------
 
@@ -338,7 +496,7 @@ def resolve_key(structure, key, key_fields):
     )
 
 
-def update_single(dll, tache, entry, structure_dir, dry_run):
+def update_single(dll, tache, entry, structure_dir, dry_run, dico_paths=None, skip_dict_check=False):
     """Modifie un enregistrement existant.
 
     Sequence : open -> tpreadlong R (reserve) -> verification exacte -> trewritelong -> close.
@@ -366,6 +524,11 @@ def update_single(dll, tache, entry, structure_dir, dry_run):
     key = letter
     record_size = structure["TailleEnreg"]
     fields = structure["Structure"]
+
+    # Garde-fou anti-corruption : la taille declaree doit correspondre a une table reelle du fichier
+    refus = _guardrail_or_none(structure, fichier, dico_paths, skip_dict_check)
+    if refus is not None:
+        return refus
 
     new_rec, warnings = build_record(donnees, fields, record_size)
     for w in warnings:
@@ -427,7 +590,7 @@ def update_single(dll, tache, entry, structure_dir, dry_run):
     return {"written": False, "skipped": False, "error_code": ret, "message": msg}
 
 
-def delete_single(dll, tache, entry, structure_dir, dry_run):
+def delete_single(dll, tache, entry, structure_dir, dry_run, dico_paths=None, skip_dict_check=False):
     """Supprime un enregistrement existant.
 
     Sequence : open -> tpreadlong R (reserve) -> verification exacte -> tdeletelong -> close.
@@ -456,6 +619,11 @@ def delete_single(dll, tache, entry, structure_dir, dry_run):
     key = letter
     record_size = structure["TailleEnreg"]
     fields = structure["Structure"]
+
+    # Garde-fou anti-corruption : la taille declaree doit correspondre a une table reelle du fichier
+    refus = _guardrail_or_none(structure, fichier, dico_paths, skip_dict_check)
+    if refus is not None:
+        return refus
 
     if dry_run:
         return {"written": True, "skipped": False, "error_code": 0,
@@ -512,7 +680,7 @@ def delete_single(dll, tache, entry, structure_dir, dry_run):
     return {"written": False, "skipped": False, "error_code": ret, "message": msg}
 
 
-def write_single(dll, tache, entry, structure_dir, dry_run):
+def write_single(dll, tache, entry, structure_dir, dry_run, dico_paths=None, skip_dict_check=False):
     """Ecrit un enregistrement unique. Retourne un dict resultat."""
     fichier = entry["Fichier"]
     struct_ref = entry["Structure"]
@@ -528,6 +696,11 @@ def write_single(dll, tache, entry, structure_dir, dry_run):
     structure = load_structure(struct_path)
     record_size = structure["TailleEnreg"]
     fields = structure["Structure"]
+
+    # Garde-fou anti-corruption : la taille declaree doit correspondre a une table reelle du fichier
+    refus = _guardrail_or_none(structure, fichier, dico_paths, skip_dict_check)
+    if refus is not None:
+        return refus
 
     # Construire l'enregistrement
     rec, warnings = build_record(donnees, fields, record_size)
@@ -597,6 +770,17 @@ def main():
         "--op", choices=["insert", "update", "delete"], default="insert",
         help="Operation a effectuer (defaut : insert)"
     )
+    parser.add_argument(
+        "--dico-path", action="append", default=None, metavar="DIR",
+        help="Repertoire ou chercher le dictionnaire .dhsd declare par la structure "
+             "(cumulable). Defaut : repertoire du fichier .dhfi cible. Utile quand le dico "
+             "est deporte (ex. fichiers d'erreur dans objets/, dico dans fichiers/)."
+    )
+    parser.add_argument(
+        "--skip-dict-check", action="store_true",
+        help="Desactive le garde-fou structure<->dictionnaire (verification de la taille "
+             "d'enregistrement). A n'utiliser qu'en connaissance de cause."
+    )
     args = parser.parse_args()
 
     # Resoudre structure-dir
@@ -658,7 +842,8 @@ def main():
 
     try:
         for i, entry in enumerate(entries):
-            result = op_fn(dll, task_id, entry, structure_dir, args.dry_run)
+            result = op_fn(dll, task_id, entry, structure_dir, args.dry_run,
+                           args.dico_path, args.skip_dict_check)
 
             if result["written"]:
                 written += 1

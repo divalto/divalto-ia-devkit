@@ -20,6 +20,7 @@ Exit codes : 0 succes, 1 erreur applicative, 2 erreur d'usage.
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -41,10 +42,14 @@ def derive_labels(entry: dict, config: dict) -> list:
     severite = (entry.get("severite") or "").strip()
 
     # categorie peut contenir plusieurs valeurs separees par + / ,
+    # On retire D'ABORD toute note entre parentheses : elle peut contenir une virgule
+    # (ex "BUG-SKILL (au depart, c'etait SUGGESTION)") qui serait sinon prise pour un
+    # separateur et produirait un label parasite ("c'etait suggestion)").
     if categorie:
         cat_map = config.get("labels_categorie", {})
-        for tok in [t.strip() for t in categorie.replace(",", "+").split("+")]:
-            tok_clean = tok.split("(")[0].strip().upper()
+        cat_clean = re.sub(r"\([^)]*\)", "", categorie)
+        for tok in [t.strip() for t in re.split(r"[+,]", cat_clean)]:
+            tok_clean = tok.strip().upper()
             if not tok_clean:
                 continue
             label = cat_map.get(tok_clean)
@@ -55,7 +60,7 @@ def derive_labels(entry: dict, config: dict) -> list:
 
     if severite:
         sev_map = config.get("labels_severite", {})
-        sev_clean = severite.split("(")[0].strip().upper()
+        sev_clean = re.sub(r"\([^)]*\)", "", severite).strip().upper()
         label = sev_map.get(sev_clean)
         if label:
             labels.append(label)
@@ -167,6 +172,11 @@ def comment_issue(repo: str, issue_number: int, body: str) -> str:
 
 
 def main() -> int:
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except (AttributeError, ValueError):
+        pass
+
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", required=True, help="Chemin vers .retex-github.json")
     parser.add_argument("--source-file", required=True, help="Chemin du RETEX-skills.md source (pour le body)")

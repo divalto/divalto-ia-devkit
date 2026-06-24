@@ -11,12 +11,13 @@
 - Transactions
 - Fonctions utilitaires
 - Performance -- gros volumes
+- Anti-pattern -- TmpRecordSql concurrent
 - Callbacks modules
 
 ---
 
 
-Pour la declaration de base des RecordSql, voir `docs/LANGAGE-SYNTAXE.md`.
+Pour la declaration de base des RecordSql, voir la référence syntaxe du langage (interne).
 
 ## Acces fluent aux conditions WHERE
 
@@ -42,6 +43,24 @@ MonRS.OrderBy.Par_Libelle()
 | `.Where.AddCondition(nom, sql)` | Condition SQL brute nommee |
 | `.Where.RemoveCondition(nom)` | Supprime une condition par nom |
 | `GT_ClearAllCondition(RS, true)` | Supprime toutes les conditions |
+
+### Piege : `Where.Equal_*` doit etre chaine avec `AddAndCondition`
+
+Une clause `Where.Equal_*` **seule** ne filtre rien : `vCondition` reste vide et le `Select` ignore la condition malgre l'apparence du code. Le triplet est **obligatoire** :
+
+```diva
+1 vCondition S = ' '
+
+MonRS.Where.Equal_SiteCod(siteCod) | MonRS.Where.Equal_SiteCod.AddAndCondition(vCondition)
+MonRS.Where.Equal_Statut(statut)   | MonRS.Where.Equal_Statut.AddAndCondition(vCondition)
+MonRS.Where.AddCondition("TABLE", vCondition)   ; AVANT le Select
+
+idReader = MonRS.Select()
+```
+
+1. declarer `vCondition S = ' '` ;
+2. chaque `Where.Equal_X(...)` chaine `| Where.Equal_X.AddAndCondition(vCondition)` (le `|` est un separateur de ligne, meme ligne logique) ;
+3. `Where.AddCondition("TABLE", vCondition)` **avant** le `Select`.
 
 ---
 
@@ -73,6 +92,14 @@ ReaderClose_MaTable(MonRS, ReaderId)
 4. `ReaderSelect_Table(RS, ReaderId)` -- execute la requete
 5. `Loop ReaderNext_Table(RS, ReaderId) = 0` -- iterer
 6. `ReaderClose_Table(RS, ReaderId)` -- **fermer le curseur**
+
+### Pieges Reader / ListMode
+
+- **`GT_Reader_recordSql(...)` n'existe pas** en DIVA. Utiliser le pattern `ReaderOpen/Select/Next/Close_<Table>` ci-dessus (+ `AddAndCondition` / `AddCondition('Record', valCond)` pour les filtres).
+- **`ListMode(id, mode, adrFct)` exige 3 parametres**, meme en mode FIFO (`mode = 0`). Recuperer l'adresse de fonction via `GetAdressFunction` :
+  ```diva
+  ListMode(id, 0, GetAdressFunction("MaFonction"))
+  ```
 
 ---
 
@@ -227,6 +254,19 @@ ECRITURE.ReaderClose(IdReaderEcriture)
 
 ---
 
+## Anti-pattern -- TmpRecordSql concurrent
+
+En batch **multi-processus** (ex. `ProgramCall` lance N instances en parallele), `TmpRecordSql` peut declencher `Erreur SQL 300A` ("There is already an object named '<table>_<N>'") : le nom de table temporaire derive d'un identifiant (suffixe timestamp/SPID) qui peut se repeter entre processus proches. Le flag `KeepOnExit` aggrave le cas (table persistante apres crash -> blocage de l'execution suivante).
+
+**Alternative recommandee** quand (a) le programme est appele par `ProgramCall` depuis plusieurs processus simultanes et (b) on passe une liste de cles : remplacer `TmpRecordSql` par le passage d'une **liste CSV via Ping**.
+
+- Emetteur : construire une chaine CSV des cles (sans espaces, separateur `,`) et l'envoyer en un seul `Ping S` avant le `ProgramCall`.
+- Recepteur : decoder avec `String(',', str, pos)` + `Mid` + `Length` + `repeat...until`.
+
+Avantages : aucune ressource SQL partagee (zero collision), chaque processus est un silo memoire isole, et `Ping S` n'a pas de limite de taille pratique. Voir [tunnels.md](tunnels.md) pour Ping/PingReceive.
+
+> Note version : `String`/`Mid`/`Length`/`repeat...until` ne sont pas tous disponibles avant X.13 (cf. `analyzing-diva-request` pour la table des fonctions par version ERP).
+
 ## Callbacks modules
 
 Procedures appelees automatiquement par le framework. `XXXX` = prefixe du module.
@@ -261,4 +301,4 @@ Procedures appelees automatiquement par le framework. `XXXX` = prefixe du module
 
 ---
 
-> Reference exhaustive : `docs/RECORDSQL.md`
+> Reference exhaustive : référence RecordSql interne

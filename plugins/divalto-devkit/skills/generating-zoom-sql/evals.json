@@ -28,6 +28,15 @@
         "output_file": "output/davtzcli_sql.dhsp",
         "validation": "0 errors, 0 warnings accepte"
       }
+    },
+    {
+      "name": "ZoomDebut — Construire_Condition_Selection inconditionnelle (R-016)",
+      "input": "Genere un Zoom SQL et verifie le placement de Construire_Condition_Selection dans ZoomDebut.",
+      "expected": {
+        "tokens": "n'importe quelle entite (ex. --domaine Retail --entite FamRglt --table RtlFamRglt --champ-cle RgltFam)",
+        "output_file": "ZoomDebut du .dhsp genere",
+        "validation": "Construire_Condition_Selection(ZOOM_SQL_CONDITION_NORMALE, TRUE) est appelee APRES le Endif du bloc 'If ZOOM.Scevaleur <> ' '' (inconditionnelle) ; seuls _Sel.Init() et le positionnement de _Sel restent dans le If. ZoomApresCle conserve son appel inconditionnel. Raison : ZoomApresCle n'est pas toujours declenche (depend d'un parametre de l'appel du zoom)."
+      }
     }
   ]
 }

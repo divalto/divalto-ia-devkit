@@ -119,6 +119,21 @@ HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Divalto\divalto.ini\System
 
 R-5 court-circuite la dependance de R-4 a `<DIVA_ROOT>` -- le chemin de `fconfig.dhfd` peut etre lu directement du registre (`CheminFpartd`), sans avoir a composer `<DIVA_ROOT> + /sys/fconfig.dhfd`. Si jamais les deux divergent (cas exotique), le registre fait foi puisque c'est ce que xwin7 utilise au runtime.
 
+### Gotcha -- certains parametres Divalto sont dans le registre, pas dans `divalto.txt` (R-006)
+
+Plusieurs parametres `[System]` documentes "a mettre dans `Divalto.ini`" sont en realite lus
+par Harmony **exclusivement dans le registre** -- les ecrire dans `C:\divalto\sys\divalto.txt`
+est **inerte** (aucun effet). Exemple : **`cheminLangues`** (chemin des traductions) vit sous
+`HKCU\Software\Divalto\divalto.ini\System`, pas dans `divalto.txt`. Pour le poser :
+`Set-ItemProperty -Path "HKCU:\Software\Divalto\divalto.ini\System" -Name "cheminLangues" -Value "<chemin>"`
+ou via `xDivaltoMajIni.exe`, puis redemarrage.
+
+> **Ne pas confondre avec la liste blanche P-C** : ce gotcha est purement informatif (comprendre
+> le poste). Le skill **ne lit pas** `cheminLangues` ni n'explore `HKCU` -- ses seules lectures
+> registre restent `CheminUl1` / `CheminFpartd` sous `HKLM` (R-5) et le DSN ODBC (R-10). Si tu dois
+> modifier `cheminLangues`, c'est une action **utilisateur** explicite, hors du perimetre de
+> resolution de chemins de ce skill.
+
 ---
 
 ## R-13 -- Trouver la version canonique d'un fichier pour ce workspace

@@ -58,6 +58,59 @@
         "0 erreurs, 0 warnings (fichier ERP standard conforme)",
         "summary.total == 0"
       ]
+    },
+    {
+      "id": "case-5-s01-faux-positif",
+      "skills": [
+        "linting-diva-code"
+      ],
+      "query": "Analyse un .dhsp contenant Modify('+','%2B',pref) et une vraie concatenation x = \"a\" + \"b\"",
+      "files": [],
+      "expected_behavior": [
+        "NE detecte PAS S01 sur Modify('+','%2B',pref) : le '+' est le contenu d'un litteral, pas un operateur",
+        "Detecte S01 (error) sur x = \"a\" + \"b\" : vraie concatenation avec + au lieu de &",
+        "Le contenu des chaines est masque avant l'analyse"
+      ]
+    },
+    {
+      "id": "case-6-s06-diva-base",
+      "skills": [
+        "linting-diva-code"
+      ],
+      "query": "Analyse une surcharge .dhsf contenant du code DIVA dans un bloc [diva_base]",
+      "files": [],
+      "expected_behavior": [
+        "NE detecte PAS S06 pour le code situe dans [diva_base]...[/diva_base] (bloc valide, comme [diva])",
+        "Detecte S06 (error) uniquement pour du code DIVA hors de tout bloc [diva...]",
+        "Corrige les faux positifs S06 sur les surcharges de masque"
+      ]
+    },
+    {
+      "id": "case-8-r08-where-type",
+      "skills": [
+        "linting-diva-code"
+      ],
+      "query": "Analyse un .dhsq dont une condition <Where> declare un parametre (Long X)",
+      "files": [],
+      "expected_behavior": [
+        "Detecte R08 (error) : '(Long X)' invalide dans une condition <Where> (Erreur 30) -> utiliser (int X) ; le long DIVA s'ecrit L",
+        "Ne signale RIEN pour (Int id) ni (Char Cod) : la casse des types valides est libre (convention du standard)",
+        "Ne flague QUE le nom Long ; String est un type DIVA valide et n'est PAS signale"
+      ]
+    },
+    {
+      "id": "case-9-s10-overwrittenby-dhop",
+      "skills": [
+        "linting-diva-code"
+      ],
+      "query": "Analyse un .dhsp dont la directive OverWrittenBy pointe un .dhsp au lieu d'un .dhop",
+      "files": [],
+      "expected_behavior": [
+        "Detecte S10 (error) : OverWrittenBy pointe un .dhsp source -> devrait pointer le .dhop compile",
+        "NE detecte PAS S10 si OverWrittenBy pointe deja le .dhop (forme correcte)",
+        "NE detecte PAS S10 si la ligne OverWrittenBy est en commentaire (`;` ou `//`)",
+        "Regle scopee aux .dhsp : ne flague pas les .dhsq (qui utilisent legitimement .dhoq) ni les .dhsj"
+      ]
     }
   ]
 }

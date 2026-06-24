@@ -1,6 +1,6 @@
 # Patterns de zoom ERP
 
-> Reference : `docs/NAVIGATION-ERP.md` section 3
+> Reference : la référence navigation ERP (interne) section 3
 
 ## Structure commune d'un zoom
 

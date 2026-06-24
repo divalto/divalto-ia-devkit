@@ -13,7 +13,7 @@
 ---
 
 
-> Reference complete : `docs/NAVIGATION-ERP.md` section 2
+> Reference complete : la référence navigation ERP (interne) section 2
 
 ## Modele reel -- graphe de regroupements
 

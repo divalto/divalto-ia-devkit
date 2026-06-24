@@ -2,72 +2,68 @@
 
 ## Principe
 
-Les outils Edit et Write de Claude Code ecrivent en UTF-8 + LF. Les fichiers Divalto sont en ISO-8859-1 + CRLF. Il faut donc soit utiliser les scripts du skill, soit passer par Bash avec les methodes ci-dessous.
+Les outils Edit et Write de Claude Code ecrivent en UTF-8 + LF ; un pipe PowerShell ajoute un BOM ; Python en mode texte convertit les CRLF en LF a la lecture. Les fichiers Divalto, eux, sont en **ISO-8859-1 + CRLF**. Il faut donc TOUJOURS passer par les scripts de ce skill.
 
 ---
 
-## Methode recommandee : scripts du skill
+## Les gestes et les scripts
 
-Toujours preferer les scripts `write_file.py`, `verify_encoding.py`, `convert_file.py` qui gerent automatiquement l'encodage et les fins de ligne.
+| Geste | Script | Note |
+|-------|--------|------|
+| **CREER** un fichier (ou le remplacer en entier) | `write_file.py` | si le fichier existe deja : `.bak` auto (cache) + avertissement |
+| **MODIFIER** un fichier existant (preserver le reste) | `patch_file.py` | edition chirurgicale : `insert` / `prepend` / `append` / `replace` / `delete` ; `.bak` auto |
+| **VERIFIER** apres ecriture | `verify_encoding.py` | encodage + fins de ligne (dont BOM et CRLF final manquant) |
+| **CORRIGER** un fichier corrompu (UTF-8 / LF / BOM / pas de CRLF final) | `convert_file.py` | `.bak` auto |
+
+> **Fichiers structures** (`.dhsd`, `.dhsf`, `.dhsi`) : NE PAS les editer ligne-a-ligne avec `patch_file.py` (positions/offsets sensibles) — utiliser les skills dedies : `managing-diva-dictionaries` (.dhsd) et `manipulating-dhsf-screens` (.dhsf, .dhsi masques d'impression). `patch_file.py` les refuse par defaut.
 
 ---
 
-## Methode Bash : modification par insertion (head/tail)
+## `patch_file.py` — modification chirurgicale (methode recommandee)
 
-Preserve l'encodage et les fins de ligne du fichier original. Ideal pour inserer des lignes dans un fichier existant.
+```
+# Inserer apres une ligne reperee par une ancre
+py .claude/skills/writing-diva-files/scripts/patch_file.py --path f.dhsp --op insert --anchor "Procedure Init" --position after --content "  ; init"
 
-```bash
-cp fichier.dhpt fichier.dhpt.bak
-{ head -n LIGNE fichier.dhpt.bak; printf 'contenu\r\n'; tail -n +$((LIGNE+1)) fichier.dhpt.bak; } > fichier.dhpt
-rm fichier.dhpt.bak
+# Inserer en tete de fichier
+py .claude/skills/writing-diva-files/scripts/patch_file.py --path f.dhsp --op prepend --content ";>xwinobj      programme"
+
+# Remplacer la ligne contenant une ancre
+py .claude/skills/writing-diva-files/scripts/patch_file.py --path f.dhsq --op replace --anchor "Const C_MAX" --content "Const C_MAX = 999"
+
+# Supprimer une plage de lignes (1-based, inclusif)
+py .claude/skills/writing-diva-files/scripts/patch_file.py --path f.dhsp --op delete --line-range 10:12
 ```
 
+Garde-fous : `--expect N` (l'ancre doit matcher exactement N lignes — defaut 1 — sinon refus, rien ecrit), `--regex` (ancre = regex), `--dry-run` (apercu sans ecrire), `.bak` auto (`--no-backup` pour s'en passer). CRLF final garanti, re-verification automatique apres ecriture.
+
 ---
 
-## Methode Bash : modification par sed
+## Pieges Windows (causes recurrentes de corruption)
 
-Pour des remplacements simples dans un fichier existant. Convertir LF temporairement, modifier, reconvertir.
+| Piege | Symptome | Parade |
+|-------|----------|--------|
+| **Edit / Write** de Claude Code | fichier passe en UTF-8 + LF | ne jamais les utiliser sur du DIVA ; le hook `protect_encoding.py` les bloque |
+| **Pipe PowerShell** (`echo ... ` redirige vers `py`) | un **BOM** se colle en tete du contenu | preferer `--content`, ou `--stdin` depuis un fichier UTF-8 sans BOM ; `verify`/`convert` detectent/retirent le BOM |
+| **Python en mode texte** (`open(p)` sans `'b'`) | CRLF convertis en LF a la **lecture** -> remplacements silencieusement rates | toujours lire/ecrire en **binaire** (les scripts du skill le font) |
+| **Pas de CRLF final** | **Erreur 135** a la compilation | `write_file`/`patch_file` garantissent le CRLF final ; `convert_file` le rajoute ; `verify` le signale |
 
+---
+
+## Fallback Bash (uniquement si les scripts sont indisponibles)
+
+Inserer en preservant l'encodage :
 ```bash
-tr -d '\r' < fichier.dhsf > /tmp/fix.tmp
-sed -i 's/ancien/nouveau/' /tmp/fix.tmp
-sed 's/$/\r/' /tmp/fix.tmp > fichier.dhsf
-rm /tmp/fix.tmp
+cp f.dhpt .f.dhpt.bak
+{ head -n L .f.dhpt.bak; printf 'contenu\r\n'; tail -n +$((L+1)) .f.dhpt.bak; } > f.dhpt
 ```
-
----
-
-## Methode Bash : conversion post-Edit/Write
-
-Si un fichier a ete ecrit avec Edit/Write (UTF-8 + LF) et doit devenir ISO-8859-1 + CRLF :
-
-```bash
-# 1. Convertir encodage
-iconv -f UTF-8 -t ISO-8859-1 fichier.dhsp > /tmp/conv.tmp
-
-# 2. Convertir fins de ligne
-sed 's/$/\r/' /tmp/conv.tmp > fichier.dhsp
-rm /tmp/conv.tmp
-```
-
----
-
-## Resume par situation
-
-| Situation | Methode |
-|-----------|---------|
-| Creer un nouveau fichier Divalto | `write_file.py` |
-| Modifier un fichier existant (remplacement) | `write_file.py` ou sed (Bash) |
-| Inserer des lignes dans un fichier existant | head/tail (Bash) |
-| Corriger un fichier corrompu (UTF-8/LF) | `convert_file.py` |
-| Verifier un fichier apres modification | `verify_encoding.py` |
-| Fichier ASCII pur sans accents | Edit/Write possibles + `sed 's/$/\r/'` apres |
+Remplacement simple : `tr -d '\r'` -> `sed` -> re-ajouter `\r` en fin de ligne. Toujours lancer `verify_encoding.py` apres.
 
 ---
 
 ## Ce qu'il ne faut JAMAIS faire
 
-- Utiliser Edit/Write sur .dhpt, .dhps, .dhsd, .dhsf (toujours des accents)
-- Ouvrir un fichier ISO-8859-1 comme UTF-8 (les octets > 0x7F deviennent invalides)
-- Melanger LF et CRLF dans un meme fichier
+- Edit/Write sur `.dhsp`, `.dhsq`, `.dhsd`, `.dhsf`, `.dhsi`, `.dhpt`, `.dhps` (accents + CRLF)
+- Pipe PowerShell direct (BOM) ; ouvrir un fichier ISO-8859-1 comme UTF-8 ; lire/ecrire en mode texte Python
+- Reecrire un fichier en entier (`write_file`) quand une modif ciblee (`patch_file`) suffit
 - Oublier de verifier apres modification

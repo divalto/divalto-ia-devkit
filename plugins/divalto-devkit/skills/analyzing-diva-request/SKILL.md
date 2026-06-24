@@ -48,6 +48,8 @@ Il colle le texte dans la conversation et ne sait pas par ou commencer. Ce skill
 
 Le resultat final est un markdown dans `output/preaction-<slug>-<YYYYMMDD>.md` + des metriques JSON avec tracabilite de la selection.
 
+> **Mode plan / lecture seule** : ce skill ecrit sur disque a chaque phase. En **mode plan**, le pipeline file-based ne s'execute pas -- voir la section [« Mode plan / lecture seule »](#mode-plan--lecture-seule-r-011) pour l'approche read-only adaptee.
+
 ---
 
 ## Prerequis
@@ -416,6 +418,37 @@ Si `diva-mcp` est inaccessible (erreur reseau, token expire, timeout global) :
 5. Phase 4 : le rapport indique "Couverture Neo4j : absente" en en-tete.
 
 Le workflow ne plante jamais.
+
+---
+
+## Mode plan / lecture seule (R-011)
+
+Ce skill est un **orchestrateur qui ecrit sur disque** a chaque phase (`output/request.json`,
+`output/queries.json`, `output/evidence_x13.json`, `output/*.facts.json`, livrable `.md`) et
+lance des scripts `py`. En **mode plan** (session en lecture seule, un seul fichier plan
+editable), ces ecritures sont **interdites** -- la phase 1 echoue des la premiere ecriture
+(`output/request.json`).
+
+**Approche adaptee (lecture seule)** -- garder la strategie de fond, retirer la persistance :
+
+1. **Ne pas executer le pipeline file-based.** Mener l'analyse **read-only** :
+   - exploration ciblee via agents **Explore** + **Read** des sources accessibles ;
+   - graphe **`diva-mcp`** (snapshot X.12 advisory) pour les candidats ;
+   - meme logique hybride **Neo4j X.12 -> verification X.13** (cf. phases 2-3), mais **sans**
+     ecrire les `output/*.json`.
+2. **Restituer l'analyse directement** dans le fichier plan (via `ExitPlanMode`) ou en
+   conversation, a la place du livrable `output/*.md` -- reprendre en texte la structure du
+   rapport (les types de contenu pertinents de « Quand utiliser »), sans generer de fichier.
+3. Les scripts restent une **reference de logique** (ce qu'ils calculent guide l'analyse),
+   mais ne sont **pas** lances tant qu'ils ecrivent sur disque.
+
+**A defaut** (analyse complete file-based requise) : signaler que ce skill n'est pas
+compatible mode plan et proposer de **sortir du mode plan d'abord**, puis relancer le pipeline
+normal.
+
+> Le fond (strategie hybride, catalogue de types de contenu, regles de marquage X.12/X.13)
+> reste pleinement valable en mode plan ; seule la **couche de persistance** (ecritures
+> `output/`) est court-circuitee.
 
 ---
 

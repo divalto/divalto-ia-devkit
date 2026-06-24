@@ -8,6 +8,7 @@
 - 3 proprietes a AJOUTER dans `[masque]`
 - 2 proprietes a MODIFIER dans `[masque]`
 - Sections `[diva]` / `[diva_base]` -- asymetrie surcharge code vs composants
+- Regles de compilation `[diva]` / `[diva_base]` -- pieges terrain (`[enregistrements]`, includes par section, `.dhop`, `diva_apres`/`id_traitements`, `[onglet]`, erreur 210)
 - Modifier un composant standard -- edition en place (pas de "vrai override")
 - Masquer un composant standard -- `XmeSetAttribut` (bonne pratique)
 - Fichier compagnon `_base.dhsf`
@@ -184,6 +185,59 @@ EndP
 
 Depuis la prise en compte du RETEX R-002, le script `scripts/surcharge_mask.py` applique automatiquement la migration `[diva]` -> `[diva_base]` + la derivation `[diva]` user depuis `[enregistrements]` (extensions `.dhsd` -> `Public Record`, `.dhoq`/`.dhsq` -> `Public RecordSql`, lowercase). Le JSON de sortie inclut un objet `diva_migration` avec `migrated`, `derived_records_count`, `derived_records`, et le tableau `rappels` documente l'etat de la migration ou alerte si elle n'a pas pu etre faite. Verifier ce JSON apres invocation du script avant de compiler -- une migration absente est detectable a ce stade sans recompilation echouee.
 
+> **Doublon `[diva_base]` -- corrige par l'outil (R-009)** : le `.dhsf` standard contient deja un bloc `[diva_base]` **vide** (placeholder `[diva_base]` suivi immediatement de `[/diva]`). Cette forme est **universelle** dans le standard livre. Lors de la migration `[diva]` -> `[diva_base]`, recopier le code sans retirer ce placeholder produirait **deux** `[diva_base]` -> erreur de link "Procedure non definie". `surcharge_mask.py` supprime donc d'abord le `[diva_base]` vide pre-existant (cle `removed_empty_diva_base` du JSON). Si tu construis une surcharge **a la main**, applique la meme regle : un seul `[diva_base]`, qui contient la copie exacte du code standard.
+
+---
+
+## Regles de compilation `[diva]` / `[diva_base]` -- pieges terrain
+
+Ces regles consolident plusieurs RETEX partenaires (R-009, R-012, R-013, R-014, R-015). Elles concernent la phase de **compilation/link** d'une surcharge `_sqlu.dhsf`, distincte des regles de placement graphique.
+
+### Toujours ecrire dans `[diva]`, jamais dans `[diva_base]` (R-009)
+
+Dans un fichier de surcharge `*u.dhsf` :
+
+- `[diva]...[/diva]` = **zone de surcharge** -> c'est **la seule** ou ajouter des procedures et des `Public Record` de surcharge.
+- `[diva_base]...[/diva]` = **zone heritee** = copie exacte du standard -> **intouchable**.
+
+Erreur classique : chercher la section `[diva_base]` (souvent plus volumineuse, donc trouvee en premier par un grep naif) et y ajouter la procedure / le `Public Record`. La procedure compile mais n'est pas prise comme surcharge -> comportement standard inchange au runtime. **Inserer toujours dans `[diva]`, avant `[diva_base]`.**
+
+### `[enregistrements]` obligatoire pour tout `Public Record` (R-015)
+
+Pour qu'un `Public Record "<dico>.dhsd" <rec> <alias>` soit reconnu dans un `.dhsf`, le dictionnaire doit etre declare dans la section **`[enregistrements]`** du masque. Les communs du `.dhpt` **ne suffisent pas**.
+
+```ini
+[enregistrements]
+"<dico>.dhsd",,xx,gxxx,5000,0          ; <-- declaration requise dans le masque
+```
+
+Cas typique : piloter un zoom via un champ de jointure suppose ce `Public Record`, donc cette declaration. C'est coherent avec la derivation `[enregistrements]` -> `[diva]` user documentee plus haut : si le record n'est pas dans `[enregistrements]`, il ne sera pas derive et le code le referencant ne linkera pas.
+
+### Includes et appels disponibles par section (R-013)
+
+L'asymetrie `[diva]` (compile independamment) / `[diva_base]` (code standard copie) a deux corollaires sur les dependances de code :
+
+1. **`Include` par section** : une procedure qui utilise un `Define` d'un `.dhsp` compile dans `[diva_base]` (ou le `.dhsp` est inclus via le standard) mais **echoue dans `[diva]`** si ce `.dhsp` n'y est pas inclus. Solution : ajouter l'`Include` requis dans l'en-tete de `[diva]`.
+2. **Procedures d'un module overwrite `.dhop`** : elles ne sont **pas** appelables par nom depuis `[diva]`. Il faut **redefinir la procedure localement** dans `[diva]`.
+3. **`RecordSql` direct** : un `RecordSql` peut etre declare directement dans `[diva]` (en recuperant le nom de type, ex. via grep) plutot que d'inclure un gros `.dhsp` standard.
+
+### `diva_apres` / `diva_avant` exige `id_traitements` (R-014)
+
+Ajouter un `diva_apres` / `diva_avant` (section `[traitements]`) dans un `.dhsf` **sans `id_traitements` dans `[masque]`** compile mais echoue au link : *"Erreur 45 : Procedure non definie dans le source des traitements"*. L'`id_traitements` est assigne par **xwin4obj** lors de la liaison ecran/programme (operation editeur).
+
+> **Sans editeur graphique** : privilegier la validation **cote `.dhsp`** (ex. `defProcSaisie`, `case K_RETURN`) plutot que `diva_apres`/`diva_avant` cote masque. On evite ainsi la dependance a l'`id_traitements`.
+
+### Structure d'une surcharge SQL `_sqlu.dhsf` -- pieges de compilation (R-011, R-012)
+
+Une surcharge `_sqlu.dhsf` correcte contient le **contenu COMPLET** du formulaire standard (tous les objets + les additions custom), **pas** seulement les ajouts. Pieges recurrents observes a la compilation :
+
+- **`Public` interdit sur une procedure du standard re-declaree dans `[diva]`** -> **Erreur 210** ("Elle ne peut etre PUBLIC"). Les overrides dans `[diva]` n'ont pas de modificateur de visibilite (cf. anti-pattern 10 et "Biais invalides").
+- **`[onglet]` manquant** : si le formulaire de base utilise des onglets, le bloc `[onglet]` doit etre present **entre `[enregistrements]` et `[page]`**. Son absence est une erreur de compilation.
+- **`[/diva]` en double** : un seul `[/diva]` de cloture par bloc (`[diva]` et `[diva_base]`). Un `[/diva]` surnumeraire casse la compilation.
+- **`[boutons]` "zoom" parasites** : ne pas inclure de `[boutons]` "zoom" si le formulaire SQL de base n'en definit pas -> genere un Warning 3 inoffensif mais du bruit inutile.
+
+> **Baseline avant modification (R-008)** : lancer `dhsf_modify.py --action validate` **avant** toute modification pour etablir la liste des violations pre-existantes (souvent des faux positifs sur les tableaux/groupbox du standard, cf. R4/R5). On evite ainsi de confondre une violation pre-existante avec une regression introduite par la modification.
+
 ---
 
 ## Modifier un composant standard -- edition en place
@@ -330,6 +384,10 @@ Toute reponse sur ces points peut etre integree dans cette doc via RETEX SUGGEST
 8. **Mettre les procedures de surcharge dans `[diva_base]`** au lieu de `[diva]` -- `[diva_base]` doit rester la copie EXACTE du standard. Les surcharges propres vont dans `[diva]`.
 9. **Recopier `[diva]` standard dans `[diva]` user** -- l'AGL derive `[diva]` user de `[enregistrements]` (records lowercase), pas de `[diva]` standard.
 10. **Transformer `public procedure` en `private procedure` dans `[diva_base]`** -- contournement historique invalide. `[diva_base]` doit conserver les declarations originales du standard sans modification (cf. section "Biais invalides" ci-dessous).
+11. **`Public Record` utilise sans declaration `[enregistrements]`** -- les communs du `.dhpt` ne suffisent pas ; declarer le dico dans `[enregistrements]` du masque (R-015).
+12. **`diva_apres` / `diva_avant` sans `id_traitements` dans `[masque]`** -- compile mais echoue au link ("Erreur 45"). Sans editeur, valider cote `.dhsp` (R-014).
+13. **Appeler par nom une procedure d'un `.dhop` overwrite depuis `[diva]`** -- non resolu ; redefinir la procedure localement dans `[diva]` (R-013).
+14. **`[onglet]` absent (base a onglets) ou `[/diva]` en double** -- erreurs de compilation classiques d'une surcharge `_sqlu.dhsf` : `[onglet]` entre `[enregistrements]` et `[page]`, un seul `[/diva]` par bloc (R-011, R-012).
 
 ---
 

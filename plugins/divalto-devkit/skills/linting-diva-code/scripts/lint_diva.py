@@ -25,8 +25,12 @@ RULES = {
     "S02": {"severity": "warning", "types": [".dhsp"], "desc": "VRAI/FAUX au lieu de True/False"},
     "S03": {"severity": "error",   "types": [".dhsp"], "desc": "Declaration de variable apres BeginP/BeginF"},
     "S04": {"severity": "error",   "types": [".dhsp"], "desc": "Function sans FReturn"},
-    "S05": {"severity": "warning", "types": [".dhsp"], "desc": "EndP/EndF sans commentaire de fermeture"},
+    "S10": {"severity": "error",   "types": [".dhsp"], "desc": "OverWrittenBy en .dhsp (source) au lieu de .dhop (compile)"},
+    # S05 retiree (2026-06-16) : un commentaire de fermeture EndP/EndF n'est pas une convention DIVA
     "S06": {"severity": "error",   "types": [".dhsf"], "desc": "Code DIVA dans un .dhsf hors [diva]...[/diva]"},
+    # S09 (public en surcharge OverWrite -> Err 210) reportee a SC-030 (linter semantique) :
+    # en regex on ne distingue pas une surcharge d'une nouvelle proc publique
+    # (84 faux positifs mesures sur le code de surcharge reel).
     # .dhsp — regles langage interdit
     "L01": {"severity": "error",   "types": [".dhsp"], "desc": "ForEach keyword interdit"},
     "L02": {"severity": "error",   "types": [".dhsp"], "desc": "Try/Catch/Finally interdit"},
@@ -58,6 +62,7 @@ RULES = {
     "R04": {"severity": "warning", "types": [".dhsq"], "desc": "Nom de fichier non conforme"},
     "R05": {"severity": "warning", "types": [".dhsq"], "desc": "Balise <DictionarySql> absente du fichier .dhsq"},
     "R07": {"severity": "warning", "types": [".dhsp"], "desc": "ReaderOpen sans ReaderClose"},
+    "R08": {"severity": "error",   "types": [".dhsq"], "desc": "Type 'Long' dans une condition <Where> -> utiliser int (Erreur 30)"},
     # CI — Regles shift-left moulinettes CI
     "CI01": {"severity": "warning", "types": [".dhsp", ".dhsi", ".dhse", ".dhsq", ".dhsf"], "desc": "SetModuleInfo/ModuleInfo absent"},
     "CI02": {"severity": "error",   "types": [".dhsp"], "desc": "Procedure/Function non PUBLIC dans TT/TE"},
@@ -189,6 +194,18 @@ def is_comment_line(line):
 # Regles .dhsp
 # ---------------------------------------------------------------------------
 
+def _mask_string_contents(code):
+    """Remplace le CONTENU des chaines par du vide, en gardant les delimiteurs.
+
+    Evite qu'un caractere a l'interieur d'un litteral soit pris pour un
+    operateur : `Modify('+','%2B',...)` -> `Modify('','',...)` (le '+' litteral
+    disparait), tandis que `"a" + "b"` reste `"" + ""` (vraie concatenation).
+    """
+    code = re.sub(r"'[^']*'", "''", code)
+    code = re.sub(r'"[^"]*"', '""', code)
+    return code
+
+
 def check_S01(lines, findings):
     """Concatenation avec + au lieu de &."""
     # Patterns : "string" + ou + "string"
@@ -202,7 +219,10 @@ def check_S01(lines, findings):
         code = strip_comment(line)
         if not code:
             continue
-        if pat1.search(code) or pat2.search(code) or pat3.search(code) or pat4.search(code):
+        # Masquer le contenu des chaines : un '+' a l'interieur d'un litteral
+        # (ex `'+'`) n'est PAS un operateur de concatenation (faux positif sinon).
+        masked = _mask_string_contents(code)
+        if pat1.search(masked) or pat2.search(masked) or pat3.search(masked) or pat4.search(masked):
             findings.append({
                 "rule": "S01", "severity": "error", "line": i,
                 "message": "Concatenation avec + au lieu de &",
@@ -289,14 +309,33 @@ def check_S04(lines, findings):
             has_freturn = False
 
 
-def check_S05(lines, findings):
-    """EndP/EndF sans commentaire de fermeture."""
-    pat = re.compile(r'^\s*(EndP|EndF)\s*$')
+# check_S05 retiree (2026-06-16) : un commentaire de fermeture EndP/EndF n'est
+# pas exige par les conventions DIVA -> regle supprimee (faux positifs sur le
+# code legacy non commente, sans signal utile).
+
+
+def check_S10(lines, findings):
+    """OverWrittenBy pointant un .dhsp (source) au lieu d'un .dhop (compile).
+
+    Dans un programme .dhsp, la directive OverWrittenBy doit referencer l'objet
+    COMPILE qui surcharge (`.dhop`), jamais le source `.dhsp` -- sinon la surcharge
+    ne se charge pas au runtime.
+
+    Regle scopee aux .dhsp uniquement : la forme compilee depend du type de fichier
+    (.dhsp -> .dhop, .dhsq -> .dhoq, .dhsj -> reste .dhsj). Une regle generique
+    "doit finir en .dhop" produirait des faux positifs sur les .dhsq (.dhoq).
+    """
+    pat = re.compile(r"""OverWrittenBy\s*=?\s*["']([^"']+)["']""", re.IGNORECASE)
     for i, line in enumerate(lines, 1):
-        if pat.match(line):
+        # Commentaire DIVA (`;`) ou `//` : ne pas signaler un OverWrittenBy commente
+        stripped = line.lstrip()
+        if stripped.startswith(";") or stripped.startswith("//"):
+            continue
+        m = pat.search(line)
+        if m and m.group(1).lower().endswith(".dhsp"):
             findings.append({
-                "rule": "S05", "severity": "warning", "line": i,
-                "message": f"{line.strip()} sans commentaire de fermeture",
+                "rule": "S10", "severity": "error", "line": i,
+                "message": f"OverWrittenBy pointe un .dhsp source ({m.group(1)}) -- devrait pointer le .dhop compile",
                 "context": line.rstrip()
             })
 
@@ -688,19 +727,30 @@ def check_F04(lines, findings):
 # ---------------------------------------------------------------------------
 
 def check_S06(lines, findings):
-    """Code DIVA dans un .dhsf hors bloc [diva]...[/diva]."""
+    """Code DIVA dans un .dhsf hors bloc [diva...]...[/diva...].
+
+    Les sections de code valides incluent [diva] ET [diva_base] (surcharges de
+    masque), et toute variante [diva_xxx] -- elles ne doivent pas declencher S06.
+    """
     diva_keywords = re.compile(
         r'\b(Procedure|Function|If|Loop|While|EndP|EndF|EndIf|EndLoop|BeginP|BeginF)\b',
         re.IGNORECASE
     )
+    open_block = re.compile(r'^\[diva[a-z0-9_]*\]$')
+    close_block = re.compile(r'^\[/diva[a-z0-9_]*\]$')
+    attr_line = re.compile(r'^\s*[A-Za-z_][\w]*\s*=')
     in_diva_block = False
     for i, line in enumerate(lines, 1):
         stripped = line.strip().lower()
-        if stripped == "[diva]":
+        if open_block.match(stripped):
             in_diva_block = True
             continue
-        if stripped == "[/diva]":
+        if close_block.match(stripped):
             in_diva_block = False
+            continue
+        # Ligne d'attribut .dhsf (cle=valeur, ex `wetype_trait=procedure`) : propriete
+        # de masque, pas du code DIVA -> ne pas y chercher de mots-cles (faux positif).
+        if attr_line.match(line):
             continue
         if not in_diva_block and diva_keywords.search(line):
             findings.append({
@@ -708,6 +758,13 @@ def check_S06(lines, findings):
                 "message": "Code DIVA detecte hors bloc [diva]...[/diva]",
                 "context": line.rstrip()
             })
+
+
+# check_S09 (public en surcharge -> Err 210) RETIREE le 2026-06-16 : non realisable
+# proprement en regex. Le code de surcharge reel ajoute legitimement des procedures
+# PUBLIQUES nouvelles dans un fichier OverWrite (84 faux positifs mesures sur corpus).
+# Distinguer "surcharge d'une proc standard" d'une "nouvelle proc" exige la semantique
+# (symboles du standard) -> reportee au linter semantique (SC-030).
 
 
 # ---------------------------------------------------------------------------
@@ -731,6 +788,43 @@ def check_S07(lines, findings):
                 "message": "Code DIVA detecte dans un fichier .dhsq",
                 "context": line.rstrip()
             })
+
+
+# Type `Long` employe dans une condition <Where> -> Erreur 30. En DIVA le type
+# long s'ecrit `L` (declaration de variable) et, dans un <Where>, le type entier
+# est `int`. La casse des types valides (int/char/date/bool/float) est LIBRE dans
+# le standard (`Int`, `CHAR`... corrects) -> on ne flague PAS la casse, uniquement
+# le nom `Long` (0 occurrence dans le standard X.13 = 0 faux positif). NB : `String`
+# est un type DIVA valide -> non signale.
+WHERE_BAD_TYPE_RE = re.compile(r'\(\s*(Long)\b', re.IGNORECASE)
+
+
+def check_R08(lines, findings):
+    """Type `Long` dans une condition <Where> d'un .dhsq -> Erreur 30.
+
+    Le type long DIVA s'ecrit `L` ; dans un <Where>, le type entier est `int`.
+    `(Long X)` provoque l'Erreur 30 -> utiliser `(int X)`. La casse des types
+    valides (int/char/date/bool/float) est libre et n'est PAS signalee.
+    """
+    in_where = False
+    for i, line in enumerate(lines, 1):
+        low = line.lower()
+        opens = "<where>" in low or "<where " in low
+        if in_where or opens:
+            m = WHERE_BAD_TYPE_RE.search(line)
+            if m:
+                findings.append({
+                    "rule": "R08", "severity": "error", "line": i,
+                    "message": (
+                        f"Type '{m.group(1)}' dans une condition <Where> -- le type entier "
+                        f"est 'int' ici (le long DIVA s'ecrit 'L'), sinon Erreur 30."
+                    ),
+                    "context": line.rstrip()
+                })
+        if opens:
+            in_where = True
+        if "</where>" in low:
+            in_where = False
 
 
 def check_R01(data, findings):
@@ -1162,7 +1256,7 @@ def check_D13(path, lines, findings):
 # Z14 -- FK orphelin cote dictionnaire (advisory)
 # ---------------------------------------------------------------------------
 _Z14_FK_SUFFIXES = {
-    # Suffixes predicteurs fiables (>=90 %) de cible FK -- cf. docs/ZOOMS-STANDARDS-CATALOGUE.md table C
+    # Suffixes predicteurs fiables (>=90 %) de cible FK (catalogue zooms standards Divalto, table C)
     "Pay", "Pays", "Dev", "Devise", "Depo",
     "Cpt", "Col", "Axe", "Jnl",
     "Sref1", "Sref2", "Cpostal",
@@ -1286,7 +1380,7 @@ def check_Z15(path, lines, findings):
 # Z16 -- Champ .dhsf avec suffixe FK fiable sans f8=<zoom> attendu
 # ---------------------------------------------------------------------------
 # Mapping restreint aux suffixes >=95 % fiables ayant un zoom t-table unique.
-# Source : docs/ZOOMS-STANDARDS-CATALOGUE.md Table A (numeros) + Table C (suffixes).
+# Source : catalogue des zooms standards Divalto (Table A numeros + Table C suffixes).
 # Elargir avec precaution : ne pas inclure les suffixes c-compta (Cpt, Col, Axe,
 # Jnl) qui ciblent C3/C4/C5 sans zoom simple unique.
 _Z16_SUFFIX_TO_ZOOM = {
@@ -2416,7 +2510,7 @@ def lint_dhsp(path, data, lines, raw_bytes, findings, active_rules):
         "S02": lambda: check_S02(lines, findings),
         "S03": lambda: check_S03(lines, findings),
         "S04": lambda: check_S04(lines, findings),
-        "S05": lambda: check_S05(lines, findings),
+        "S10": lambda: check_S10(lines, findings),
         "L01": lambda: check_L01(lines, findings),
         "L02": lambda: check_L02(lines, findings),
         "L03": lambda: check_L03(lines, findings),
@@ -2451,6 +2545,7 @@ def lint_dhsq(path, data, lines, raw_bytes, findings, active_rules):
     """Lint d'un fichier .dhsq."""
     rule_map = {
         "S07": lambda: check_S07(lines, findings),
+        "R08": lambda: check_R08(lines, findings),
         "R01": lambda: check_R01(data, findings),
         "R02": lambda: check_R02(data, findings),
         "R03": lambda: check_R03(lines, findings),

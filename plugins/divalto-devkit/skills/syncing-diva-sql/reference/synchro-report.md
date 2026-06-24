@@ -30,6 +30,55 @@ Le rapport synchroauto contient :
 
 ---
 
+## Delta de schema (ce qui change reellement)
+
+La synchro produit un **vrai delta**, pas un DROP+CREATE en bloc (sauf **table
+neuve** : `DROP TABLE` conditionnel + `CREATE TABLE`). Sur une table existante :
+
+```sql
+ALTER TABLE [dbo].[ART] DROP COLUMN [MIMARQUE],[MIMISESERVICEDT],[MIMODELE]
+ALTER TABLE [dbo].[ART] ADD [TESTRAJOUT] numeric(1,0) default 0 NOT NULL
+DROP INDEX [MI_ARTMODELE] ON [dbo].[ART]
+```
+
+**Sauvegarde avant DROP COLUMN** : la synchro cree d'abord une table
+`<TABLE>_oldcolumns` + `INSERT INTO ... SELECT` pour preserver les donnees des
+colonnes supprimees. Ce sont des **artefacts de sauvegarde**, pas des changements de
+schema -> a ignorer dans un resume de delta.
+
+**En-tetes machine-readable** (script `.sql`) : chaque bloc est precede d'un
+commentaire de flags, ex. :
+
+```
+/* <ifAlterTable>1<ifTableName>ART<ifAlterTableDropColumn>1<champ>MIMARQUE,3,20,0;... */
+```
+
+Indicatifs (`<ifTableName>` ne suit pas toujours la table reelle sur les blocs ADD) :
+la **source de verite reste l'instruction DDL** (`ALTER TABLE [dbo].[X] ...`).
+
+**Procedures `ERASE_*`** (truncate par module) : regenerees (DROP+CREATE) a chaque
+synchro -> boilerplate, pas un changement de schema.
+
+### Resume automatique : `--changes`
+
+```bash
+py parse_synchro.py --path <rapport.txt|DhOdbcConfigSql.log|...Script.sql> --changes
+```
+
+Extrait le delta groupe par table (`add_columns` / `drop_columns` / `create_index` /
+`drop_index` / `created` / `dropped`) + `procedures` + `functions`, en filtrant le
+bruit ci-dessus. Marche sur le rapport `synchroauto` **et** sur le log/script d'audit
+`C:\divalto\DivaltoLog\DhOdbcConfigSql.log` / `DhOdbcConfigSqlScript.sql`.
+
+## Apercu avant application (dry-run)
+
+Pas de dry-run **natif** dans `xwin7 synchroauto`. Un apercu est possible **par
+programmation** via le mecanisme `ModeAudit` (cf. doc Divalto « Synchronisation du
+schema de la base par programmation »). A defaut, le mode `--changes` ci-dessus donne
+le delta **a posteriori** (apres execution).
+
+---
+
 ## Erreurs courantes
 
 ### Erreur de connexion SQL Server

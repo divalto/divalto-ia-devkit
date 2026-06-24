@@ -1,6 +1,6 @@
 # Bloc d'alias pour *pmficsql.dhsp
 
-Source : `docs/SQUELETTES.md`, `docs/ARCHITECTURE-ENTITE.md`, fichier ERP `rtpmficsql.dhsp`
+Source : les squelettes (interne), la référence architecture d'entité (interne), fichier ERP `rtpmficsql.dhsp`
 
 ---
 

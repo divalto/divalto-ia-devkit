@@ -16,5 +16,29 @@
     "query": "J'ai change d'environnement de TEST a PROD pour diva-mcp",
     "files": [".mcp.json"],
     "expected_behavior": "Le skill repatche le bloc headers avec le nouveau env (et eventuellement nouvelle apikey si elle differe par env)."
+  },
+  {
+    "skills": ["configuring-diva-mcp"],
+    "query": "locate_mcp_json.py ne trouve pas mon .mcp.json, j'ai installe le plugin via la marketplace",
+    "files": [],
+    "expected_behavior": "locate_mcp_json.py decouvre le chemin reel d'install marketplace (~/.claude/plugins/cache/<owner>/divalto-devkit/<version>/.mcp.json, version la plus recente), sans que le partenaire ait a le fournir a la main. --dry-run-show-candidates peut lister les chemins testes."
+  },
+  {
+    "skills": ["configuring-diva-mcp"],
+    "query": "Ma cle API contient $$ (ex: ...eda55$$61558...). Configure diva-mcp.",
+    "files": [".mcp.json"],
+    "expected_behavior": "Le skill passe la cle HORS argv pour eviter l'expansion shell ($$ -> PID) : via --apikey-stdin (printf '%s' '<cle>' | ...) ou --apikey-file. Il ne passe PAS --apikey \"...$$...\" sous bash. La cle ecrite dans .mcp.json contient bien $$ intact."
+  },
+  {
+    "skills": ["configuring-diva-mcp"],
+    "query": "J'ai configure diva-mcp et redemarre, mais les outils mcp__...diva-mcp__* n'apparaissent pas",
+    "files": [],
+    "expected_behavior": "Le skill cherche 'shadowing' / 'remote: 0' dans main.log, verifie le BOM de settings.json, recommande un redemarrage complet (gestionnaire des taches), et oriente vers reference/post-install-checks.md (contournement etiquete version-dependant, procedure officielle a confirmer avec l'equipe IA Divalto)."
+  },
+  {
+    "skills": ["configuring-diva-mcp", "querying-diva-graph"],
+    "query": "Je migre ce projet de X.9 vers X.13. Verifie la doc native de XmeListInput.",
+    "files": [],
+    "expected_behavior": "Comme deux versions sont en jeu, Claude confirme la version cible via AskUserQuestion (X.9 installee vs X.13 cible) avant d'appeler get_native_keyword_doc. Le hook check_mcp_version laisse passer la version validee ; viser une version non validee redeclenche une confirmation."
   }
 ]

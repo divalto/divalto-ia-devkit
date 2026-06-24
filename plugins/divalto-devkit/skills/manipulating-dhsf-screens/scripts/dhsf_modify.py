@@ -197,8 +197,23 @@ def gen_column_block(
     largeur_col: int = 60,
     wstyle: str = "TABLEAU_AFF",
     saisie: bool = False,
+    fl_aff: str = "non",
 ) -> list[str]:
-    """Generate the lines for a champ_tableau (table column)."""
+    """Generate the lines for a champ_tableau (table column).
+
+    fl_aff : "toujours" / "oui" / "non" (RETEX R-015).
+      - "toujours" : colonne toujours affichee, non masquable -> AUCUNE ligne
+        fl_aff emise (c'est l'absence de l'attribut qui code ce comportement).
+      - "oui"      : affichee par defaut mais masquable -> `fl_aff=oui`.
+      - "non"      : masquee par defaut (defaut du script) -> `fl_aff=non`.
+    Une valeur inconnue est ramenee a "non" (defaut sur). Format reel confirme
+    sur corpus : seules les valeurs `oui` / `non` apparaissent dans
+    [param_colonne] ; l'etat "toujours" correspond a l'absence de la ligne.
+    """
+    fl_aff = (fl_aff or "non").strip().lower()
+    if fl_aff not in ("toujours", "oui", "non"):
+        fl_aff = "non"
+
     block = []
 
     block.append(f"{INDENT_2}[champ_tableau]\n")
@@ -217,6 +232,8 @@ def gen_column_block(
     block.append(f"{INDENT_3}texte=\"{titre}\"\n")
     block.append(f"{INDENT_3}[param_colonne]\n")
     block.append(f"    titre=\"{titre}\"\n")
+    if fl_aff != "toujours":
+        block.append(f"    fl_aff={fl_aff}\n")
     block.append(f"    largeur_col={largeur_col}\n")
     block.append(f"    wstyle=\"ENTETE_COLONNE\"\n")
 
@@ -392,6 +409,7 @@ def action_add_column(path: str, tree: dict, params: dict) -> dict:
     largeur = params.get("largeur_col", 60)
     wstyle = params.get("wstyle", "TABLEAU_AFF")
     saisie = params.get("saisie", False)
+    fl_aff = params.get("fl_aff", "non")
 
     # Find the tableau on the target page
     page = None
@@ -420,6 +438,7 @@ def action_add_column(path: str, tree: dict, params: dict) -> dict:
     block = gen_column_block(
         titre=titre, vue=vue, champ=champ, alias=alias,
         col_id=col_id, largeur_col=largeur, wstyle=wstyle, saisie=saisie,
+        fl_aff=fl_aff,
     )
 
     # Insert after last child of tableau (or after tableau's own sub-sections)
@@ -553,6 +572,14 @@ _GROUPBOX_CHILD_TYPES = {
     "bouton_radio", "groupe_radio",
 }
 
+# Types a grille INTERNE propre (tableau / arbre / panel WPF) : les bornes de grille
+# de PAGE (R4 = nb_col*4, R5 = nb_lig*14) ne s'y appliquent pas. Mesure sur corpus
+# reel X.13 (standard + surcharges, qui COMPILENT) : ~13600 declenchements R4/R5,
+# 100 % sur ces types, 0 sur un element de page normal -> faux positifs. Exclus de R4/R5.
+GRID_EXEMPT_TYPES = {
+    "tableau", "arbre", "panel_wpf", "champ_tableau", "multi_choix_tableau",
+}
+
 
 def _max_xy(elem: dict) -> tuple[int, int]:
     """Retourne (max_X, max_Y) d'un element : position + taille."""
@@ -608,9 +635,13 @@ def validate_groupbox_layout(tree: dict) -> dict:
         else:
             max_y_bound = None
 
-        # R4/R5 : bornes de grille sur tous les elements
+        # R4/R5 : bornes de grille de PAGE -- ne s'appliquent PAS aux widgets a grille
+        # interne (tableau/arbre/panel), qui produiraient des faux positifs (cf. mesure
+        # corpus). On les exclut explicitement.
         for elem in _flatten_elements(page.get("elements", [])):
             if not isinstance(elem.get("position"), list):
+                continue
+            if elem.get("type") in GRID_EXEMPT_TYPES:
                 continue
             max_x, max_y = _max_xy(elem)
             if max_x_bound is not None and max_x > max_x_bound:

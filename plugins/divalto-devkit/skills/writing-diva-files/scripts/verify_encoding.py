@@ -18,7 +18,7 @@ import sys
 BINARY_EXTENSIONS = {'.dhop', '.dhoq'}
 
 # Extensions texte Divalto — doivent etre ISO-8859-1 + CRLF
-DIVA_TEXT_EXTENSIONS = {'.dhsp', '.dhsq', '.dhsj', '.dhpt', '.dhps', '.dhsd', '.dhsf'}
+DIVA_TEXT_EXTENSIONS = {'.dhsp', '.dhsq', '.dhsj', '.dhpt', '.dhps', '.dhsd', '.dhsf', '.dhsi', '.dhse'}
 
 
 def detect_encoding(data):
@@ -129,6 +129,10 @@ def verify_file(path):
     # Verifier BOM UTF-8
     if data[:3] == b'\xef\xbb\xbf':
         issues.append("BOM UTF-8 detecte en debut de fichier — a supprimer")
+
+    # Verifier le CRLF final (son absence provoque l'Erreur 135 a la compilation)
+    if not data.endswith(b'\r\n'):
+        issues.append("Pas de CRLF final — risque d'Erreur 135 a la compilation (convert_file.py corrige)")
 
     # Avertissement si extension non-Divalto
     if ext and ext not in DIVA_TEXT_EXTENSIONS and ext not in BINARY_EXTENSIONS:

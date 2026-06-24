@@ -1,6 +1,6 @@
 # Patterns observes dans le corpus Zoom SQL
 
-> **Note** : les chiffres ci-dessous proviennent d'une extraction du graphe `diva-mcp` en date du **2026-04-17** (snapshot alors X.12). Depuis le 2026-04-24 le graphe est passe X.13 ; les volumes ont peu evolue (+3-6 % en moyenne, cf `docs/MCP-DIVA-GRAPH.md`). Les pourcentages et conclusions ci-dessous restent significatifs, mais n'ont pas ete re-executes sur X.13.
+> **Note** : les chiffres ci-dessous proviennent d'une extraction du graphe `diva-mcp` en date du **2026-04-17** (snapshot alors X.12). Depuis le 2026-04-24 le graphe est passe X.13 ; les volumes ont peu evolue (+3-6 % en moyenne, cf le référentiel du graphe diva-mcp (interne)). Les pourcentages et conclusions ci-dessous restent significatifs, mais n'ont pas ete re-executes sur X.13.
 
 ## Contenu
 
@@ -211,7 +211,7 @@ Statistiques de `lines_length` sur un echantillon de 10 procedures canoniques :
 | **Procedures "presque-canoniques" absentes** (`zoomentetetableau` 63 %, `zoomapresreadliste` 45 %) | Moyenne | Envisager un mode template "avec liste/tableau" |
 | **`zoomfiltreavantvaleur` / `zoomfiltreapresvaleur` optionnelles** (45 %) | Faible | Les rendre conditionnelles dans le template |
 | **Procedures custom recurrentes** (`maj_menu_boutons` 40 %, `maj_note` 16 %, `traiter_selection` 14 %) | Faible | Documenter comme extensions optionnelles plutot que generees |
-| **Doublons semantiques de nommage** (ex: `maj_menu_boutons` vs `menu_boutons_maj`) | Faible | Enrichir `docs/CONVENTIONS.md` pour trancher la forme privilegiee |
+| **Doublons semantiques de nommage** (ex: `maj_menu_boutons` vs `menu_boutons_maj`) | Faible | Enrichir les conventions de nommage internes pour trancher la forme privilegiee |
 
 ---
 
@@ -251,7 +251,7 @@ projette des champs ou utilise des noms de table de reference :
 - `a5dd.dhsd` tables `MXmlNode`/`MDsql*` : camelCase/lowercase (imports XML).
 - `ppfdd.dhsd` : 200 camelCase + 46 lowercase (historique Paie).
 
-**Taxonomie de suffixes typés** (nom -> Nature) : voir `docs/CONVENTIONS.md`
+**Taxonomie de suffixes typés** (nom -> Nature) : voir les conventions de nommage internes,
 tableau "Suffixes typés sur les noms de champ". Pertinent pour nommer les
 colonnes du tableau dans le zoom : `Dt` date, `Dh` datetime, `Fl` flag,
 `Mt` montant, `Qte` quantite.

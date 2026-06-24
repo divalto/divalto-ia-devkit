@@ -25,7 +25,7 @@ Comment chaque detecteur confronte le livrable UC-200 aux sources de verite.
 Principe commun : **chaque detection doit etre ancree**. Un item remonte porte systematiquement :
 
 - `yaml_path` -- ou l'affirmation vit dans le livrable (ex: `business.role` sur `entity/CLI.yaml`)
-- `source_ref` -- ou la verite vit (ex: `Gttcli.dhsd:87`, ou `docs/DICTIONNAIRE-DHSD.md:section 3`, ou `<aucune>` pour E1)
+- `source_ref` -- ou la verite vit (ex: `Gttcli.dhsd:87`, ou `<référentiel dictionnaire>:section 3`, ou `<aucune>` pour E1)
 - `challenge` -- phrase courte qui contraste les deux
 
 ---
@@ -149,10 +149,10 @@ Etape 2 : pour chaque entite, appliquer les heuristiques :
 
 | Heuristique | Verification | Source referentiel |
 |-------------|--------------|---------------------|
-| Nature d'un champ coherente avec son suffixe | Le suffixe du nom YAML declare doit cadrer avec la Nature declaree | `docs/DICTIONNAIRE-DHSD.md` (table des suffixes) |
-| Prefixe d'entite coherent avec son domaine | Le prefixe du fichier source (Gtt*, Gfc*, Gab*) doit cadrer avec le domaine declare | `docs/MODULES-ERP.md` (section 4) |
-| Pattern 3 fichiers respecte | Si `.dhop` cite, verifier le naming `Gttmchk*.dhop` ou equivalent | `docs/ARCHITECTURE-ENTITE.md` |
-| Anti-patterns connus | Chercher les patterns listes `Z01`-`Z20` dans le livrable | `docs/ANTI-PATTERNS.md` |
+| Nature d'un champ coherente avec son suffixe | Le suffixe du nom YAML declare doit cadrer avec la Nature declaree | le référentiel interne dictionnaire (table des suffixes) |
+| Prefixe d'entite coherent avec son domaine | Le prefixe du fichier source (Gtt*, Gfc*, Gab*) doit cadrer avec le domaine declare | le référentiel interne des modules ERP (section 4) |
+| Pattern 3 fichiers respecte | Si `.dhop` cite, verifier le naming `Gttmchk*.dhop` ou equivalent | le référentiel architecture d'entité (interne) |
+| Anti-patterns connus | Chercher les patterns listes `Z01`-`Z20` dans le livrable | le référentiel anti-patterns (interne) |
 
 Etape 3 : si la racine `docs/` est absente (`--docs-root skip`), ecrire un `.detect_e4.json` avec `items: []` + `warning_global: "docs-root skip"` et continuer.
 

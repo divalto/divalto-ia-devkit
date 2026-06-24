@@ -12,7 +12,9 @@ description: >
   convention/regle/nommage/structure -- le filesystem n'est jamais source
   primaire ; (2) les skills DIVA sont prioritaires sur toute commande
   improvisee -- si un skill couvre l'operation, l'invoquer plutot que
-  reproduire son resultat via `find` / `grep` / `cat`.
+  reproduire son resultat via `find` / `grep` / `cat` ; (3) invoquer un skill
+  charge ses instructions a EXECUTER -- Claude lance ensuite les scripts, il ne
+  s'arrete pas a afficher le README.
 ---
 
 # Discovering Skills
@@ -49,7 +51,7 @@ Avant de lancer la commande, **reformuler la demande** pour choisir le mode :
 
 ## Discipline d'invocation
 
-Ces deux regles encadrent l'usage de l'ensemble du devkit DIVA. Elles s'appliquent independamment des regles internes a chaque skill (P-A/P-B de `understanding-integrator-workspace`, 4PRINCIPLES, anti-patterns metier, etc.). Le `discovering-skills` est le **point d'entree** annonce du devkit -- il porte ces regles parce qu'elles concernent la **discipline d'invocation des skills**, pas un skill particulier.
+Ces trois regles encadrent l'usage de l'ensemble du devkit DIVA. Elles s'appliquent independamment des regles internes a chaque skill (P-A/P-B de `understanding-integrator-workspace`, 4PRINCIPLES, anti-patterns metier, etc.). Le `discovering-skills` est le **point d'entree** annonce du devkit -- il porte ces regles parce qu'elles concernent la **discipline d'invocation des skills**, pas un skill particulier.
 
 ### Regle 1 -- Documentation skill = source autoritaire pour les conventions
 
@@ -97,12 +99,40 @@ Examples concrets :
 
 Dans le doute : passer par `discovering-skills search <mots-cles>` pour verifier qu'aucun skill ne couvre la tache avant de la faire a la main.
 
+### Regle 3 -- Invoquer un skill charge des instructions A EXECUTER (pas un README terminal)
+
+Invoquer un skill **charge son `SKILL.md`** (un playbook d'instructions) dans le
+contexte. Ce **n'est pas** un appel de fonction qui execute les scripts et renvoie
+leur sortie : c'est un mode d'emploi que **Claude lit, puis applique lui-meme** en
+lancant les scripts (via Bash) selon les etapes decrites.
+
+**Discipline** : apres le chargement d'un skill, **enchainer sur l'execution** -- ne
+pas s'arreter a « voici le contenu du skill ». Si la tache demande de generer /
+linter / compiler / lire un fichier, Claude **lance les scripts** et presente leurs
+resultats (puis les checkpoints habituels). Afficher la doc sans agir = comportement
+**incomplet**.
+
+**Cote utilisateur** : on **decrit la tache** (« genere le RecordSql de X »,
+« compile le projet ») -- on ne « passe pas d'arguments » a un skill pour qu'il
+auto-execute un script.
+
+**Frontiere CLAUDE-TOOL** : si le tool `Skill` echoue *reellement* a charger un skill
+(rien ne se charge), c'est un bug **Claude Code amont** a remonter -- hors devkit. Le
+contournement de depannage (`py .claude/skills/<skill>/scripts/<x>.py`) reste valable
+hors session Claude ; piege encodage : un pipe Bash ajoute un BOM UTF-8, preferer un
+script Python inline pour l'ISO-8859-1 (cf. `writing-diva-files`).
+
+> Symptome RETEX #134 (« le skill renvoie son README sans executer ») = chargement
+> **attendu** des instructions **+** discipline manquante (il faut enchainer sur
+> l'execution), **pas** un skill casse.
+
 ### Application a Claude
 
-Ces deux regles concernent **le comportement de Claude lors d'une session sur un workspace DIVA**. Elles ne demandent rien au collaborateur. Concretement :
+Ces trois regles concernent **le comportement de Claude lors d'une session sur un workspace DIVA**. Elles ne demandent rien au collaborateur. Concretement :
 
 - Avant toute reponse a une question de convention/structure : Claude consulte la doc du skill pertinent.
 - Avant toute commande improvisee dans le perimetre DIVA : Claude verifie qu'un skill ne la couvre pas.
+- Apres avoir invoque un skill : Claude **execute** les scripts decrits, il ne s'arrete pas a la doc chargee.
 - En cas de doute : `discovering-skills` est le point d'entree pour la verification.
 
 ---

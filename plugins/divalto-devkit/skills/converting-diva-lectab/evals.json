@@ -1,0 +1,155 @@
+{
+  "skill": "converting-diva-lectab",
+  "description": "Scenarios d'evaluation de converting-diva-lectab (migration des lectures DIVA seek_xxx/Lectab vers l'API objet metier).",
+  "scenarios": [
+    {
+      "id": "case-1-seek-soc-load-gtfdos",
+      "skills": [
+        "converting-diva-lectab"
+      ],
+      "query": "Convertis les fonctions de lecture de ce dossier .dhsp vers l'API objet metier (pack Std de destination fourni via --std)",
+      "files": [],
+      "expected_behavior": [
+        "Convertit seek_soc(x) en Load_gtfdos(x) : exception directe, sans verification de l'objet metier",
+        "Tronque les arguments a l'arite de Load_gtfdos (1 argument) : seek_soc(dos, 0, 0, 0, 1) -> Load_gtfdos(dos) ; un arg surnumeraire non trivial (le 1) supprime -> ;TODO args",
+        "Ajoute la directive Module \"gtpmfdos.dhop\" (module framework portant Load_gtfdos) si elle est absente",
+        "Encodage ISO-8859-1 et fins de ligne preserves ; seuls les fichiers modifies sont ecrits dans --out (en miroir)"
+      ]
+    },
+    {
+      "id": "case-2-lectab-avec-no-erreur-find",
+      "skills": [
+        "converting-diva-lectab"
+      ],
+      "query": "Convertis un Lectab avec numero d'erreur, ex Lectab(41, cle, 1141)",
+      "files": [],
+      "expected_behavior": [
+        "Convertit Lectab(nn, cle, 11nn) en Find_T0nn(cle) : le 3e argument (1100 + numero de table) est un numero d'erreur -> Find_ reproduit l'affichage auto de l'erreur",
+        "Find_ prend la cle en 1er argument (pas d'instance)",
+        "Si T0nn.Champ est lu ailleurs dans le fichier : emet Find_T0nn(cle, allcolumns = true) + un ;TODO Get_Record (le T0nn = Get_T0nn_Record() reste a ajouter a la main)",
+        "Ajoute la directive Module \"gttmchkt0nn.dhop\" si elle est absente"
+      ]
+    },
+    {
+      "id": "case-3-lectab-sans-no-erreur-give",
+      "skills": [
+        "converting-diva-lectab"
+      ],
+      "query": "Convertis un Lectab sans numero d'erreur, ex Lectab(25, cle)",
+      "files": [],
+      "expected_behavior": [
+        "Convertit Lectab(nn, cle) en Give_T0nn(T0nn, cle) : lecture simple, PAS d'affichage d'erreur",
+        "Tronque les arguments a l'arite reelle de Give_T0nn (params apres l'instance, lue sur la signature) : un flag legacy surnumeraire (ex. le 0 final) est coupe si la signature ne l'accepte pas ; un arg qui rentre est conserve",
+        "Transforme la forme [a b] en , a, b"
+      ]
+    },
+    {
+      "id": "case-4-objet-metier-absent-todo",
+      "skills": [
+        "converting-diva-lectab"
+      ],
+      "query": "Convertis un dossier ou certains seek/Lectab ciblent une entite absente de l'objet metier du pack Std de destination",
+      "files": [],
+      "expected_behavior": [
+        "Garde-fou uniforme : un seek OU un Lectab dont la fonction cible n'existe pas dans le pack Std -> ligne INCHANGEE + commentaire ;TODO migration + entree dans le rapport",
+        "Le rapport regExResult.txt liste les conversions appliquees, les appels non convertis et une synthese chiffree"
+      ]
+    },
+    {
+      "id": "case-5-preserve-helper-local-et-seek-optionnel",
+      "skills": [
+        "converting-diva-lectab"
+      ],
+      "query": "Convertis un dossier contenant un helper local 'function ... seek_xxx(' et des appels seek_<entite>",
+      "files": [],
+      "expected_behavior": [
+        "Un seek_xxx defini localement (function ... seek_xxx() dans les sources, meme dans un autre fichier du lot) est un helper projet : JAMAIS converti ni flague",
+        "Decision 3-voies par appel (--objets obligatoire, index des seek_* lus dans l'arbre Objets .dhop de la cible) : GARDER si le wrapper survit dans l'index ; sinon CONVERTIR en Give_<entite> (+ ;TODO hooks, car Give_ ne declenche pas les hooks <Ent>_Seek_Av/_Ap) si Give_<entite> existe au pack ; sinon ;TODO migration",
+        "Le nom de fonction et le nom d'instance sont lus dans la signature reelle de l'objet metier (ex. public function int Give_ART(&ART, ...) -> Give_ART(ART, ...))"
+      ]
+    },
+    {
+      "id": "case-6-masque-filtre-diva",
+      "skills": [
+        "converting-diva-lectab"
+      ],
+      "query": "Convertis un masque de surcharge .dhsf contenant un Lectab dans [diva] ET un Lectab dans [diva_base]",
+      "files": [],
+      "expected_behavior": [
+        "Transforme UNIQUEMENT les lignes du bloc [diva] (code surcharge) ; le bloc [diva_base] (copie figee du standard) reste byte-identique",
+        "Les directives Module sont inserees dans le bloc [diva], jamais dans [diva_base]",
+        "Une variante [diva_xxx] (!= [diva] exact) est traitee comme NON modifiable",
+        "Garde-fou auto-verifie : le rapport atteste 'bloc [diva] lignes X-Y -- aucune modif hors [diva]' (0 dans [diva_base])"
+      ]
+    },
+    {
+      "id": "case-7-perimetre-extensions-et-failsafe",
+      "skills": [
+        "converting-diva-lectab"
+      ],
+      "query": "Convertis un dossier mixte (.dhsp, .dhsf, .dhsi, .dhsq, fichiers *_base, un masque a balises malformees)",
+      "files": [],
+      "expected_behavior": [
+        "Traite par defaut .dhsp + .dhsf + .dhsi + .dhsq (option --extensions) ; les .dhsd ne sont jamais touches",
+        "Exclut les fichiers *_base.* (option --exclude-pattern, defaut _base)",
+        "Les .dhsq sont scannes mais declaratifs -> no-op (aucune conversion)",
+        "Fail-safe : un masque a structure de balises inattendue (bloc [diva] non ferme, imbrication, [/diva] orphelin, >1 bloc [diva]) est LAISSE INTACT et liste au rapport sous 'Masques IGNORES par securite'",
+        "--no-diva-filter desactive le filtre (dangereux : convertirait aussi [diva_base])"
+      ]
+    },
+    {
+      "id": "case-8-dry-run-et-todo-groupes",
+      "skills": [
+        "converting-diva-lectab"
+      ],
+      "query": "Lance la conversion en --dry-run, puis consulte le regroupement des TODO du rapport",
+      "files": [],
+      "expected_behavior": [
+        "--dry-run : produit le rapport regExResult.txt mais N'ecrit AUCUN fichier converti (pas de miroir) ; l'en-tete indique writeNewFiles=False (DRY-RUN)",
+        "Le rapport regroupe les ;TODO par type (hooks / Get_Record / migration / cle) avec un compteur par type et une ligne TOTAL",
+        "Sans --dry-run, les fichiers modifies sont ecrits dans --out (en miroir)"
+      ]
+    },
+    {
+      "id": "case-9-suffixe-key",
+      "skills": [
+        "converting-diva-lectab"
+      ],
+      "query": "Convertis un appel Seek_<ent>_Key(...) dont Give_<ent>_Key n'existe pas mais Give_<ent> oui (ex. Seek_BG_Key)",
+      "files": [],
+      "expected_behavior": [
+        "Reconnait le suffixe de variante _Key : l'objet metier reel est <ent>, pas <ent>_Key",
+        "Si Give_<ent>_Key absent du pack mais Give_<ent> present -> cible Give_<ent> (et non un faux ;TODO migration sur Give_<ent>_Key)",
+        "La cle multi-champs est eclatee normalement selon Find_<ent> (ex. Seek_BG_Key([prefpino pino gamseq lilg]) -> Give_BG(BG, prefpino, pino, gamseq, lilg))"
+      ]
+    },
+    {
+      "id": "case-10-lignes-commentees",
+      "skills": [
+        "converting-diva-lectab"
+      ],
+      "query": "Convertis un fichier contenant des seek_/Lectab sur des lignes commentees (corps commencant par ;)",
+      "files": [],
+      "expected_behavior": [
+        "Une ligne dont le corps (apres split_eol) commence par ; (commentaire DIVA) n'est JAMAIS transformee ni flaguee",
+        "Le code en commentaire reste byte-identique (la migration de reference laisse les commentaires intacts)",
+        "Les lignes commentees ne gonflent ni les conversions ni les compteurs ;TODO"
+      ]
+    },
+    {
+      "id": "case-11-seek-3-voies-objets-obligatoire",
+      "skills": [
+        "converting-diva-lectab"
+      ],
+      "query": "Convertis un dossier avec --objets <arbre .dhop de la cible> ; certains seek_ survivent en cible, d'autres ont disparu",
+      "files": [],
+      "expected_behavior": [
+        "--objets est OBLIGATOIRE : sans lui le script refuse de tourner (erreur, exit 2) -- la decision serait aveugle (sur-conversion)",
+        "Construit l'index des seek_* lus EN CLAIR dans les .dhop (frontiere de mot stricte : seek_c3 != seek_c3xq)",
+        "GARDER intact un seek_<ent> present dans l'index (wrapper survit en cible) ; le rapport recense les seek_ gardes",
+        "CONVERTIR en Give_<ent> (+ ;TODO hooks) un seek_<ent> absent de l'index ET du local mais dont Give_<ent> existe au pack (wrapper disparu, ex. seek_c4)",
+        "Laisser INCHANGE + ;TODO migration un seek_<ent> introuvable partout"
+      ]
+    }
+  ]
+}

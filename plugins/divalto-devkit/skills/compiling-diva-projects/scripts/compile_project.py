@@ -58,8 +58,10 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -161,13 +163,18 @@ def generate_ps1(
     return "\n".join(ps1_lines)
 
 
-def parse_summary_line(log_path: Path) -> dict | None:
-    """Parse la ligne de resume du rapport xwin7 :
-      `Erreur(s)=N   Warning(s)=N   Diva=N   Masques=N   ...`
+# Ligne de RESUME : contient "Erreur(s)=" (a ne pas confondre avec une ligne de
+# DETAIL d'erreur commencant par "Erreur ..." -- source du faux negatif #61).
+SUMMARY_ERR_RE = re.compile(r"erreur\(s\)\s*=", re.IGNORECASE)
+# "Le projet est a jour, aucune compilation a effectuer" (#27) -- pas un echec.
+UP_TO_DATE_RE = re.compile(r"aucune compilation", re.IGNORECASE)
 
-    Ne reimplemente pas `parse_compilation.py` -- juste lit la ligne de resume
-    pour determiner le success/failure et la passe en stdout. L'appelant peut
-    invoquer `parse_compilation.py --path <log>` pour le detail des erreurs.
+
+def parse_summary_line(log_path: Path) -> dict | None:
+    """Lit la LIGNE DE RESUME du rapport xwin7 (celle qui contient 'Erreur(s)=').
+
+    On cible specifiquement 'Erreur(s)=' (et pas une ligne de detail commencant
+    par 'Erreur ...'), sinon faux negatif -- cf. #61 (exit 1 alors que Erreur(s)=0).
     """
     if not log_path.is_file():
         return None
@@ -175,17 +182,67 @@ def parse_summary_line(log_path: Path) -> dict | None:
         text = log_path.read_text(encoding="iso-8859-1", errors="replace")
     except OSError:
         return None
-    summary: dict = {}
     for line in text.splitlines():
-        if line.lstrip().lower().startswith("erreur"):
-            # Forme attendue : "Erreur(s)=0   Warning(s)=0   Diva=N   ..."
-            parts = line.split()
-            for token in parts:
+        if SUMMARY_ERR_RE.search(line):
+            summary: dict = {}
+            for token in line.split():
                 if "=" in token:
                     key, _, value = token.partition("=")
                     summary[key.rstrip("(s)").lower()] = value
-            break
-    return summary or None
+            if summary:
+                return summary
+    return None
+
+
+def wait_for_summary(log_path: Path, attempts: int = 12, delay: float = 0.5) -> dict | None:
+    """Attend l'apparition de la ligne de resume.
+
+    Le log peut etre visible avec un leger retard apres la fin de xwin7 (flush /
+    antivirus) -- d'ou de faux 'log absent' (#16). On retente quelques fois.
+    """
+    summary = parse_summary_line(log_path)
+    for _ in range(attempts):
+        if summary is not None:
+            return summary
+        time.sleep(delay)
+        summary = parse_summary_line(log_path)
+    return summary
+
+
+def is_up_to_date(log_path: Path) -> bool:
+    """Detecte 'Le projet est a jour, aucune compilation a effectuer' (#27) :
+    build incremental sans rien a recompiler -- ce n'est PAS un echec."""
+    if not log_path.is_file():
+        return False
+    try:
+        text = log_path.read_text(encoding="iso-8859-1", errors="replace")
+    except OSError:
+        return False
+    return bool(UP_TO_DATE_RE.search(text))
+
+
+def parse_profiles(dhpt_path: Path) -> list[str]:
+    """Extrait les noms de profils des sections [profil] du .dhpt (lignes 'nom=').
+
+    Sert a valider --profile AVANT de lancer xwin7 (evite l'echec tardif
+    'Profil X inexistant') et a repondre a --list-profiles -- cf. #26, #71.
+    """
+    try:
+        text = dhpt_path.read_text(encoding="iso-8859-1", errors="replace")
+    except OSError:
+        return []
+    profiles: list[str] = []
+    in_profil = False
+    for raw in text.splitlines():
+        s = raw.strip()
+        if s.startswith("["):
+            in_profil = (s.lower() == "[profil]")
+            continue
+        if in_profil and s.lower().startswith("nom="):
+            val = s[4:].split(",", 1)[0].strip().strip('"')
+            if val:
+                profiles.append(val)
+    return profiles
 
 
 def main() -> None:
@@ -197,12 +254,16 @@ def main() -> None:
     )
     parser.add_argument("--project", required=True, help="Chemin absolu du .dhpt cible")
     parser.add_argument(
-        "--profile", required=True,
-        help='Nom du profil (peut contenir accent, ex: "developpement" avec e accent aigu)',
+        "--profile",
+        help='Nom du profil (peut contenir accent, ex: "developpement" avec e accent aigu). Requis sauf avec --list-profiles.',
     )
     parser.add_argument(
-        "--log-path", required=True,
-        help="Chemin absolu du fichier de log que xwin7 doit produire (-output)",
+        "--log-path",
+        help="Chemin absolu du fichier de log que xwin7 doit produire (-output). Requis sauf avec --list-profiles.",
+    )
+    parser.add_argument(
+        "--list-profiles", action="store_true",
+        help="Liste les profils declares dans le .dhpt (lecture seule) puis sort, sans compiler.",
     )
     parser.add_argument(
         "--action", default="build", choices=VALID_ACTIONS,
@@ -242,7 +303,6 @@ def main() -> None:
     args = parser.parse_args()
 
     project_path = Path(args.project).resolve()
-    log_path = Path(args.log_path).resolve()
 
     if not project_path.is_file():
         print(f"ERREUR: --project introuvable : {project_path}", file=sys.stderr)
@@ -253,6 +313,34 @@ def main() -> None:
             file=sys.stderr,
         )
         sys.exit(1)
+
+    profiles = parse_profiles(project_path)
+
+    # --list-profiles : lecture seule, pas de compilation
+    if args.list_profiles:
+        json.dump({"project": str(project_path), "profiles": profiles},
+                  sys.stdout, indent=2, ensure_ascii=False)
+        sys.stdout.write("\n")
+        sys.exit(0)
+
+    if not args.profile or not args.log_path:
+        print("ERREUR: --profile et --log-path sont requis (sauf avec --list-profiles).", file=sys.stderr)
+        sys.exit(1)
+
+    # Validation du profil contre les [profil] du .dhpt : evite l'echec tardif
+    # "Profil X inexistant" apres demarrage de xwin7 (#26, #71). Si aucun profil
+    # n'a pu etre lu (liste vide), on ne bloque pas.
+    if profiles and args.profile not in profiles:
+        print(json.dumps({
+            "status": "error",
+            "error": f"Profil '{args.profile}' absent du projet {project_path.name}.",
+            "available_profiles": profiles,
+            "hint": "Choisir un profil de la liste ci-dessus (ou inspecter via --list-profiles).",
+        }, ensure_ascii=False, indent=2), file=sys.stderr)
+        sys.exit(1)
+
+    log_path = Path(args.log_path).resolve()
+
     if args.source and not args.sousproject:
         print(
             "ERREUR: --source requiert --sousproject (couplage xwin7 obligatoire). "
@@ -320,7 +408,7 @@ def main() -> None:
     result["powershell_stdout"] = (proc.stdout or "").strip()
     result["powershell_stderr"] = (proc.stderr or "").strip()
 
-    summary = parse_summary_line(log_path)
+    summary = wait_for_summary(log_path)
     if summary is not None:
         result["summary"] = summary
         erreurs_str = summary.get("erreur", "0")
@@ -329,15 +417,20 @@ def main() -> None:
         except ValueError:
             erreurs = -1
         result["success"] = (erreurs == 0)
+    elif is_up_to_date(log_path):
+        # "Le projet est a jour, aucune compilation a effectuer" : pas un echec (#27)
+        result["summary"] = None
+        result["up_to_date"] = True
+        result["success"] = True
     else:
-        # Log absent ou non parsable -- forme de pannne caracteristique de R-005
-        # quand le profil n'a pas matche (xwin7 abandonne sans ecrire le log).
+        # Log absent ou sans ligne de resume apres attente -- xwin7 n'a pas
+        # demarre/termine normalement (profil introuvable, .dhpt invalide...).
         result["summary"] = None
         result["success"] = False
         result["error_hint"] = (
-            "Le fichier de log est absent ou non parsable. Cela peut indiquer "
-            "que xwin7 n'a pas pu demarrer (profil introuvable, .dhpt invalide). "
-            "Verifier le stdout/stderr capture aux chemins indiques."
+            "Le fichier de log est absent ou ne contient pas de ligne de resume "
+            "'Erreur(s)=' apres attente. Verifier le stdout/stderr capture, le "
+            "profil (--list-profiles) et la validite du .dhpt."
         )
 
     json.dump(result, sys.stdout, indent=2, ensure_ascii=False)

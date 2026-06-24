@@ -18,7 +18,7 @@ Reference detaillee pour l'etape 17 du workflow `creating-diva-entity` (ajout d'
 
 ## Modele Divalto du menu
 
-Voir `docs/NAVIGATION-ERP.md` section 2 pour le detail. En synthese :
+Voir la référence navigation ERP (interne) section 2 pour le detail. En synthese :
 
 - Le menu n'est **pas une arborescence imbriquee** mais un **graphe de regroupements plats**.
 - Chaque entree appartient a un regroupement (code court comme `FIC`, `FICTABPG`, etc.).
@@ -85,7 +85,7 @@ py .claude/skills/writing-isam-files/scripts/write_isam.py \
 
 ## Champs M2 obligatoires
 
-Voir `docs/ZOOM-INTEGRATION.md` section 5.6 pour la reference complete.
+Voir la référence d'intégration zoom (interne) section 5.6 pour la reference complete.
 
 ```json
 {
@@ -123,7 +123,7 @@ programme. Type="**, meme si `TypeChain=3` (Zoom) et `Enchain` sont corrects.
 Constate empiriquement le 2026-04-20.
 
 Le layout interne des 600 octets n'est pas encore formellement caracterise
-(cf. `docs/NAVIGATION-ERP.md` section 4.1c). **Strategie recommandee** : cloner
+(cf. la référence navigation ERP (interne) section 4.1c). **Strategie recommandee** : cloner
 le champ `Echange` depuis une entree M2 existante du **meme `TypeChain`**
 (Zoom avec Zoom, Page avec Page, Programme avec Programme), puis adapter
 uniquement les champs distinctifs.
@@ -157,7 +157,7 @@ nouvelle_entree["EnrNo"] = "{enr_unique}"
 > `Echange` comme une string **strip()** (espaces de tete et de fin supprimes).
 > Le reecriture via `write_isam.py` repositionne alors le contenu a l'offset 0
 > du champ, alors que les sous-champs reels (Type tiers, Aide, Masque, ...) sont
-> a des offsets fixes non nuls (cf. `docs/NAVIGATION-ERP.md` section 4.1c).
+> a des offsets fixes non nuls (cf. la référence navigation ERP (interne) section 4.1c).
 > En pratique, l'ERP est tolerant sur ce decalage pour les entrees Zoom simples
 > (sous-champs lus a leurs offsets attendus = espaces = vide, mais l'enreg reste
 > exploitable). Pour des entrees complexes (Programme avec Masque/Module), ce

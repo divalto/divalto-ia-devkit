@@ -15,7 +15,7 @@
 ---
 
 
-Detail de chaque section du rapport genere par `build_report.py`. Reference croisee avec `docs/ANALYSE-PRE-ACTION.md`.
+Detail de chaque section du rapport genere par `build_report.py`. Reference croisee avec le gabarit d'analyse pré-action (interne).
 
 ## Section 1 -- Comprehension de la demande
 
@@ -42,7 +42,7 @@ Source : fonctions englobantes extraites des `context_sample` des confirmed.
 
 Le template remplit automatiquement les fonctions detectees. Le LLM au CP5 **doit** :
 - Categoriser chaque fonction en famille (`Framework`, `RecordSql`, `ISAM`, etc.)
-- Ajouter des fonctions du catalogue DIVA (docs/LANGAGE-AVANCE.md) pertinentes a la demande
+- Ajouter des fonctions du catalogue DIVA (référence langage avancé interne) pertinentes a la demande
 - Borner a 12 fonctions maximum
 
 ## Section 4 -- Etude d'impact

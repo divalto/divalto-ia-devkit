@@ -81,10 +81,16 @@ Beginp
 {% else %}
 		{{ NomVue }}_Sel.{{ ChampCle }}	= ZOOM.Scevaleur				|	{{ NomVue }}.Orderby.Par_Code()
 {% endif %}
-		Construire_Condition_Selection(ZOOM_SQL_CONDITION_NORMALE, TRUE)
 	Else
 		{{ NomVue }}.Orderby.Par_Code()
    Endif
+
+	; Filtre construit INCONDITIONNELLEMENT (voir reference/zoom-procedures.md) :
+	; selon le parametre d'appel du zoom, ZoomApresCle n'est pas toujours declenche ;
+	; ZoomDebut peut alors etre la seule occasion de batir le filtre. L'init et le
+	; positionnement de _Sel restent dans le If ci-dessus pour ne pas ecraser un
+	; _Sel pre-positionne par l'appelant.
+	Construire_Condition_Selection(ZOOM_SQL_CONDITION_NORMALE, TRUE)
 
 Endp
 

@@ -12,7 +12,7 @@
 ---
 
 
-Source : `docs/DICTIONNAIRE-DHSD.md`.
+Source : référentiel interne -- dictionnaire (.dhsd).
 
 ---
 

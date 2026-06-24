@@ -44,6 +44,34 @@
         "Si UTF-8 : propose la conversion en ISO-8859-1 avec iconv",
         "Explique que l'accent sur developpement doit etre 0xE9 (ISO-8859-1), pas 0xC3A9 (UTF-8)"
       ]
+    },
+    {
+      "id": "case-4-decouverte-profil",
+      "skills": [
+        "compiling-diva-projects"
+      ],
+      "query": "Je veux compiler ce projet mais je ne sais pas quel nom de profil utiliser.",
+      "files": [],
+      "expected_behavior": [
+        "Liste d'abord les profils declares dans le .dhpt avec compile_project.py --list-profiles (lecture seule)",
+        "Ne presume PAS un profil 'developpement' : un .dhpt definit ses propres profils nommes",
+        "Propose un profil parmi ceux trouves, puis compile",
+        "Si le profil demande est absent, compile_project.py echoue tot (avant xwin7) en listant les profils disponibles"
+      ]
+    },
+    {
+      "id": "case-5-projet-a-jour",
+      "skills": [
+        "compiling-diva-projects"
+      ],
+      "query": "La compilation affiche 'Le projet est a jour, aucune compilation a effectuer'. Est-ce une erreur ?",
+      "files": [],
+      "expected_behavior": [
+        "Explique que ce n'est PAS un echec : rien a recompiler (build incremental) ou deja compile ailleurs",
+        "Le verdict reste success=true avec up_to_date=true",
+        "Ne confond pas une ligne de detail 'Erreur 152 : ...' avec la ligne de resume 'Erreur(s)=N' : le succes se decide sur 'Erreur(s)=0'",
+        "Si une recompilation etait attendue, en conclut que la source n'a pas change"
+      ]
     }
   ]
 }

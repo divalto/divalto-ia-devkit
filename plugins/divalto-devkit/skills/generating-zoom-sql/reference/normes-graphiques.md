@@ -1,6 +1,6 @@
 # Normes graphiques -- Fragment reference generating-zoom-sql
 
-> Source canonique : `docs/NORMES-GRAPHIQUES.md` (workspace). Ce fragment extrait la regle minimale de coherence dhsp/dhsf pour le generateur de zoom.
+> Source : normes graphiques internes Divalto. Ce fragment extrait la regle minimale de coherence dhsp/dhsf pour le generateur de zoom.
 
 ## Perimetre du skill
 

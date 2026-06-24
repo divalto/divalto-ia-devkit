@@ -66,6 +66,6 @@ Si aucun pattern ne matche, `message_erreur: null` et `needs_clarification: true
 
 ## Liens avec la phase 3 (verification X.13)
 
-Le message extrait est utilise comme **keyword techniques** prioritaire dans la phase 3 : `searching-erp-sources` le cherchera textuellement dans les `.dhsp` pour localiser ou le message est emis. Voir `docs/RECHERCHE-ERP.md` section "Patterns d'impact X.13".
+Le message extrait est utilise comme **keyword techniques** prioritaire dans la phase 3 : `searching-erp-sources` le cherchera textuellement dans les `.dhsp` pour localiser ou le message est emis. Voir la référence recherche ERP (interne) section "Patterns d'impact X.13".
 
 Les messages d'erreur DIVA courants (framework, moulinettes) sont a terme documentes dans `coding-diva-advanced` ou un futur skill dedie. Ce parser ne les reconnait pas specifiquement -- tout message entre quotes est capture.

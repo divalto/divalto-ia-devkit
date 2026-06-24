@@ -45,6 +45,35 @@
         "Verifie qu'aucun champ ne depasse TailleEnreg",
         "Sortie JSON avec valid=true, fields=44, record_size=1000"
       ]
+    },
+    {
+      "id": "case-4",
+      "skills": [
+        "writing-isam-files"
+      ],
+      "query": "J'ai une structure dont la TailleEnreg ne correspond pas a la table reelle du fichier (ex. 1024 alors que A5f.M4 fait 1000). Que se passe-t-il a l'ecriture ?",
+      "files": [],
+      "expected_behavior": [
+        "Le garde-fou structure<->dictionnaire localise le .dhsd declare par la structure (Dictionnaire/Base/Table)",
+        "Resout la taille reelle de la table via [BASE]->[TABLES] puis [TABLE].Taille",
+        "Detecte TailleEnreg=1024 != taille reelle 1000 de A5f.M4",
+        "REFUSE l'ecriture : errors[] contient error_code=-2, message 'Garde-fou dico : ... corruption evitee', success=false, exit code 1",
+        "Aucune ecriture effectuee (le refus precede tout appel a la DLL)"
+      ]
+    },
+    {
+      "id": "case-5",
+      "skills": [
+        "writing-isam-files"
+      ],
+      "query": "J'ecris dans un fichier d'erreur dont le dico a5dd.dhsd est dans un autre repertoire (objets/ vs fichiers/). Comment le garde-fou retrouve le dictionnaire ?",
+      "files": [],
+      "expected_behavior": [
+        "Sans --dico-path : le dico est cherche dans le repertoire du .dhfi cible ; s'il est absent, le garde-fou emet un warning stderr et AUTORISE l'ecriture (degradation gracieuse, jamais de faux blocage)",
+        "Avec --dico-path pointant sur le repertoire du dictionnaire : le .dhsd est localise, la verification s'effectue, pas de warning",
+        "Le garde-fou matche sur la Taille (le CE n'est verifie que s'il est present : XErr/206 et XQ n'ont pas de CE)",
+        "Override total disponible : --skip-dict-check"
+      ]
     }
   ]
 }

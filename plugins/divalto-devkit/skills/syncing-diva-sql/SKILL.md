@@ -13,6 +13,7 @@ description: >
 - Utilisation rapide
 - Workflow complet (3 etapes)
 - Parsing du rapport
+- Apercu (dry-run) et delta de schema
 - Scripts disponibles
 - References
 
@@ -115,13 +116,41 @@ Les erreurs de synchronisation apparaissent dans le corps du rapport avant la li
 
 ---
 
+## Apercu (dry-run) et delta de schema
+
+**Il n'existe pas de dry-run natif** via `xwin7 -action synchroauto` (pas d'action
+`synchroscript`, pas d'option `-noexec`). Apres un buildall complet, toutes les
+tables du projet sont candidates a la synchro -- ce qui peut inquieter avant
+d'appliquer.
+
+**Un apercu est toutefois possible par programmation** (mecanisme `ModeAudit` de la
+synchro-par-programme) -- voir la doc Divalto **« Synchronisation du schema de la
+base par programmation »**. Si le besoin d'apercu devient recurrent, envisager un
+petit programme Divalto dedie utilisant `ModeAudit`.
+
+**A defaut, verifier le delta a posteriori** : la synchro produit un **vrai delta**
+(`ALTER TABLE ADD/DROP COLUMN`, `CREATE/DROP INDEX`...), pas un DROP+CREATE en bloc
+(sauf table neuve). Le rapport d'audit (`Synchro.txt`, ou `DhOdbcConfigSql.log` /
+`DhOdbcConfigSqlScript.sql` sous `C:\divalto\DivaltoLog`) liste ce delta. Pour en
+obtenir un **resume par table** :
+
+```bash
+py .claude/skills/syncing-diva-sql/scripts/parse_synchro.py \
+    --path "C:/divalto/DivaltoLog/DhOdbcConfigSqlScript.sql" --changes
+```
+
+Sortie : `{changes: {tables_modified, tables:[{table, add_columns, drop_columns, create_index, drop_index, created, dropped}], procedures, functions}}`. Le bruit est filtre (tables `*_oldcolumns` de sauvegarde, `INSERT`, `sp_addextendedproperty`, drop-constraint). Les procedures `ERASE_*` (truncate) sont regenerees a chaque synchro -- listees a part, ce ne sont pas des changements de schema.
+
+---
+
 ## Scripts disponibles
 
 | Script | Role | Entree | Sortie |
 |--------|------|--------|--------|
-| `parse_synchro.py` | Parse rapport synchroauto | --path fichier.txt | JSON (success, total_errors, errors) |
+| `parse_synchro.py` | Parse rapport synchroauto | `--path fichier.txt` | JSON (success, total_errors, errors) |
+| `parse_synchro.py --changes` | Delta de schema par table (substitut d'apercu) | `--path fichier.txt\|.log\|.sql` | JSON (changes: tables[], procedures, functions) |
 
-**Exit codes** : 0 = synchronisation reussie, 1 = erreurs trouvees, 2 = rapport illisible.
+**Exit codes** : 0 = synchronisation reussie (ou `--changes` extrait), 1 = erreurs trouvees, 2 = rapport illisible.
 
 ---
 

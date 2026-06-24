@@ -1,7 +1,7 @@
 # RecordSql -- Complements API et structure
 
 Reference complementaire pour la generation de RecordSql.
-Pour le detail exhaustif, voir `docs/RECORDSQL.md`.
+Pour le detail exhaustif, voir la référence RecordSql interne.
 
 ---
 

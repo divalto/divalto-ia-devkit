@@ -73,4 +73,4 @@ Ce fichier documente le comportement actuel. Toute extension (ex : support de `A
 - D'un scenario dans `evals.json`
 - D'une mise a jour de ce fichier
 
-Voir `docs/RECHERCHE-ERP.md` section "Regles pour le LLM" pour le cadrage general.
+Voir la référence recherche ERP (interne) section "Regles pour le LLM" pour le cadrage general.

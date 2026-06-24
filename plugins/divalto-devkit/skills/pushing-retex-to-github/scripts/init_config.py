@@ -53,11 +53,22 @@ def parse_entries(retex_file: Path) -> list:
 
 
 def main() -> int:
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except (AttributeError, ValueError):
+        pass
+
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--retex-file", required=True, help="Chemin vers RETEX-skills.md")
     parser.add_argument("--repo", required=True, help="Repo GitHub cible (owner/name)")
     parser.add_argument("--force", action="store_true", help="Overwrite config existante")
     parser.add_argument("--reset-tracking", action="store_true", help="Reinitialise le tracking (efface l'existant)")
+    parser.add_argument(
+        "--global",
+        dest="global_config",
+        action="store_true",
+        help="Ecrit la config dans ~/.claude/.retex-github.json (partagee entre workspaces). Le tracking reste local.",
+    )
     args = parser.parse_args()
 
     retex_file = Path(args.retex_file).resolve()
@@ -66,7 +77,13 @@ def main() -> int:
         return 1
 
     retex_dir = retex_file.parent
-    config_path = retex_dir / ".retex-github.json"
+    # --global : config partagee dans ~/.claude/. Sinon config locale au workspace.
+    # Le tracking est TOUJOURS local (numerotation R-NNN propre au workspace).
+    if args.global_config:
+        config_path = Path.home() / ".claude" / ".retex-github.json"
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+    else:
+        config_path = retex_dir / ".retex-github.json"
     tracking_path = retex_dir / ".retex-pushed.json"
 
     # Config

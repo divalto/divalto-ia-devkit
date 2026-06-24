@@ -47,6 +47,57 @@
           "ReaderClose_gtrsart pour fermer"
         ]
       }
+    },
+    {
+      "name": "overwrite-constante-non-heritee",
+      "description": "Constante d'un .dhsp standard utilisee dans une surcharge OverWrite",
+      "prompt": "Dans ma surcharge gtut150u.dhsp (OverWrite), j'utilise la constante C_PICOD_BL mais j'ai 'Erreur 99 : Mot inconnu'. Pourquoi ?",
+      "expected": {
+        "patterns": [
+          "Les constantes d'un .dhsp standard ne sont PAS heritees dans une surcharge OverWrite",
+          "C'est le contexte de compilation du sous-projet (.dhps) qui determine l'accessible, pas les includes du parent",
+          "Solution 1 : re-Include explicitement le .dhsp fournissant la constante",
+          "Solution 2 : redeclarer localement et minimalement (Const C_PICOD_BL = 3)"
+        ]
+      }
+    },
+    {
+      "name": "where-addandcondition",
+      "description": "Filtre Select RecordSql avec le triplet Where.Equal_* obligatoire",
+      "prompt": "Ecris un Select sur le RecordSql article filtrant sur SiteCod et Statut. Mon filtre semble ignore.",
+      "expected": {
+        "patterns": [
+          "Declarer vCondition S = ' '",
+          "Chaque Where.Equal_X(...) chaine | Where.Equal_X.AddAndCondition(vCondition)",
+          "Where.AddCondition(\"TABLE\", vCondition) AVANT le Select",
+          "Sans le triplet, vCondition reste vide et le filtre SQL n'est pas applique"
+        ]
+      }
+    },
+    {
+      "name": "reader-listmode-pieges",
+      "description": "Pieges GT_Reader_recordSql inexistant et ListMode 3 parametres",
+      "prompt": "J'ai trouve du code avec GT_Reader_recordSql(...) et ListMode(id, 0). Est-ce correct ?",
+      "expected": {
+        "patterns": [
+          "GT_Reader_recordSql n'existe pas en DIVA",
+          "Utiliser le pattern ReaderOpen/Select/Next/Close_<Table>",
+          "ListMode exige 3 parametres meme en FIFO (mode=0)",
+          "Recuperer l'adresse via GetAdressFunction"
+        ]
+      }
+    },
+    {
+      "name": "pieges-langage-date-booleen",
+      "description": "Anti-patterns langage : date du jour et constante booleenne",
+      "prompt": "Ecris un controle qui compare une date a la date du jour et met un flag a vrai si ok.",
+      "expected": {
+        "patterns": [
+          "Utiliser today() pour la date du jour, PAS MZ.DateJour (qui n'existe pas)",
+          "Constante booleenne standard : OUI = 2 (pas 1), NON = 0",
+          "Ne pas utiliser ; comme fin d'instruction (c'est un commentaire), ni | comme OU"
+        ]
+      }
     }
   ]
 }

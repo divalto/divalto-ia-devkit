@@ -48,6 +48,13 @@ Via `manipulating-dhsf-screens/scripts/dhsf_add_fk.py` (FK-03) :
 - Injecte `[param_saisie] table_associee=oui`, `[touches] f8=<zoom>`, `[traitements] diva_apres`, `[boutons] "zoom"`
 - Ajoute la procedure callback `Champ_<CHAMP>_<id>_Ap` dans `[diva]` (compteur sequentiel global)
 
+> **Variante legere (pattern B)** -- si l'on veut seulement **valider** qu'un code
+> saisi existe (sans zoom de saisie ni FK dans l'objet metier), utiliser le pattern
+> « controle d'existence en surcharge de masque » : `Module 'GTTMCHKT0xx.dhop'` +
+> `Find_T0xx(champ)` en `diva_apres` (auto-erreur, pas de check du retour). Documente
+> dans [reference/fk-pattern.md](reference/fk-pattern.md) (section *Pattern B*).
+> L'edition du masque passe par `manipulating-dhsf-screens`.
+
 ## Utilisation
 
 ### Reproduire le cas RETEX R-003
@@ -123,7 +130,7 @@ Attendu apres appel :
 
 ## References
 
-- [reference/fk-pattern.md](reference/fk-pattern.md) : pattern 3 couches + cardinalites + mapping cible/module + taxonomie suffixes
+- [reference/fk-pattern.md](reference/fk-pattern.md) : pattern A (3 couches FK structurelle) + pattern B (controle d'existence en surcharge de masque) + cardinalites + mapping cible/module + taxonomie suffixes
 - [generating-objet-metier](../generating-objet-metier/SKILL.md) : version creation (FK-02)
 - [manipulating-dhsf-screens](../manipulating-dhsf-screens/SKILL.md) : script `dhsf_add_fk.py` partage (FK-03)
 - [linting-diva-code](../linting-diva-code/SKILL.md) : regles Z14/Z15 (FK-06) pour verifier l'absence d'orphelins

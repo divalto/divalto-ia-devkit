@@ -1,6 +1,6 @@
 # Anti-patterns RecordSql — Regles R01-R06
 
-Source : `docs/ANTI-PATTERNS.md` (section 4).
+Source : référentiel interne -- anti-patterns (RecordSql).
 
 ---
 

@@ -105,7 +105,7 @@ Exemple : `OverWrittenBy 'RTUZFAMRGLT_SQL.dhop'`. Indique que ce fichier peut et
 
 ## Ordre de priorite dans le rapport
 
-Pour la section 4 "Etude d'impact" de `docs/ANALYSE-PRE-ACTION.md` :
+Pour la section 4 "Etude d'impact" de le gabarit d'analyse pré-action (interne) :
 
 1. **Appelants directs** (`Call`, `Execute`) -- cascade probable
 2. **Dependances structurelles** (`Module`, `HFileVersion`) -- cascade certaine en cas de modification d'interface

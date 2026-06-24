@@ -70,6 +70,21 @@
         "Sortie JSON : found=true, type=4, 1 entree",
         "Entry : ce=1, valeur contient 'IdFic', choix est vide"
       ]
+    },
+    {
+      "id": "case-6",
+      "skills": [
+        "reading-multichoix"
+      ],
+      "query": "Comment savoir si un dictionnaire multichoix standard (ex. ccfdmc) a ete modifie, et que faire si c'est le cas ?",
+      "files": [],
+      "expected_behavior": [
+        "Rappelle la NORME : un XXfdmc standard ne doit jamais etre modifie ; un besoin specifique se gere dans le propre XXfdmc du partenaire (pas de conflit SP/migration)",
+        "Pour localiser le XXfdmc : passer par understanding-integrator-workspace (chemins de recherche) ; generalement dans les sources mais pas une regle ; ne pas confondre avec XXferr (objets/)",
+        "Detection = comparer le fichier a une reference standard saine (copie du pack) ; sans reference, indetectable ; un simple diff de fichiers signale identique/different",
+        "Pour le detail, renvoyer vers l'outil natif Harmony 'Utilitaires > Comparaison entre 2 dictionnaires de multi-choix' ; le developpeur examine et corrige en deplacant le custom vers son propre XXfdmc",
+        "Ne PAS proposer de fusionner un custom dans un dmc standard (ce serait entretenir la violation de norme)"
+      ]
     }
   ]
 }

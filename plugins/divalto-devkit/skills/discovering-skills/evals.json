@@ -57,6 +57,22 @@
         "parsing-diva-request",
         "analyzing-diva-request"
       ]
+    },
+    {
+      "name": "modele d'execution d'un skill (Regle 3, #134)",
+      "input": "Quand j'invoque un skill, il me renvoie juste son README et n'execute pas les scripts. C'est un bug ?",
+      "expected_behavior": [
+        "Expliquer que invoquer un skill CHARGE ses instructions (SKILL.md), ce n'est pas un appel de fonction qui auto-execute les scripts",
+        "Preciser que c'est ensuite a Claude d'EXECUTER les scripts (via Bash) en suivant ces instructions -- ne pas s'arreter a afficher la doc",
+        "Indiquer que l'utilisateur decrit la tache (pas d'arguments a passer pour auto-lancer un script)",
+        "Donner la frontiere CLAUDE-TOOL : un echec REEL de chargement du tool Skill = bug Claude Code amont (hors devkit) ; le contournement py direct reste un depannage",
+        "Ne PAS conclure que le skill est casse : symptome attendu (chargement) + discipline d'execution a appliquer (Regle 3)"
+      ],
+      "expected_output_excerpts": [
+        "instructions",
+        "executer",
+        "Regle 3"
+      ]
     }
   ]
 }

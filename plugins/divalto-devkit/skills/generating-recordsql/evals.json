@@ -100,9 +100,38 @@
         "Contient <RecordSql Name=LignePceGtf>",
         "FROM contient MOUV, ART, CLI (3 tables, jointures implicites)",
         "WHERE contient les 2 conditions de jointure + MOUV.Dos = MZ.Dos",
-        "3 cases additionnels : 'Case Equal_Ref(char val)', 'Case Like_Ref(char val)', 'Case Between_DateMouv(Date deb, Date fin)'",
+        "3 cases additionnels : 'Case Equal_Ref(char val)', 'Case Like_Ref(char val)', 'Case Between_DateMouv(Date deb, Date fin)' (casse des types libre)",
         "Le case Between genere BETWEEN deb AND fin",
         "Validation R01-R08 : 0 erreurs"
+      ]
+    },
+    {
+      "id": "case-7-where-param-type",
+      "skills": [
+        "generating-recordsql"
+      ],
+      "query": "Dans un RecordSql, un Case de recherche par ID entier est ecrit 'case Equal_Id (Long id)'. La compilation echoue avec 'Erreur 30 : Type du parametre incorrect'.",
+      "files": [],
+      "expected_behavior": [
+        "Identifie que 'Long' (ou 'long') n'est pas un type valide dans une condition <Where> -> Erreur 30",
+        "Corrige en 'case Equal_Id (int id)' (int valide ; INT majuscule compile aussi -- la casse est libre)",
+        "N'impose PAS la minuscule : 'CHAR'/'INT'/'DATE' capitalises compilent ; seul 'long' est rejete",
+        "Renvoie a la regle linter R08 de linting-diva-code (flague uniquement 'long', pas la casse)"
+      ]
+    },
+    {
+      "id": "case-8-downgrade-arbitration",
+      "skills": [
+        "generating-recordsql",
+        "migrating-erp-downgrade"
+      ],
+      "query": "Au passage d'un Service Pack, ce RecordSql overlay downgrade (XXrsYYYu.dhsq) est identique au standard par diff texte. Puis-je le supprimer ?",
+      "files": [],
+      "expected_behavior": [
+        "Refuse de conclure sur le seul diff texte : un SELECT * est couple a la structure du dictionnaire, et un overlay ne porte que le delta (un .dhsq identique = delta stable, pas redondant)",
+        "Compare la structure des tables du SELECT entre dico downgrade et dico standard du nouveau SP ; verifie si le delta custom est absorbe par le standard",
+        "Pour un collapse : verifie les 3 conditions necessaires -- (1) surcharge superieure uu redefinit le record, (2) custom porte par le dico present dans le projet cible, (3) AUCUN consommateur de la table/record dans le perimetre de compilation downgrade",
+        "Ne supprime que si les 3 conditions sont reunies (sinon overlay obligatoire)"
       ]
     }
   ]

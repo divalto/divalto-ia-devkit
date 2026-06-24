@@ -1,6 +1,6 @@
 # Anti-patterns Zoom SQL — Regles Z01-Z12
 
-Source : `docs/ANTI-PATTERNS.md` (section 2).
+Source : référentiel interne -- anti-patterns (Zoom SQL).
 
 ---
 

@@ -12,7 +12,7 @@
 ---
 
 
-> Reference : `docs/NAVIGATION-ERP.md` section 3.4
+> Reference : la référence navigation ERP (interne) section 3.4
 
 ## Role
 

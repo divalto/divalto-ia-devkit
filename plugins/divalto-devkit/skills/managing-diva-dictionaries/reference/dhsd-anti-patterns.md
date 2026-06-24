@@ -11,7 +11,7 @@
 ---
 
 
-Source : `docs/ANTI-PATTERNS.md` (section dictionnaire).
+Source : référentiel interne -- anti-patterns (section dictionnaire).
 
 ---
 
@@ -204,10 +204,10 @@ Severite : error -- regle dure.
 | Option | Action | Valide ? |
 |--------|--------|----------|
 | A | Reutiliser le champ tel quel (Nature standard inchangee) | OK |
-| B | Creer un nouveau champ prefixe (`mi<X>`, `dgs<X>`...) avec Nature librement choisie | OK |
+| B | Creer un nouveau champ prefixe (`<prefixe><X>`, ex. `spe<X>`) avec Nature librement choisie | OK |
 | C | Redeclarer le `[CHAMP]` standard avec Nature/Gel/Flags differents | **INTERDIT** |
 
-Exemple : standard declare `Nom=Ref,Reference,1 Nature=25`. Pour ajouter un Ref Nature=8 sur la table CLI, refuser l'option C, proposer A (reutiliser Nature=25) ou B (creer `miRef` Nature=8).
+Exemple : standard declare `Nom=Ref,Reference,1 Nature=25`. Pour ajouter un Ref Nature=8 sur une table, refuser l'option C, proposer A (reutiliser Nature=25) ou B (creer `speRef` Nature=8).
 
 Severite : error.
 

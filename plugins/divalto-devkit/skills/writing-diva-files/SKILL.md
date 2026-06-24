@@ -12,6 +12,7 @@ description: >
 
 - Regle fondamentale
 - Workflow : ecrire un fichier Divalto
+- Workflow : modifier un fichier existant (patch chirurgical)
 - Workflow : verifier un fichier existant
 - Workflow : corriger un fichier corrompu
 - Scripts disponibles
@@ -22,6 +23,8 @@ description: >
 ## Regle fondamentale
 
 **TOUS les fichiers texte Divalto sont en ISO-8859-1 + CRLF.** Les outils Edit et Write de Claude Code ecrivent en UTF-8 + LF — incompatible. Toujours utiliser les scripts de ce skill pour ecrire ou verifier.
+
+Deux gestes distincts : **créer / remplacer en entier** → `write_file.py` ; **modifier en place** (préserver le reste) → `patch_file.py`. Pièges Windows fréquents (pipe PowerShell → BOM, Python mode texte → LF à la lecture, pas de CRLF final → **Erreur 135**) : voir [reference/safe-methods.md](reference/safe-methods.md).
 
 ---
 
@@ -41,6 +44,23 @@ description: >
    py .claude/skills/writing-diva-files/scripts/verify_encoding.py --path "chemin/fichier.dhsp"
    ```
 4. Si echec : examiner les issues, corriger, re-verifier
+
+---
+
+## Workflow : modifier un fichier existant (patch chirurgical)
+
+Pour **modifier** un fichier existant sans le réécrire en entier (préserver tout le reste) :
+
+```
+py .claude/skills/writing-diva-files/scripts/patch_file.py \
+    --path "chemin/fichier.dhsp" --op insert --anchor "Procedure Init" --position after --content "  ; init"
+```
+
+Opérations (`--op`) : `insert` (par `--anchor` ou `--line N` + `--position before|after`), `prepend`, `append`, `replace` (`--anchor` ou `--line-range A:B`), `delete`.
+
+Garde-fous : `--expect N` (l'ancre doit matcher exactement N lignes — défaut 1 — sinon **refus, rien écrit**), `--regex`, `--dry-run` (aperçu), `.bak` auto (caché sous Windows). CRLF final garanti + re-vérification automatique.
+
+> **Fichiers structurés** : `patch_file.py` **refuse** `.dhsd` / `.dhsf` / `.dhsi` (positions/offsets sensibles) → passer par `managing-diva-dictionaries` (.dhsd) ou `manipulating-dhsf-screens` (.dhsf/.dhsi). Override explicite : `--force-structured`.
 
 ---
 
@@ -80,8 +100,9 @@ Sortie JSON : `{path, backup, original_encoding, original_line_endings, converte
 
 | Script | Role | Entree | Sortie JSON |
 |--------|------|--------|-------------|
-| `scripts/write_file.py` | Ecrit du contenu en ISO-8859-1+CRLF | `--path` + `--content` ou `--stdin` | `{path, encoding, line_endings, bytes}` |
-| `scripts/verify_encoding.py` | Verifie encodage et fins de ligne | `--path` | `{path, valid, encoding, line_endings, issues[]}` |
+| `scripts/write_file.py` | Crée / réécrit un fichier en ISO-8859-1+CRLF (`.bak` auto + avertissement si écrasement) | `--path` + `--content` ou `--stdin` [+ `--no-backup`] | `{path, encoding, line_endings, bytes, backup, warning}` |
+| `scripts/patch_file.py` | **Modifie** un fichier existant (chirurgical : insert/prepend/append/replace/delete), `.bak` caché, refuse les fichiers structurés | `--path --op ...` [`--anchor`/`--line`/`--line-range` `--expect` `--dry-run`] | `{path, op, matched, lines_before, lines_after, changed, backup, verified}` |
+| `scripts/verify_encoding.py` | Verifie encodage et fins de ligne (dont BOM et CRLF final manquant) | `--path` | `{path, valid, encoding, line_endings, issues[]}` |
 | `scripts/convert_file.py` | Convertit vers ISO-8859-1+CRLF | `--path` [+ `--no-backup`] | `{path, backup, converted, verified}` |
 | `scripts/add_zoom_constant.py` | Ajoute une constante de zoom dans a5tczoom.dhsp | `--file` `--instance` `--num` `--comment` [+ `--dry-run`] | `{success, constant_name, constant_line, line_number, already_exists}` |
 

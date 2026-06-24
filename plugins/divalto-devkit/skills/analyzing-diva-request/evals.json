@@ -36,6 +36,19 @@
         "couverture_neo4j": "absente",
         "report_contains": "Couverture Neo4j : absente"
       }
+    },
+    {
+      "id": "mode-plan-read-only",
+      "description": "Invocation en mode plan -> aucune ecriture disque, analyse read-only restituee dans le plan (R-011).",
+      "input_text": "[Session en mode plan] Analyse cette US : impression automatique d'un document a la validation d'une commande.",
+      "mode": "plan",
+      "expected": {
+        "no_disk_writes": true,
+        "no_output_files": true,
+        "approach": "read-only (agents Explore + diva-mcp + Read) ; strategie hybride X.12 -> X.13 conservee, sans persister output/*.json",
+        "restitution": "directement dans le fichier plan / ExitPlanMode, pas de livrable output/*.md",
+        "fallback": "si une analyse file-based complete est requise, proposer de sortir du mode plan d'abord"
+      }
     }
   ],
   "execution": {

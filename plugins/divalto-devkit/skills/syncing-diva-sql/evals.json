@@ -41,6 +41,21 @@
           "Suggerer de recompiler d'abord avec compiling-diva-projects"
         ]
       }
+    },
+    {
+      "name": "apercu-dry-run-et-delta",
+      "description": "Le collaborateur veut voir ce que la synchro va changer avant/apres application (R-013 / #148).",
+      "prompt": "Avant d'appliquer la synchro SQL, je veux savoir ce qu'elle va changer dans le schema. Comment faire ?",
+      "expected": {
+        "actions": [
+          "Rappeler qu'il n'y a PAS de dry-run natif dans xwin7 synchroauto (pas de synchroscript / -noexec)",
+          "Indiquer qu'un apercu est possible PAR PROGRAMMATION via le mecanisme ModeAudit (doc Divalto 'Synchronisation du schema de la base par programmation', referencee par titre, sans URL interne)",
+          "A defaut, proposer la verification a posteriori : parse_synchro.py --path <rapport|DhOdbcConfigSql.log|.sql> --changes",
+          "Le --changes restitue le DELTA par table (add_columns/drop_columns/create_index/drop_index/created/dropped), pas un DROP+CREATE en bloc",
+          "Preciser que le bruit est filtre (tables *_oldcolumns de sauvegarde, INSERT, sp_addextendedproperty) et que les procedures ERASE_* sont des regenerations techniques",
+          "Ne PAS pretendre creer un dry-run natif (inexistant)"
+        ]
+      }
     }
   ]
 }

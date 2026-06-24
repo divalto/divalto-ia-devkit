@@ -59,6 +59,26 @@
         "dhsf_callback_count": 1,
         "dhsf_champ_attributes_warning": "f8, table_associee, diva_apres appliques une seule fois (idempotence couche structurelle)"
       }
+    },
+    {
+      "id": "pattern-b-controle-existence-surcharge",
+      "description": "Pattern B (R-014 / #109) : je veux juste valider qu'un code pays saisi existe sur un champ d'un masque, sans creer de FK dans l'objet metier ni de zoom de saisie.",
+      "input": {
+        "intent": "controle d'existence seul en surcharge de masque",
+        "champ": "PayD (code pays)",
+        "cible": "T013"
+      },
+      "expected": {
+        "guidance": [
+          "Reconnaitre qu'il s'agit du pattern B (controle d'existence), PAS du pattern A (FK structurelle + zoom)",
+          "Dans le [diva] de la surcharge : Module 'GTTMCHKT013.dhop' (generalisable a tout T0xx)",
+          "Dans le diva_apres du champ : appeler Find_T013(<champ>) directement si non vide",
+          "Style 'bare' : Find_T0xx auto-affiche l'erreur standard Harmony -> pas besoin de checker le retour (capture possible si gestion custom)",
+          "Champs en fourchette (d/f) : appeler Find avant le controle de fourchette",
+          "L'edition du .dhsf passe par manipulating-dhsf-screens ; ne PAS utiliser dhsf_add_fk.py (qui pose le binding zoom complet)",
+          "Reference : reading fk-pattern.md section Pattern B (corpus : 546 masques importent GTTMCHKT0xx, 355 appellent Find_T0xx)"
+        ]
+      }
     }
   ]
 }

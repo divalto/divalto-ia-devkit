@@ -52,6 +52,40 @@ gh auth status
 # > Token scopes: 'repo', 'workflow', ...
 ```
 
+### Auth depuis un sous-processus (hook) -- Windows
+
+Le push RETEX tourne en **sous-processus detache** (lance par le hook). Sous Windows, le
+**keyring** ou `gh` stocke le token apres `gh auth login` peut etre **inaccessible** depuis
+ce contexte : `gh auth status` reussit en console mais echoue depuis le hook.
+
+Parade : exposer le token via la variable d'environnement **`GH_TOKEN`** (que `gh` lit
+nativement), de facon **persistante** (pas seulement la session courante) :
+
+```powershell
+setx GH_TOKEN "$(gh auth token)"
+# Rouvrir le terminal (et relancer Claude Code) pour que la variable soit prise en compte.
+```
+
+Les scripts heritent de l'environnement -> `gh` utilise `GH_TOKEN` sans dependre du keyring.
+> `GH_TOKEN` est un secret : ne pas le committer (`setx` le stocke dans le profil utilisateur).
+
+## Permission d'execution sous Claude Code (sandbox)
+
+Si Claude Code refuse de lancer les scripts du plugin installe via la marketplace (erreur
+de classification sandbox), autoriser leur execution dans le `settings.json` (global ou
+projet) :
+
+```json
+{
+  "permissions": {
+    "allow": ["Bash(py *plugins/cache/divalto/divalto-devkit/*:*)"]
+  }
+}
+```
+
+Adapter le motif au chemin reel d'install (cf. `configuring-diva-mcp` pour la localisation
+du cache marketplace). N'autorise que l'execution locale des scripts du devkit.
+
 ## Permissions sur le repo cible
 
 Le compte authentifie doit avoir les permissions :

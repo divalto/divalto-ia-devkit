@@ -14,7 +14,7 @@
 ---
 
 
-Source : `docs/SQUELETTES.md` et fichier ERP reel `rtrstab.dhsq`.
+Source : squelettes internes + fichier ERP reel `rtrstab.dhsq`.
 
 ---
 
@@ -108,11 +108,19 @@ Les attributs `Insert`, `Update`, `Delete` controlent les droits DML sur la tabl
     Case PK(char code)                 ← Recherche par cle primaire
         {TableSQL}.{ChampCle} = code
 
-    Case ID(Int id)                    ← Recherche par ID SQL auto-genere
+    Case ID(Int id)                    ← Recherche par ID SQL auto-genere (casse libre : Int = int)
         {TableSQL}.{TableSQL}_ID = id
 ```
 
 Le filtre `{TableSQL}.Dos = MZ.Dos` est **en dehors de tout Case** — il s'applique a toutes les requetes. C'est une **obligation de securite** pour le multi-dossier.
+
+**Typage des parametres de Case (R-017)** : les parametres declares entre parentheses d'un
+Case (`<Where>`, mais aussi `<Having>` / `<SubQuery>`) prennent un type comme `char`, `int`,
+`date`. **La casse est LIBRE** : `CHAR`, `INT`, `DATE` (capitalises) compilent aussi bien que
+les minuscules. Le seul piege : le type **`long` n'est pas valide** dans une condition
+`<Where>` (quelle que soit la casse) -> *« Erreur 30 : Type du parametre incorrect »* ;
+utiliser **`int`**. (Le linter detecte ce cas -- regle R08 de `linting-diva-code`, qui ne
+flague QUE `long`, jamais la casse.)
 
 ---
 

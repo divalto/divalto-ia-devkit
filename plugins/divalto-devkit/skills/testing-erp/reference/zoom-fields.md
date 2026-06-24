@@ -1,7 +1,7 @@
 # Champs du zoom des zooms
 
-> Reference : `docs/NAVIGATION-ERP.md` section 5.3
-> Cross-reference : `docs/ZOOM-INTEGRATION.md` section 2.3 (structure ISAM M4)
+> Reference : la référence navigation ERP (interne) section 5.3
+> Cross-reference : la référence d'intégration zoom (interne) section 2.3 (structure ISAM M4)
 
 ## Champs principaux (mode fiche)
 

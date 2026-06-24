@@ -45,6 +45,39 @@
         "Cree un backup .bak avant conversion",
         "Verifie le resultat : ISO-8859-1 + CRLF, valid: true"
       ]
+    },
+    {
+      "id": "case-4-patch-chirurgical",
+      "skills": [
+        "writing-diva-files"
+      ],
+      "query": "Dans gtutrf027.dhsp existant, insere une ligne ';init borne' juste apres la ligne contenant 'Procedure Init', sans toucher au reste du fichier.",
+      "files": [
+        "gtutrf027.dhsp"
+      ],
+      "expected_behavior": [
+        "Utilise patch_file.py --op insert --anchor 'Procedure Init' --position after (PAS write_file qui reecrirait tout)",
+        "Garde-fou --expect : refuse si l'ancre matche 0 ou plus d'une fois",
+        "Cree un .bak (cache sous Windows) avant modification",
+        "Preserve ISO-8859-1 + CRLF et garantit le CRLF final ; re-verifie apres ecriture",
+        "Le reste du fichier est inchange (edition chirurgicale)"
+      ]
+    },
+    {
+      "id": "case-5-fichier-structure-refuse",
+      "skills": [
+        "writing-diva-files"
+      ],
+      "query": "Ajoute un champ dans le dictionnaire gtfdd.dhsd avec patch_file.py.",
+      "files": [
+        "gtfdd.dhsd"
+      ],
+      "expected_behavior": [
+        "patch_file.py REFUSE le .dhsd (fichier structure, positions/offsets) avec exit code 1",
+        "Le message redirige vers le skill dedie managing-diva-dictionaries",
+        "Aucune ecriture effectuee sur le .dhsd",
+        "Idem pour .dhsf / .dhsi (manipulating-dhsf-screens)"
+      ]
     }
   ]
 }

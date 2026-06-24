@@ -21,14 +21,14 @@
       "skills": [
         "allocating-zoom-numbers"
       ],
-      "query": "Trouve 5 numeros libres dans la plage 9900-9999 avec cross-check complet (a5tczoom + a5f.dhfi local).",
+      "query": "Trouve 5 numeros libres dans la plage 9900-9999 avec cross-check sur a5tczoom + a5f.dhfi standard + a5fu.dhfi.",
       "files": [],
       "expected_behavior": [
-        "Execute find_free_zoom.py avec --range 9900-9999 --count 5 --a5tczoom <chemin> --a5f-local <chemin> --read-isam-script <chemin> --structure <chemin>",
+        "Execute find_free_zoom.py avec --range 9900-9999 --count 5 --a5tczoom <chemin> --a5f-local <chemin> --a5fu <chemin> --read-isam-script <chemin> --structure <chemin>",
         "Sortie JSON avec 'free' contenant 5 numeros (ou moins si saturation)",
-        "Sortie 'sources' avec compteurs a5tczoom + a5f_local + union",
-        "Si des numeros sont declares dans a5tczoom ET enregistres dans a5f.dhfi, ils apparaissent dans 'collisions_a5f_local_vs_a5tczoom_in_range'",
-        "Cas R-010 (9946 declare dans a5tczoom mais dans une autre plage) : ne doit PAS etre propose comme libre"
+        "Sortie 'sources' avec compteurs a5tczoom + a5f_local + a5fu + union_used_count",
+        "Cas R-010 (9946 declare dans a5tczoom mais dans une autre plage) : ne doit PAS etre propose comme libre",
+        "Detection globale : un zoom present uniquement dans a5fu (specifique) est exclu des libres"
       ]
     },
     {
@@ -42,6 +42,36 @@
         "Execute find_free_zoom.py --domain DAFF --a5tczoom <chemin>",
         "Sortie JSON avec 'ranges_considered' reflete la config DAFF (31000-31999 et 12592-12593)",
         "'free' contient un numero dans cette plage"
+      ]
+    },
+    {
+      "id": "case-4",
+      "skills": [
+        "allocating-zoom-numbers"
+      ],
+      "query": "Je veux creer un nouveau zoom specifique. Donne-moi un numero libre.",
+      "files": [],
+      "expected_behavior": [
+        "Aucun --domain ni --range fourni -> allocation dans la plage partenaire 90000-99999 par defaut",
+        "Sortie JSON 'allocation_origin' = 'partenaire 90000+ (convention par defaut)'",
+        "'ranges_considered' = [[90000, 99999]]",
+        "Rappel : la convention 90000 ne borne que l'allocation ; la detection du used-set reste globale (un zoom specifique < 90000 reste detecte)"
+      ]
+    },
+    {
+      "id": "case-5",
+      "skills": [
+        "allocating-zoom-numbers"
+      ],
+      "query": "Trouve un numero de zoom libre et verifie qu'il n'est pas deja utilise dans mes sources specifiques.",
+      "files": [],
+      "expected_behavior": [
+        "Execute find_free_zoom.py avec --specifs-root <repertoire specifique> (phase 2 activee)",
+        "La recherche large se fait UNIQUEMENT dans les sources specifiques (.dhsp, .dhsf), jamais le standard",
+        "Un candidat sans occurrence -> place dans 'free' (disponible)",
+        "Un candidat avec occurrence(s) -> 'specifs_search.suspects' avec fichier:ligne + extrait + label (zoom_call/touche_masque=fort, affectation=faible, non_reconnu=inconnu)",
+        "Aucune decision automatique : les suspects sont remontes pour jugement humain",
+        "Une occurrence 'non_reconnu' est un signal d'apprentissage (pattern potentiellement nouveau a confirmer par RETEX, cf. reference/zoom-number-patterns.md)"
       ]
     }
   ]

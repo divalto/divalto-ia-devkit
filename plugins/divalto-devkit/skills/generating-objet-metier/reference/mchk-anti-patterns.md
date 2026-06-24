@@ -9,7 +9,7 @@
 ---
 
 
-Source : `docs/ANTI-PATTERNS.md` (section 3).
+Source : référentiel interne -- anti-patterns (Module Check).
 
 ---
 

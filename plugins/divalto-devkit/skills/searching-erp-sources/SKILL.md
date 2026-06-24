@@ -33,7 +33,7 @@ Workflow type (apres querying-diva-graph) :
 py .claude/skills/searching-erp-sources/scripts/verify_x13.py \
     --candidates output/candidates_x12.json \
     --request output/request.json \
-    --erp-root "C:/Developpements harmony/Standard/Version X.13" \
+    --erp-root "{CHEMIN_ERP_STANDARD}" \
     --domain-scope auto \
     --max-matches 50 --max-files 20 --timeout 60
 ```
@@ -79,7 +79,7 @@ candidates_x12.json  -->  verify_x13.py  -->  evidence_x13.json
 |-----------|--------|-------------|--------|
 | `--candidates` | Chemin `candidates_x12.json` | Oui (sauf mode direct) | -- |
 | `--request` | Chemin `request.json` | Oui | -- |
-| `--erp-root` | Chemin racine ERP X.13 | Non | `C:/Developpements harmony/Standard/Version X.13` |
+| `--erp-root` | Chemin racine ERP X.13 | Non | `{CHEMIN_ERP_STANDARD}` |
 | `--domain-scope` | `auto` / `<prefix>` / `all` | Non | `auto` (suit `request.domaine_pressenti`) |
 | `--max-matches` | Plafond matches par keyword | Non | `50` |
 | `--max-files` | Plafond fichiers examines | Non | `20` |
@@ -94,7 +94,7 @@ candidates_x12.json  -->  verify_x13.py  -->  evidence_x13.json
 ```json
 {
   "scope": {
-    "erp_root": "C:/Developpements harmony/Standard/Version X.13",
+    "erp_root": "{CHEMIN_ERP_STANDARD}",
     "domains_searched": ["Achat-Vente/source/Retail"],
     "files_examined": 42,
     "matches_truncated": false,

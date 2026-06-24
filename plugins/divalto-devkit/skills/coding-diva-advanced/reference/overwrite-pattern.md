@@ -7,6 +7,7 @@
 - Declaration des procedures surchargees (sans Public/Private/Protected)
 - Visibilite des declarations dans une surcharge (records, fichiers, RSQL, constantes)
 - Pattern canonique de surcharge de procedure
+- Visibilite et partage inter-module
 - Surcharge RecordSql
 - Regles
 - Advisory -- analyse d'impact avant surcharge (via diva-mcp)
@@ -97,6 +98,26 @@ EndP
 
 Regle : seules les `Procedure` / `Function` sont surchargees au sens runtime. Tout symbole non-procedural (record, file, RecordSql, constante, define) utilise dans le corps doit etre redeclare en haut de la `.dhsp` de surcharge, **identique a la declaration du standard**.
 
+### Constantes : re-`Include` ou redeclaration locale minimale
+
+Les constantes d'un `.dhsp` standard (ex `GTTC000.dhsp`) **ne sont pas heritees** dans une surcharge -- les y utiliser sans rien faire donne `Erreur 99 : Mot inconnu`. C'est le **contexte de compilation du sous-projet** (les `Include` de son `.dhps`) qui determine ce qui est accessible, **pas** les includes du fichier parent surcharge. Deux options :
+
+1. **Re-`Include` explicitement** le `.dhsp` qui fournit les constantes, meme si le standard l'inclut deja.
+2. **Redeclarer localement et minimalement** la seule constante manquante, pour eviter qu'un double `Include` ne provoque une double definition :
+   ```diva
+   Const C_PICOD_BL = 3   ; cf. GTTC000.dhsp -- redeclaration locale minimale
+   ```
+
+Exemple concret : un sous-projet OverWrite dont le `.dhps` n'inclut que `zdiva.dhsp` rend toutes les constantes metier (`C_PICOD_BL`, `C_PICOD_CDE`...) inaccessibles -> declarer `Const C_PICOD_BL = 3` directement dans le `.dhsp` de surcharge.
+
+### Record commun redeclare localement
+
+Un `Record` commun (ex un parametrage via `<dico>.dhsd`) utilise dans un module qui n'inclut pas le `.dhsp` le fournissant doit etre redeclare localement, sinon `Erreur 31 : Signe egal attendu` :
+
+```diva
+Record "<dico>.dhsd" X LocX   ; redeclaration locale du Record commun
+```
+
 ## Pattern canonique de surcharge de procedure
 
 Trois regles, dans l'ordre :
@@ -146,6 +167,29 @@ Deux `preturn`, deux branches de sortie = code moins maintenable.
 **Le pattern s'applique a toutes les procedures surchargees**, pas seulement aux `Zoom*` : modules de pieces (`Pre/PostInsert`, `Pre/PostUpdate`, `Pre/PostDelete`), tarification, calcul, etc. L'ordre "Standard puis specifique" + test du flag d'acceptation est la convention solide.
 
 > Note : la grille des flags de retour (`'O'`, `'N'`, `'I'`, `'C'`...) varie selon le hook. Voir [zoom-hooks-reference.md](zoom-hooks-reference.md) pour les codes par hook Zoom*.
+
+## Visibilite et partage inter-module
+
+Au-dela de la surcharge, le partage de symboles entre modules DIVA obeit a des regles strictes. Ce qui **ne marche pas** (confirme au compile) :
+
+| Tentative | Erreur | A la place |
+|-----------|--------|-----------|
+| `Public Structure` contenant un champ type `S` (string variable) | 216 | Champs de type fixe uniquement ; passer les chaines en parametres individuels |
+| `public 1 xxx L` (variable simple en `Public`) | 82 | `PUBLIC` doit etre suivi de `FILE`/`HFILE`/`RECORD`/`FUNCTION`/`PROCEDURE` |
+| `module.Variable` (lire une variable d'un autre module) | 98 ("Fonction inconnue dans le module") | N'exposer que des `Public Function`/`Public Procedure` ; lire via un accesseur |
+| `RecordDiva StructureType Var` local a une fonction d'un autre module | "table absente" | La structure n'est pas exportee via `Module` -- passer les champs en parametres |
+
+Regle : **n'exposer entre modules que des `Public Function` / `Public Procedure`**. Les donnees se passent en parametres, pas via des variables/structures publiques.
+
+### Fonctions partagees dhsp + dhsf -> module tiers
+
+Pour reutiliser des fonctions a la fois depuis un `.dhsp` ET depuis le `[diva]` d'un `.dhsf` : les rendre `Public` dans le `.dhsp` puis ajouter `Module "<dhsp>.dhop"` dans `[diva]` cree une **reference circulaire** (`.dhop` -> `.dhof` -> `.dhop`) -- ca compile en harness mais le statut runtime est incertain.
+
+Norme : placer ces fonctions dans un **module tiers** (`.dhop`) declare par les deux consommateurs. Validation en harness multi-sources :
+```
+--sources <module_tiers>.dhsp <appelant>.dhsp
+```
+(le `.dhsp` appelant seul echoue, le `.dhop` tiers etant absent). Pour le harness multi-sources, voir le skill `compiling-diva-projects`.
 
 ## Surcharge RecordSql
 

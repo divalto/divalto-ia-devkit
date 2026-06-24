@@ -14,7 +14,7 @@
 
 
 Reference pratique pour ecrire un enregistrement zoom (table M4) dans le fichier
-A5F.dhfi (zoom des zooms). Voir `docs/ZOOM-INTEGRATION.md` pour la documentation
+A5F.dhfi (zoom des zooms). Voir la référence d'intégration zoom (interne) pour la documentation
 complete (structure, plages moulinette 58, menu domaine).
 
 ---
@@ -113,7 +113,7 @@ A5F (ZoomEnr: "RaceChien" -> "RaceChienGtf").
 | Gestion Ressources | DGRM | 45000-45999 |
 | Reglement | DREG | 49000-49999 |
 
-Certains domaines ont des plages secondaires (voir `docs/ZOOM-INTEGRATION.md` section 4.2).
+Certains domaines ont des plages secondaires (voir la référence d'intégration zoom (interne) section 4.2).
 
 ---
 
@@ -189,7 +189,7 @@ Cas valide (test de reference) : zoom ecrit avec les parametres de la section
 
 ## Apres l'ecriture
 
-1. **Declarer la constante** dans `a5tczoom.dhsp` (voir `docs/ZOOM-INTEGRATION.md` section 3)
+1. **Declarer la constante** dans `a5tczoom.dhsp` (voir la référence d'intégration zoom (interne) section 3)
 2. **Recompiler** (a5tczoom.dhsp modifie)
 3. **Ajouter au menu du domaine** -- ecrire un M2 dans le .dhfi du domaine (voir ci-dessous)
 4. **Tester dans l'ERP**
@@ -237,4 +237,4 @@ py .claude/skills/writing-isam-files/scripts/write_isam.py \
     --structure-dir ".claude/skills/writing-isam-files/scripts/structures"
 ```
 
-Voir `docs/ZOOM-INTEGRATION.md` section 5 pour la reference complete (TypeChain, regroupements, index).
+Voir la référence d'intégration zoom (interne) section 5 pour la reference complete (TypeChain, regroupements, index).

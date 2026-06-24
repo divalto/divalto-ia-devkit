@@ -38,6 +38,40 @@ Source : `rttzfamrglt_sql.dhsp` (303 lignes, ERP X.13).
 
 ---
 
+## Construction du filtre -- placement de `Construire_Condition_Selection` (R-016)
+
+`Construire_Condition_Selection` batit les clauses WHERE a partir de l'instance
+`{NomVue}_Sel`. Elle est appelee a deux endroits :
+
+| Procedure | Appel | Conditionnel ? |
+|-----------|-------|----------------|
+| `ZoomApresCle` (#26) | `Construire_Condition_Selection(ZOOM_SQL_CONDITION_NORMALE)` | **Non** -- inconditionnel |
+| `ZoomDebut` (#2) | `Construire_Condition_Selection(ZOOM_SQL_CONDITION_NORMALE, TRUE)` | **Non** (depuis R-016) -- inconditionnel, **apres** le bloc `If ZOOM.Scevaleur` |
+
+**Regle (template)** : dans `ZoomDebut`, l'appel est **hors** du bloc `If ZOOM.Scevaleur <> ' '`.
+Seuls l'`Init()` et le **positionnement** de `_Sel` (depuis `ZOOM.Scevaleur`) restent
+dans le `If` -- pour ne pas ecraser un `_Sel` deja positionne par l'appelant.
+
+**Pourquoi** : le declenchement de `ZoomApresCle` depend d'un **parametre de l'appel
+du zoom** (pas du mode F9 en soi). Dans les modes ou `ZoomApresCle` n'est pas
+declenche, `ZoomDebut` est la **seule** occasion de construire le filtre. Si l'appel
+y est garde par `If ZOOM.Scevaleur <> ' '` et que `Scevaleur` est vide (filtre fourni
+autrement que par la chaine de selection), le filtre n'est jamais construit -> liste
+non filtree (symptome rapporte par R-016).
+
+> **Honnetete sur la portee** : le mecanisme reel est plus complexe que ce simple
+> deplacement. Sortir l'appel du `If` **elargit la couverture** (plus de modes
+> d'appel filtrent correctement) **sans introduire d'erreur supplementaire**, mais ne
+> garantit pas 100 % des cas.
+
+**Pas un anti-pattern dans le code existant** : sur le corpus X.13 (565 zooms),
+`ZoomApresCle` porte l'appel inconditionnel dans **100 %** des cas, tandis que dans
+`ZoomDebut` le placement est partage (~54 % dans le `If`, ~45 % inconditionnel). Un
+zoom existant qui appelle `Construire_Condition_Selection` dans le `If` de `ZoomDebut`
+n'est donc **pas** signale comme erreur par le linter -- c'est une variante repandue.
+
+---
+
 ## Patterns recurrents
 
 | Code | Signification | Usage |

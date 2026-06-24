@@ -8,7 +8,9 @@ description: >
   le calcul automatique des positions sans trou, la taxonomie de suffixes typés (Dt->D8, Dh->DH,
   Fl->1,0...) via suggest_nature.py, et la validation de coherence D01-D14.
   Preserve l'encodage ISO-8859-1+CRLF. A utiliser pour declarer une nouvelle table metier
-  dans le dictionnaire avant de generer le code.
+  dans le dictionnaire avant de generer le code, ou pour modifier la Nature d'un champ
+  existant avec recalcul automatique des positions (tables + index) lors d'un alignement
+  de version / migration (modify_field_nature.py).
 ---
 
 # Managing DIVA Dictionaries
@@ -185,6 +187,14 @@ Trois modes de validation :
 - `--path --table` : valide une table dans un .dhsd existant (apres insertion)
 - `--path --dhsd-standard <chemin_standard>` : valide une surcharge contre son .dhsd standard (D14/D15/D16)
 
+**Option `--migration` (R-041)** : sur une table **legacy en cours d'alignement**
+(migration de version), l'absence de U-field (D03) est un etat **preexistant**, pas
+une regression. `--migration` fait passer **D03 en `warning`** au lieu d'`error`, pour
+que le vrai signal d'une modification de positions (D01 chevauchement / D02 trou) ne
+soit pas noye. Mesure terrain : 45 % des tables standard X.13 et 67 % des tables
+specifiques n'ont pas de U-field -> sans ce mode, D03 sature le rapport. `modify_field_nature.py`
+valide automatiquement en mode migration.
+
 ---
 
 ## Scripts disponibles
@@ -195,7 +205,8 @@ Trois modes de validation :
 | `scripts/generate_dhsd_block.py` | Genere les 5 blocs INI (nouvelle table) | JSON params (stdin ou fichier) | JSON {table, blocks, positions, taille, summary} |
 | `scripts/generate_surcharge_field.py` | Ajoute un champ a une table standard via surcharge (mode `--output` creation ou `--append-to` ajout) | `--dhsd-standard --table --field-name --nature --label --user [--prefix]` | JSON {status, file, mode, field, nature, size_bytes, container, container_capacity, offset_in_container, capacity_remaining, table_metadata_source, bases_metadata_source, filetime_le} |
 | `scripts/insert_dhsd_blocks.py` | Insere les blocs dans un .dhsd (tri alpha, backup, validation) | `--dhsd` + `--blocks` [+ `--dry-run`] | JSON {success, insertions, validation} |
-| `scripts/validate_dhsd.py` | Valide blocs generes ou .dhsd existant | `--blocks` JSON ou `--path` .dhsd + `--table` | JSON {target, valid, errors, warnings, summary} |
+| `scripts/modify_field_nature.py` | **Modifie la Nature d'un champ existant** + re-propage les positions (tables + index) | `--path` + `--field` + `--new-nature` [+ `--filler-policy` `--dry-run`] | JSON {field, delta, tables[], indexes[], warnings[], validation[]} |
+| `scripts/validate_dhsd.py` | Valide blocs generes ou .dhsd existant | `--blocks` JSON ou `--path` .dhsd + `--table` [+ `--migration`] | JSON {target, valid, errors, warnings, summary} |
 
 ---
 
@@ -216,11 +227,11 @@ Operation deterministe une fois `(table, champ, Nature)` connus. Le script `gene
 py .claude/skills/managing-diva-dictionaries/scripts/generate_surcharge_field.py \
     --dhsd-standard "{CHEMIN_ERP_STANDARD}/dictionnaires/gtfdd.dhsd" \
     --table T143 \
-    --field-name dgsTrajetKmMax \
+    --field-name speTrajetKmMax \
     --nature 5,0 \
     --label "Plafond km deplacement" \
-    --user rootDGS \
-    --prefix dgs \
+    --user rootSPE \
+    --prefix spe \
     --output "{CHEMIN_SPECIFIQUE}/fichiers/gtfddu.dhsd"
 ```
 
@@ -230,11 +241,11 @@ py .claude/skills/managing-diva-dictionaries/scripts/generate_surcharge_field.py
 py .claude/skills/managing-diva-dictionaries/scripts/generate_surcharge_field.py \
     --dhsd-standard "{CHEMIN_ERP_STANDARD}/dictionnaires/gtfdd.dhsd" \
     --table T143 \
-    --field-name dgsTrajetKmMin \
+    --field-name speTrajetKmMin \
     --nature 5,0 \
     --label "Plancher km deplacement" \
-    --user rootDGS \
-    --prefix dgs \
+    --user rootSPE \
+    --prefix spe \
     --append-to "{CHEMIN_SPECIFIQUE}/fichiers/gtfddu.dhsd"
 ```
 
@@ -255,6 +266,43 @@ Verifie D14 (metadonnees divergentes), D15 (table sans U-container), D16 (option
 
 ---
 
+## Modifier la Nature d'un champ existant (R-040)
+
+Changer la Nature d'un champ **deja declare** (ex. alignement de version : `Dos` 3->8,
+`Lib` 40->50) decale les positions de **tous les champs suivants** dans **chaque**
+`[TABLE]/[CHAMPS]` et **chaque** `[INDEX]/[CHAMPS]` qui l'utilisent. Le script
+`modify_field_nature.py` automatise ce recalcul (la modification de Nature est
+**globale** -- une seule declaration `[CHAMP]` -- donc la re-propagation couvre
+**toutes** les tables/index, jamais un sous-ensemble).
+
+```
+py .claude/skills/managing-diva-dictionaries/scripts/modify_field_nature.py \
+    --path "chemin/dictionnaire.dhsd" --field Lib --new-nature 50
+```
+
+Le script : (1) lit la Nature actuelle du `[CHAMP]` global -> `delta` ; (2) met a jour
+la ligne `Nature=` ; (3) decale les positions en aval dans chaque table et index ;
+(4) reecrit en ISO-8859-1+CRLF (+ `.bak`) ; (5) valide chaque table touchee via
+`validate_dhsd` en **mode migration**.
+
+**Politique Filler** (`--filler-policy`) :
+
+| Valeur | Effet sur la table | Quand |
+|--------|--------------------|-------|
+| `shift` **(defaut)** | tout decale, `Taille` grandit de `delta`, Filler inchange | migration / creation / **table sans Filler** / on accepte que le record grandisse (= comportement standard Divalto) |
+| `cannibalize` | zone champ->Filler decalee, **Filler reduit de `delta`**, champs apres le Filler figes, `Taille` **constante** | preserver la taille du record **sans reconstruire le fichier** (donnees en prod, downgrade) -- **erreur explicite si `Filler < delta` ou absent** |
+
+**Limites v1 (signalees, non traitees)** :
+- couche relationnelle `[CHAMPL]` (records logiques RecordSQL) **non re-propagee** ->
+  le script emet un **warning** si le champ y figure (cf. [reference/dhsd-diff-downgrade.md](reference/dhsd-diff-downgrade.md), regle des 3 couches) ;
+- champs **tableau** (Nature avec `*`) et **multi-table composite** -> **refuses**
+  (rediger a la main, cf. [reference/dhsd-surcharge-pattern.md](reference/dhsd-surcharge-pattern.md)).
+
+Toujours relire le `validation[]` du JSON avant de compiler : une violation `D01`
+(chevauchement) ou `D02` (trou) signale un recalcul casse.
+
+---
+
 ## References
 
 - **Les 5 zones avec format et exemples** : Voir [reference/dhsd-5-zones.md](reference/dhsd-5-zones.md) (Zone 4 documente les 3 types d'index et les filtered indexes Divalto)
@@ -262,3 +310,4 @@ Verifie D14 (metadonnees divergentes), D15 (table sans U-container), D16 (option
 - **Surcharge -- index custom** : Voir [reference/dhsd-surcharge-indexes.md](reference/dhsd-surcharge-indexes.md)
 - **Table Nature -> taille** : Voir [reference/nature-types.md](reference/nature-types.md) (couverture ~40 % des Nature reelles du standard -- inviter a enrichir)
 - **Anti-patterns D01-D16** : Voir [reference/dhsd-anti-patterns.md](reference/dhsd-anti-patterns.md)
+- **Diff de dictionnaire & arbitrage downgrade (3 couches, 3 voies)** : Voir [reference/dhsd-diff-downgrade.md](reference/dhsd-diff-downgrade.md) (methodologie R-026/R-027, sans outil dedie)

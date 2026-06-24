@@ -31,11 +31,19 @@ Definit la correspondance entre les champs metier et leur position dans l'enregi
 
 | Cle | Type | Description |
 |-----|------|-------------|
-| `Dictionnaire` | string | Fichier dictionnaire source (.dhsd) |
-| `Table` | string | Nom de la table dans le dictionnaire |
-| `Base` | string | Nom de la base physique (prefixe du .dhfi) |
-| `TailleEnreg` | int | Taille totale de l'enregistrement en octets |
+| `Dictionnaire` | string | Fichier dictionnaire source (.dhsd). **Utilise par le garde-fou anti-corruption.** |
+| `Table` | string | Nom de la table dans le dictionnaire. **Verifie par le garde-fou.** |
+| `Base` | string | Nom de la base physique (prefixe du .dhfi). **Verifie par le garde-fou.** |
+| `Ce` | int / null | Optionnel. Code enregistrement discriminant de la table (null si table mono-table). Verifie par le garde-fou s'il est present. |
+| `TailleEnreg` | int | Taille totale de l'enregistrement en octets. **Verifie par le garde-fou contre la taille reelle de la table.** |
 | `Structure` | array | Liste des champs avec Nom, Offset, Taille |
+
+> **Garde-fou taille d'enregistrement** : `Dictionnaire`, `Base`, `Table`, `Ce` et
+> `TailleEnreg` ne sont pas que descriptifs -- `write_isam.py` les confronte au `.dhsd`
+> reel avant toute ecriture et **refuse** une structure dont la `Table` est absente de la
+> base ou dont la `TailleEnreg` ne correspond pas a la taille reelle (un `.dhfi` peut
+> contenir plusieurs tables de tailles differentes). Ne pas falsifier ces champs. Detail :
+> SKILL.md section "Garde-fou taille d'enregistrement". Override : `--skip-dict-check`.
 
 ### Champ dans Structure
 

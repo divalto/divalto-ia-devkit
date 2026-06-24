@@ -194,6 +194,37 @@ def derive_diva_from_enregistrements(content: str) -> list[str]:
     return derived
 
 
+def _strip_empty_diva_base(lines: list[str]) -> tuple[list[str], int]:
+    """Retire les blocs `[diva_base]...[/diva]` VIDES (placeholder du standard non
+    surcharge : le template/standard se termine par un `[diva_base]\\n[/diva]` vide).
+
+    Sans ca, le renommage `[diva]` -> `[diva_base]` de migrate_diva_to_base cree un
+    `[diva_base]` en DOUBLE (placeholder vide + bloc renomme) : le compilateur ignore
+    le bloc porteur des procedures -> 'Procedure non definie' (RETEX #14 / #95).
+
+    Un bloc est considere VIDE s'il ne contient que des lignes blanches ou des
+    commentaires (`;...`). Les blocs non vides (deja surcharges) sont preserves.
+    """
+    out: list[str] = []
+    removed = 0
+    i = 0
+    n = len(lines)
+    while i < n:
+        if lines[i].strip().lower() == "[diva_base]":
+            j = i + 1
+            while j < n and lines[j].strip().lower() != "[/diva]":
+                j += 1
+            if j < n:  # [/diva] fermant trouve
+                body = lines[i + 1:j]
+                if all((not b.strip()) or b.strip().startswith(";") for b in body):
+                    removed += 1
+                    i = j + 1  # sauter tout le bloc vide, [/diva] inclus
+                    continue
+        out.append(lines[i])
+        i += 1
+    return out, removed
+
+
 def migrate_diva_to_base(content: str, derived_block: list[str]) -> tuple[str, dict]:
     """R-002 / R-033 -- migre `[diva]` -> `[diva_base]` et insere un nouveau `[diva]`.
 
@@ -222,6 +253,9 @@ def migrate_diva_to_base(content: str, derived_block: list[str]) -> tuple[str, d
     content inchange + stats avec `migrated=false`.
     """
     lines = content.split("\r\n")
+    # #14/#95 : retirer le(s) [diva_base]...[/diva] VIDE(s) preexistant(s) avant de
+    # renommer [diva] -> [diva_base], sinon on obtient un [diva_base] en double.
+    lines, removed_empty = _strip_empty_diva_base(lines)
     diva_open = None
     diva_close = None
     for i, line in enumerate(lines):
@@ -255,6 +289,7 @@ def migrate_diva_to_base(content: str, derived_block: list[str]) -> tuple[str, d
         "migrated": True,
         "derived_records_count": len(derived_block),
         "derived_records": derived_block,
+        "removed_empty_diva_base": removed_empty,
     }
 
 

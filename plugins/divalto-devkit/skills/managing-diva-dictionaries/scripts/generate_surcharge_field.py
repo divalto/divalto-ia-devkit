@@ -25,11 +25,11 @@ Usage :
     py generate_surcharge_field.py \
         --dhsd-standard "C:/divalto/.../gtfdd.dhsd" \
         --table T143 \
-        --field-name dgsTrajetKmMax \
+        --field-name speTrajetKmMax \
         --nature 5,0 \
         --label "Plafond km deplacement" \
-        --user rootDGS \
-        --prefix dgs \
+        --user rootSPE \
+        --prefix spe \
         (--output "C:/.../fichiers/gtfddu.dhsd"
          | --append-to "C:/.../fichiers/gtfddu.dhsd")
 
@@ -38,7 +38,7 @@ Sortie :
 
 Note prefixe poste : il n'existe AUCUNE regle universelle pour identifier
 un champ specifique depuis son nom. Selon les postes, le prefixe peut etre
-1, 2 ou 3 caracteres (`m*`, `mi*`, `dgs*`, `eco*`), ou meme absent (champ
+1, 2 ou 3 caracteres (`a*`, `ab*`, `abc*`), ou meme absent (champ
 en PascalCase pur, identique en surface au standard). Le script ne fait
 donc AUCUNE validation de forme sur le prefixe. Si `--prefix` est passe,
 le script verifie juste que le nom du champ commence par cette chaine
@@ -618,11 +618,11 @@ def main():
     parser = argparse.ArgumentParser(description="Ajoute un champ a une table standard via surcharge dictionnaire DIVA.")
     parser.add_argument('--dhsd-standard', required=True, help="Chemin du .dhsd standard (lecture seule).")
     parser.add_argument('--table', required=True, help="Nom de la table cible (ex: T143).")
-    parser.add_argument('--field-name', required=True, help="Nom du champ a ajouter (avec prefixe poste, ex: dgsTrajetKmMax).")
+    parser.add_argument('--field-name', required=True, help="Nom du champ a ajouter (avec prefixe poste, ex: speTrajetKmMax).")
     parser.add_argument('--nature', required=True, help="Nature DIVA du champ (ex: 5,0 ou D8 ou 20).")
     parser.add_argument('--label', required=True, help="Libelle FR du champ (sans accents recommande).")
-    parser.add_argument('--user', required=True, help="Identifiant utilisateur (ex: rootDGS), padding 20 chars automatique.")
-    parser.add_argument('--prefix', default='', help="Prefixe poste OPTIONNEL (ex: dgs, mi, m, eco, ou rien). Aucune validation de forme. Si fourni, le nom du champ doit commencer par cette chaine (garde-fou anti-typo). Sans valeur, le script accepte n'importe quel nom de champ.")
+    parser.add_argument('--user', required=True, help="Identifiant utilisateur (ex: rootSPE), padding 20 chars automatique.")
+    parser.add_argument('--prefix', default='', help="Prefixe poste OPTIONNEL (ex: spe, ab, a, ou rien). Aucune validation de forme. Si fourni, le nom du champ doit commencer par cette chaine (garde-fou anti-typo). Sans valeur, le script accepte n'importe quel nom de champ.")
     grp = parser.add_mutually_exclusive_group(required=True)
     grp.add_argument('--output', help="Chemin de creation d'un nouveau .dhsd surcharge.")
     grp.add_argument('--append-to', help="Chemin d'un .dhsd surcharge existant a enrichir.")

@@ -24,6 +24,17 @@ sys.path.insert(0, SCRIPT_DIR)
 from verify_encoding import detect_encoding, detect_line_endings
 
 
+def set_hidden_windows(path):
+    """Pose l'attribut 'cache' Windows sur le backup (no-op hors Windows ; jamais bloquant)."""
+    if os.name != 'nt':
+        return
+    try:
+        import ctypes
+        ctypes.windll.kernel32.SetFileAttributesW(str(path), 0x02)  # FILE_ATTRIBUTE_HIDDEN
+    except Exception:
+        pass
+
+
 def convert_file(path, create_backup=True):
     """Convertit un fichier vers ISO-8859-1 + CRLF."""
     if not os.path.exists(path):
@@ -41,8 +52,9 @@ def convert_file(path, create_backup=True):
     needs_encoding_fix = original_encoding == 'utf-8'
     needs_line_ending_fix = original_line_endings in ('LF', 'mixed')
     has_bom = data[:3] == b'\xef\xbb\xbf'
+    needs_final_crlf = len(data) > 0 and not data.endswith(b'\r\n')
 
-    if not needs_encoding_fix and not needs_line_ending_fix and not has_bom:
+    if not needs_encoding_fix and not needs_line_ending_fix and not has_bom and not needs_final_crlf:
         return {
             "path": os.path.abspath(path),
             "backup": None,
@@ -56,7 +68,10 @@ def convert_file(path, create_backup=True):
     backup_path = None
     if create_backup:
         backup_path = path + '.bak'
+        if os.path.exists(backup_path):
+            os.remove(backup_path)
         shutil.copy2(path, backup_path)
+        set_hidden_windows(backup_path)
 
     # Decoder le contenu
     try:
@@ -76,6 +91,10 @@ def convert_file(path, create_backup=True):
     # Normaliser les fins de ligne en CRLF
     text = text.replace('\r\n', '\n').replace('\r', '\n')
     text = text.replace('\n', '\r\n')
+
+    # Garantir un CRLF final (son absence provoque l'Erreur 135)
+    if text and not text.endswith('\r\n'):
+        text += '\r\n'
 
     # Encoder en ISO-8859-1
     try:
@@ -98,7 +117,10 @@ def convert_file(path, create_backup=True):
 
     result_encoding = detect_encoding(result_data)
     result_line_endings = detect_line_endings(result_data)
-    verified = result_encoding in ('iso-8859-1', 'us-ascii') and result_line_endings in ('CRLF', 'none')
+    final_crlf_ok = (len(result_data) == 0) or result_data.endswith(b'\r\n')
+    verified = (result_encoding in ('iso-8859-1', 'us-ascii')
+                and result_line_endings in ('CRLF', 'none')
+                and final_crlf_ok)
 
     return {
         "path": os.path.abspath(path),

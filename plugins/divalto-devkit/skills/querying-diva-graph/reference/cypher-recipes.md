@@ -1,6 +1,6 @@
 # cypher-recipes.md
 
-Recettes Cypher exploitees par `querying-diva-graph`. Alignees sur `docs/MCP-DIVA-GRAPH.md` (schema, labels, relations, limites APOC).
+Recettes Cypher exploitees par `querying-diva-graph`. Alignees sur le référentiel interne du graphe diva-mcp (schema, labels, relations, limites APOC).
 
 ## Conventions
 
@@ -94,6 +94,16 @@ ORDER BY caller_name LIMIT 25;
 
 Usage : identifier les invocations via le pattern transaction Divalto (`xmt_call`, `g3_xmt_call`, `tnt_xmt_call`, `ga_xmt_call`, `xmt_call_sql`, ...). Volumes ordre de grandeur : ~1 400 XMT_CALL. Complete `callers_of` et `dynamic_callers_of` pour une couverture d'impact analysis complete.
 
+> **`get_call_graph` ne suffit PAS pour l'impact analysis (R-068)** : l'outil MCP de commodite
+> `get_call_graph` ne remonte que les relations **CALLS statiques**. Il **manque** les appels
+> dynamiques / transactionnels -- typiquement `TNT_Xmt_Call("NomProcedure")`, ou la cible est
+> passee en chaine. Consequence : la procedure cible **n'apparait pas** dans les CALLS sortants
+> du programme appelant, et une analyse d'impact basee sur les seuls CALLS rate tous ces hooks.
+> **Couverture complete** = `callers_of` (CALLS) **+** `dynamic_callers_of` (DYNAMIC_CALL) **+**
+> `xmt_callers_of` (XMT_CALL) via `query_cypher`, **complete par un `grep`** du nom de procedure
+> dans les sources locales (cote programme appelant, le grep reste le moyen sur de retrouver les
+> cibles `TNT_Xmt_Call`).
+
 ### similar_entity -- entites metier similaires
 
 ```cypher
@@ -118,6 +128,8 @@ Usage : trouver des patterns d'entite metier comparables (Client, Article, FamRg
 | `scope_type=procedure` non source-faithful | Compter les populations source = filesystem X.13 | MCP-DIVA-GRAPH.md section "Decouvertes -- Piege 5" |
 | APOC `apoc.meta.schema` sandboxed | Pas d'introspection via APOC ; utiliser `db.labels()`/`db.relationshipTypes()` | MCP-DIVA-GRAPH.md section "APOC disponible" |
 | Pas de relation `OverWrittenBy` explicite | Detection des surcharges = grep X.13 (searching-erp-sources) | -- |
+| `get_call_graph` = CALLS statiques uniquement | Appels dynamiques/XMT (`TNT_Xmt_Call`) manques | recettes `dynamic_callers_of` + `xmt_callers_of` (`query_cypher`) + grep local (R-068) |
+| Graphe en retard sur revisions recentes | `[]` sur programme existant != absence | verifier en local (`searching-erp-sources`) (R-067) |
 
 ## Ajouter une nouvelle recette
 

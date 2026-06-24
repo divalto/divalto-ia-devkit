@@ -1,6 +1,6 @@
 # Patterns observes dans le corpus Module Check (mchk)
 
-> **Note** : les chiffres ci-dessous proviennent d'une extraction du graphe `diva-mcp` en date du **2026-04-17** (snapshot alors X.12). Depuis le 2026-04-24 le graphe est passe X.13 ; les volumes ont peu evolue (+3-6 % en moyenne, cf `docs/MCP-DIVA-GRAPH.md`). Les pourcentages et conclusions ci-dessous restent significatifs, mais n'ont pas ete re-executes sur X.13.
+> **Note** : les chiffres ci-dessous proviennent d'une extraction du graphe `diva-mcp` en date du **2026-04-17** (snapshot alors X.12). Depuis le 2026-04-24 le graphe est passe X.13 ; les volumes ont peu evolue (+3-6 % en moyenne, cf le référentiel du graphe diva-mcp (interne)). Les pourcentages et conclusions ci-dessous restent significatifs, mais n'ont pas ete re-executes sur X.13.
 
 ## Contenu
 
@@ -174,6 +174,6 @@ dictionnaires .dhsd).
 `UserTrace` a **retirer** (0 occurrence corpus).
 
 **Suffixes typés sur les noms de champ** (correlation nom -> Nature) :
-voir `docs/CONVENTIONS.md` tableau "Suffixes typés sur les noms de champ".
+voir les conventions de nommage internes, tableau "Suffixes typés sur les noms de champ".
 Extraits : `Dh`->DH (98 %), `Fl`->1,0 (95 %), `Dt`->D8 (93 %), `Qte`->12,D2 (72 %),
 `Mt`->16,D0 (65 %). Piege : `Tb` = tableau repete (Nature `X*N`), **pas** cle de table.

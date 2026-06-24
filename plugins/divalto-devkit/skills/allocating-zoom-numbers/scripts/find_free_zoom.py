@@ -1,24 +1,39 @@
 #!/usr/bin/env python3
-"""Trouve un numero de zoom libre pour une plage donnee, en cross-checkant 3 sources.
+"""Trouve un numero de zoom libre, en cross-checkant les sources enregistrees
+puis en verifiant le candidat dans les sources specifiques/surcharge.
 
-Sources verifiees :
-  1. a5tczoom.dhsp : declarations `C_ZOOM_<Name>_<Num> = <Num>`
-  2. a5f.dhfi local : enregistrements M4 (cle A4, champ ZoomNum) via read_isam.py en sous-process
-  3. a5f.dhfi de versionx9 (optionnel)
+Sources du used-set (numeros a eviter) :
+  1. a5tczoom.dhsp      : declarations standard `C_ZOOM_<Name>_<Num> = <Num>`
+  2. a5f.dhfi           : zooms STANDARD enregistres (M4, cle A4, champ ZoomNum)
+  3. a5f.dhfi versionx9 : (optionnel) zooms standard d'une version anterieure
+  4. a5fu.dhfi          : zooms SPECIFIQUES / surcharge enregistres (overlay de a5f,
+                          meme structure M4). `a5f` est STANDARD et n'est jamais
+                          modifie : les zooms partenaire vivent dans `a5fu`.
+
+Verification phase 2 (recherche large) :
+  Le(s) numero(s) candidat(s) est/sont recherche(s) DANS LES SOURCES
+  SPECIFIQUES / SURCHARGE uniquement (jamais le standard). Toute occurrence est
+  remontee avec son contexte (fichier:ligne + extrait) et etiquetee via un
+  registre de patterns EXTENSIBLE (cf. reference/zoom-number-patterns.md) :
+    - pattern connu (fort) : Zoom_Call / Tnt_Zoom_Call, binding touche masque fN=<num>
+    - affectation (faible) : = <num>
+    - non reconnu          : signal d'apprentissage (pattern potentiellement nouveau)
+  AUCUNE decision automatique : les occurrences sont remontees pour jugement humain.
+  0 occurrence -> candidat considere disponible.
+
+Convention : un nouveau zoom specifique partenaire demarre a 90000 (plage par
+defaut). Mais des zooms specifiques < 90000 existent -> la DETECTION du used-set
+est globale (toutes plages) ; 90000 ne borne que la RECHERCHE d'un numero libre.
 
 Usage :
-    # Cross-check minimal (a5tczoom seul)
-    py find_free_zoom.py --a5tczoom a5tczoom.dhsp --domain DAV
-
-    # Cross-check complet (3 sources)
+    # Allocation partenaire (plage 90000+ par defaut) + verif sources specifiques
     py find_free_zoom.py --a5tczoom a5tczoom.dhsp \\
-        --a5f-local a5f.dhfi \\
+        --a5f-local a5f.dhfi --a5fu a5fu.dhfi \\
         --read-isam-script .claude/skills/reading-isam-files/scripts/read_isam.py \\
         --structure .claude/skills/reading-isam-files/scripts/structures/structure_a5f_m4.json \\
-        --domain DAV --count 5
+        --specifs-root "C:/.../specifs" --count 3
 
-Sortie JSON : {"free": [...], "sources": {...}, "collisions_...": [...]}
-Exit codes : 0 = au moins un libre, 1 = aucun libre, 2 = erreur argument/fichier
+Sortie JSON. Exit codes : 0 = au moins un libre confirme, 1 = aucun, 2 = erreur.
 """
 
 import argparse
@@ -47,6 +62,49 @@ DOMAIN_RANGES = {
     "ZOOM":   [(99050, 99060)],
 }
 
+# Convention : un nouveau zoom specifique partenaire demarre a 90000.
+# Plafond 99999 : ZoomNum = 5 caracteres dans la structure M4 de a5f/a5fu.
+# C'est la plage de DEFAUT pour ALLOUER ; la detection du used-set reste globale.
+PARTNER_DEFAULT_RANGE = (90000, 99999)
+
+# Registre EXTENSIBLE des patterns d'usage d'un numero de zoom dans les sources.
+# Sert a ETIQUETER les occurrences de la recherche large (phase 2). Chaque entree
+# est tracee a un RETEX dans reference/zoom-number-patterns.md. Etendre ce registre
+# au fil des RETEX : une occurrence "non_reconnu" est un candidat-pattern a confirmer.
+# {N} est remplace par le numero candidat (deja echappe) lors de la compilation.
+ZOOM_USAGE_PATTERNS = [
+    {
+        "id": "zoom_call",
+        "exts": (".dhsp",),
+        "regex": r"(?i)\b(?:Tnt_)?Zoom_Call\s*\(",
+        "confidence": "fort",
+        "desc": "Appel Zoom_Call / Tnt_Zoom_Call",
+        "retex": "R-012 (#29)",
+    },
+    {
+        "id": "touche_masque",
+        "exts": (".dhsf",),
+        "regex": r"(?i)(?:shift_|ctrl_)?f\d+\s*=\s*{N}\b",
+        "confidence": "fort",
+        "desc": "Binding touche de masque ([touches] fN=<num>)",
+        "retex": "R-012 (#29)",
+    },
+    {
+        "id": "affectation",
+        "exts": (".dhsp", ".dhsf"),
+        # Lookbehind negatif : exclut les comparateurs >= <= == != := (le '=' n'est
+        # pas precede de < > = ! :). Decouvert sur sources reelles (sss) : `case vsw >= 9000`
+        # etait etiquete a tort. Un '=' simple (assignation/egalite DIVA) reste ambigu -> faible.
+        "regex": r"(?<![<>=!:])=\s*{N}\b",
+        "confidence": "faible",
+        "desc": "Affectation '= <num>' (constante ou autre, a juger ; hors comparateurs)",
+        "retex": "R-012 (#29)",
+    },
+]
+
+# Extensions scannees en phase 2 (extensible).
+SPECIFS_SCAN_EXTS = (".dhsp", ".dhsf")
+
 
 def parse_a5tczoom(path):
     """Parse a5tczoom.dhsp et extrait tous les numeros de zoom declares.
@@ -71,12 +129,12 @@ def parse_a5tczoom(path):
 
 
 def parse_a5f_zooms(dhfi_path, read_isam_script, structure_path):
-    """Invoque read_isam.py pour extraire les ZoomNum depuis a5f.dhfi (cle A4).
+    """Invoque read_isam.py pour extraire les ZoomNum depuis a5f/a5fu.dhfi (cle A4).
 
-    Retourne un set de numeros entiers.
+    Retourne un set de numeros entiers. Meme structure M4 pour a5f et a5fu.
     """
     if not os.path.isfile(dhfi_path):
-        print(f"Warning : a5f.dhfi introuvable : {dhfi_path}", file=sys.stderr)
+        print(f"Warning : fichier .dhfi introuvable : {dhfi_path}", file=sys.stderr)
         return set()
     try:
         r = subprocess.run(
@@ -118,47 +176,134 @@ def find_free(used_set, ranges, count=1):
     return free
 
 
+def _compile_patterns(num):
+    """Compile le registre pour un numero donne. Retourne [(meta, regex_compilee), ...]."""
+    compiled = []
+    n = re.escape(str(num))
+    for p in ZOOM_USAGE_PATTERNS:
+        rx = p["regex"].replace("{N}", n)
+        compiled.append((p, re.compile(rx)))
+    return compiled
+
+
+def label_occurrence(line, ext, compiled_patterns):
+    """Etiquette une ligne (contenant le numero) selon le registre.
+
+    Retourne (label, confidence). ("non_reconnu", "inconnu") si aucun pattern
+    connu ne matche -> signal d'apprentissage (pattern potentiellement nouveau).
+    """
+    best = None
+    for meta, rx in compiled_patterns:
+        if ext not in meta["exts"]:
+            continue
+        if rx.search(line):
+            conf = meta["confidence"]
+            if best is None or (conf == "fort" and best[1] != "fort"):
+                best = (meta["id"], conf)
+    return best if best else ("non_reconnu", "inconnu")
+
+
+def broad_search(candidates, specifs_roots, exts, max_files):
+    """Recherche large des numeros candidats dans les sources specifiques uniquement.
+
+    UNE passe sur les fichiers (alternation regex des candidats). Retourne
+    (occ_by_num, files_scanned, truncated) ou occ_by_num = {num: [occurrences]}.
+    """
+    occ_by_num = {c: [] for c in candidates}
+    if not candidates or not specifs_roots:
+        return occ_by_num, 0, False
+    num_alt = re.compile(r"\b(" + "|".join(re.escape(str(c)) for c in candidates) + r")\b")
+    compiled_by_num = {c: _compile_patterns(c) for c in candidates}
+    files_scanned = 0
+    truncated = False
+    for root in specifs_roots:
+        if not os.path.isdir(root):
+            print(f"Warning : --specifs-root introuvable : {root}", file=sys.stderr)
+            continue
+        for dirpath, _dirs, files in os.walk(root):
+            for fn in files:
+                ext = os.path.splitext(fn)[1].lower()
+                if ext not in exts:
+                    continue
+                if files_scanned >= max_files:
+                    truncated = True
+                    break
+                fpath = os.path.join(dirpath, fn)
+                files_scanned += 1
+                try:
+                    with open(fpath, "r", encoding="iso-8859-1", errors="replace") as f:
+                        for lineno, line in enumerate(f, 1):
+                            seen_on_line = set()
+                            for m in num_alt.finditer(line):
+                                num = int(m.group(1))
+                                if num in seen_on_line:
+                                    continue
+                                seen_on_line.add(num)
+                                label, conf = label_occurrence(line, ext, compiled_by_num[num])
+                                occ_by_num[num].append({
+                                    "file": fpath,
+                                    "line": lineno,
+                                    "text": line.strip()[:200],
+                                    "label": label,
+                                    "confidence": conf,
+                                })
+                except Exception as e:
+                    print(f"Warning : lecture echouee {fpath} : {e}", file=sys.stderr)
+            if truncated:
+                break
+        if truncated:
+            break
+    if truncated:
+        print(f"Warning : recherche large tronquee a --max-files={max_files} fichiers",
+              file=sys.stderr)
+    return occ_by_num, files_scanned, truncated
+
+
 def main():
     parser = argparse.ArgumentParser(
-        description="Trouve un numero de zoom libre via cross-check 3 sources",
+        description="Trouve un numero de zoom libre (a5f + a5fu) puis verifie le "
+                    "candidat dans les sources specifiques (recherche large etiquetee).",
     )
     parser.add_argument("--a5tczoom", required=True,
-                        help="Chemin de a5tczoom.dhsp (source de verite standard)")
+                        help="Chemin de a5tczoom.dhsp (constantes zoom standard)")
     parser.add_argument("--a5f-local", default=None,
-                        help="Chemin de a5f.dhfi local (optionnel)")
+                        help="Chemin de a5f.dhfi STANDARD local (optionnel)")
     parser.add_argument("--a5f-versionx9", default=None,
-                        help="Chemin de a5f.dhfi de versionx9 (optionnel)")
+                        help="Chemin de a5f.dhfi STANDARD de versionx9 (optionnel)")
+    parser.add_argument("--a5fu", default=None,
+                        help="Chemin de a5fu.dhfi (zooms SPECIFIQUES/surcharge, overlay a5f)")
     parser.add_argument("--domain", default=None,
-                        help=f"Code domaine ({', '.join(sorted(DOMAIN_RANGES.keys()))})")
+                        help=f"Code domaine standard ({', '.join(sorted(DOMAIN_RANGES.keys()))})")
     parser.add_argument("--range", default=None,
                         help="Plage personnalisee au format START-END (ex: 9900-9999)")
     parser.add_argument("--count", type=int, default=1,
-                        help="Nombre de numeros libres a retourner (defaut: 1)")
+                        help="Nombre de numeros libres confirmes a retourner (defaut: 1)")
     parser.add_argument("--read-isam-script", default=None,
                         help="Chemin de reading-isam-files/scripts/read_isam.py "
-                             "(requis si --a5f-local ou --a5f-versionx9)")
+                             "(requis si --a5f-local / --a5f-versionx9 / --a5fu)")
     parser.add_argument("--structure", default=None,
                         help="Chemin structure_a5f_m4.json "
-                             "(requis si --a5f-local ou --a5f-versionx9)")
+                             "(requis si --a5f-local / --a5f-versionx9 / --a5fu)")
+    parser.add_argument("--specifs-root", action="append", default=None, metavar="DIR",
+                        help="Repertoire de sources SPECIFIQUES/surcharge a scanner en "
+                             "phase 2 (repetable). Le standard n'est JAMAIS scanne.")
+    parser.add_argument("--max-files", type=int, default=20000,
+                        help="Borne de fichiers scannes en phase 2 (defaut: 20000)")
     args = parser.parse_args()
 
-    # Resoudre la plage cible
+    # Resoudre la plage cible d'ALLOCATION (le used-set, lui, reste global)
     if args.range:
         m = re.match(r'^(\d+)-(\d+)$', args.range.strip())
         if not m:
             print(f"Erreur : --range invalide '{args.range}'. Format attendu : START-END", file=sys.stderr)
             sys.exit(2)
         start, end = int(m.group(1)), int(m.group(2))
-        # Garde-fou : la structure M4 de a5f.dhfi limite ZoomNum a 5 chars (99999 max).
-        # La plage "custom >= 100000" est valide pour les EnrNo menu (M2, 6 chars) via
-        # allocating-menu-enrno, mais PAS pour les zooms.
+        # Garde-fou : ZoomNum = 5 chars dans la structure M4 (99999 max). La plage
+        # >= 100000 est valide pour allocating-menu-enrno (EnrNo menu M2, 6 chars), pas ici.
         if end > 99999 or start > 99999:
             print(
                 f"Erreur : --range {args.range} depasse 99999. La structure M4 de "
-                f"a5f.dhfi limite ZoomNum a 5 caracteres (max 99999). Utiliser "
-                f"--domain DAV/DAFF/... ou une plage <= 99999. Note : la plage "
-                f">= 100000 est valide pour allocating-menu-enrno (EnrNo menu, "
-                f"M2 sur 6 chars), pas pour les zooms (M4 sur 5 chars).",
+                f"a5f/a5fu limite ZoomNum a 5 caracteres (max 99999).",
                 file=sys.stderr,
             )
             sys.exit(2)
@@ -166,55 +311,77 @@ def main():
             print(f"Erreur : --range {args.range} : borne basse > borne haute", file=sys.stderr)
             sys.exit(2)
         ranges = [(start, end)]
+        alloc_origin = f"range={args.range}"
     elif args.domain:
         ranges = DOMAIN_RANGES.get(args.domain.upper())
         if not ranges:
             print(f"Erreur : domaine inconnu '{args.domain}'. Valides : "
                   f"{sorted(DOMAIN_RANGES.keys())}", file=sys.stderr)
             sys.exit(2)
+        alloc_origin = f"domain={args.domain.upper()}"
     else:
-        print("Erreur : fournir --domain OU --range", file=sys.stderr)
-        sys.exit(2)
+        # Defaut : convention partenaire (nouveau zoom specifique demarre a 90000)
+        ranges = [PARTNER_DEFAULT_RANGE]
+        alloc_origin = "partenaire 90000+ (convention par defaut)"
 
-    # Source 1 : a5tczoom.dhsp
+    # --- Used-set : a5tczoom (standard) + a5f (standard) + a5fu (specifique) ---
     consts = parse_a5tczoom(args.a5tczoom)
 
-    # Sources 2 et 3 : a5f.dhfi (optionnelles)
     a5f_local_nums = set()
     a5f_v9_nums = set()
-    needs_isam = args.a5f_local or args.a5f_versionx9
+    a5fu_nums = set()
+    needs_isam = args.a5f_local or args.a5f_versionx9 or args.a5fu
     if needs_isam and (not args.read_isam_script or not args.structure):
-        print("Erreur : --a5f-local/--a5f-versionx9 requierent --read-isam-script ET --structure",
+        print("Erreur : --a5f-local/--a5f-versionx9/--a5fu requierent --read-isam-script ET --structure",
               file=sys.stderr)
         sys.exit(2)
     if args.a5f_local:
         a5f_local_nums = parse_a5f_zooms(args.a5f_local, args.read_isam_script, args.structure)
     if args.a5f_versionx9:
         a5f_v9_nums = parse_a5f_zooms(args.a5f_versionx9, args.read_isam_script, args.structure)
+    if args.a5fu:
+        a5fu_nums = parse_a5f_zooms(args.a5fu, args.read_isam_script, args.structure)
 
-    # Union des numeros utilises
-    used = set(consts.keys()) | a5f_local_nums | a5f_v9_nums
+    used = set(consts.keys()) | a5f_local_nums | a5f_v9_nums | a5fu_nums
 
-    # Numeros libres dans la plage consideree
-    free = find_free(used, ranges, args.count)
+    # --- Phase 1 : pool de candidats libres d'apres le used-set ---
+    specifs_roots = args.specifs_root or []
+    # Si phase 2 active, on prend un pool plus large pour absorber les "suspects".
+    pool_count = args.count if not specifs_roots else (args.count * 5 + 5)
+    pool = find_free(used, ranges, pool_count)
 
-    # Collisions inter-sources limitees a la plage (pour info / diagnostic)
-    in_range = lambda n: any(s <= n <= e for (s, e) in ranges)
-    collisions_a5f_vs_consts = sorted(
-        n for n in a5f_local_nums & set(consts.keys()) if in_range(n)
+    # --- Phase 2 : recherche large dans les sources SPECIFIQUES uniquement ---
+    occ_by_num, files_scanned, truncated = broad_search(
+        pool, specifs_roots, SPECIFS_SCAN_EXTS, args.max_files
     )
+
+    clean = [n for n in pool if not occ_by_num.get(n)]
+    suspects = [
+        {"num": n, "occurrences": occ_by_num[n]}
+        for n in pool if occ_by_num.get(n)
+    ]
+    free = clean[:args.count]
 
     result = {
         "free": free,
-        "range": args.range or f"domain={args.domain}",
+        "allocation_origin": alloc_origin,
         "ranges_considered": [[s, e] for (s, e) in ranges],
         "sources": {
             "a5tczoom_count": len(consts),
             "a5f_local_count": len(a5f_local_nums),
             "a5f_versionx9_count": len(a5f_v9_nums),
+            "a5fu_count": len(a5fu_nums),
             "union_used_count": len(used),
         },
-        "collisions_a5f_local_vs_a5tczoom_in_range": collisions_a5f_vs_consts,
+        "specifs_search": {
+            "enabled": bool(specifs_roots),
+            "roots": specifs_roots,
+            "exts": list(SPECIFS_SCAN_EXTS),
+            "files_scanned": files_scanned,
+            "truncated": truncated,
+            "candidates_examined": pool,
+            "suspects": suspects,
+        },
     }
 
     json.dump(result, sys.stdout, indent=2, ensure_ascii=False)

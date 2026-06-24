@@ -1,6 +1,6 @@
 # Checklist creation d'entite DIVA
 
-Source : `docs/ARCHITECTURE-ENTITE.md`
+Source : la référence architecture d'entité (interne)
 
 ---
 

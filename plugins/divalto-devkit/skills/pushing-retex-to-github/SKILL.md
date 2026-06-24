@@ -49,11 +49,14 @@ py plugin/skills/pushing-retex-to-github/scripts/push_new_entries.py `
 Detecte les R-NNN absents du tracking, cree une issue GitHub par entree, met a jour le
 tracking. Sortie JSON sur stdout : `{"pushed": [...], "skipped": [...], "errors": [...]}`.
 
+> **Toujours passer `--retex-file` explicitement** vers le RETEX du workspace courant. Sur
+> un poste multi-projets, un glob large risque de selectionner le mauvais `RETEX-skills.md`.
+
 ### Backfill (pousser TOUTES les entrees existantes)
 
 ```powershell
 py plugin/skills/pushing-retex-to-github/scripts/push_new_entries.py `
-    --retex-file "retex/RETEX-skills.md" --backfill
+    --retex-file "retex/RETEX-skills.md" --backfill --yes-i-want-to-push-everything
 ```
 
 > CHECKPOINT -- Ne lancer `--backfill` qu'apres validation explicite du collaborateur.
@@ -76,6 +79,12 @@ py plugin/skills/pushing-retex-to-github/scripts/push_new_entries.py `
 | `retex/.retex-github.json` | Repo cible, options de labels | NON (gitignore) |
 | `retex/.retex-pushed.json` | Tracking des R-NNN deja pousses (R-NNN -> issue#, hash contenu) | NON (gitignore) |
 | `retex/.retex-push.log` | Log d'execution (succes / erreurs) | NON (gitignore) |
+
+> **Resolution en cascade** (push) : `--config` explicite -> `.retex-github.json` **local**
+> (a cote du RETEX) -> `~/.claude/.retex-github.json` **global** (partage entre workspaces,
+> cree via `init_config.py --global`). Le **tracking `.retex-pushed.json` reste TOUJOURS
+> local** : la numerotation R-NNN est propre a chaque workspace ; un tracking partage
+> creerait des collisions d'ID. Le local surcharge toujours le global.
 
 ### Format de .retex-github.json
 
@@ -198,6 +207,25 @@ Action: log l'erreur, marquer l'entree comme "pending" dans tracking
 Detect: .retex-pushed.json contient R-NNN -> issue 42, mais l'issue 42 a ete fermee/supprimee
 Action: re-create + warning dans log
 ```
+
+---
+
+## Symptomes courants (diagnostic)
+
+Le push tourne en arriere-plan via le hook : s'il echoue, **rien ne le signale a l'ecran**
+(le hook est non bloquant par conception). Pour diagnostiquer quand des RETEX
+**n'apparaissent pas** en issues :
+
+| Symptome | Verifier | Cause / action |
+|----------|----------|----------------|
+| Aucune issue, aucune erreur visible | `.retex-github.json` existe-t-il (local ou `~/.claude/`) ? | **Push non configure** -> lancer `init_config.py`. Les RETEX ne sont **pas perdus** (ils restent dans `RETEX-skills.md`). |
+| Configure mais d'anciennes entrees ne partent pas | `.retex-pushed.json` les marque-t-il deja ? | `init_config.py` marque l'existant comme "deja pousse" -> pour les entrees ecrites **avant** la config : `--backfill --yes-i-want-to-push-everything`. |
+| Echec silencieux du hook | `retex/.retex-push.log` | Le log enregistre chaque tentative (succes / abort / erreur gh / `WARN parsing`). Source de verite du hook. |
+| `gh` "label not found" | La note `(...)` de Categorie contenait-elle une virgule ? | Corrige (la note est retiree avant de deriver les labels). Sinon : `gh label create <nom>`. |
+| En-tete `### R-NNN` ignore | `.retex-push.log` ligne `WARN parsing` | Un en-tete sans date `-- AAAA-MM-JJ --` est signale et **non** pousse -> corriger le format. |
+
+> Lancer le script **a la main** (`push_new_entries.py --retex-file …`) affiche le diagnostic
+> directement ; le hook, lui, reste silencieux (par conception).
 
 ---
 

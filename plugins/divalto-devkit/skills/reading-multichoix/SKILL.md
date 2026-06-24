@@ -1,24 +1,70 @@
 ---
 name: reading-multichoix
 description: >
-  Lit le dictionnaire des multichoix Divalto (fichier `gtfdmc.dhfi` d'un module
-  ERP). Liste les multichoix disponibles, detaille les entrees d'un multichoix
-  donne, et (a venir) resout les lookups Type=3 en lisant la table cible. Gere
-  les 3 Types rencontres (1 liste fixe, 3 lookup dynamique, 4 identifiant externe).
-  A utiliser pour consulter la definition d'une liste de choix avant de binder
-  un champ de dictionnaire metier via `Choix=gtfdmc.dhfi` + `NomChoix=<NC>`.
+  Lit les dictionnaires de multichoix Divalto (fichiers `XXfdmc.dhfi` d'un module
+  ERP : `gtfdmc`, `ccfdmc`, ...). Liste les multichoix disponibles, detaille les
+  entrees d'un multichoix donne, et (a venir) resout les lookups Type=3 en lisant
+  la table cible. Gere les 3 Types rencontres (1 liste fixe, 3 lookup dynamique,
+  4 identifiant externe). A utiliser pour consulter la definition d'une liste de
+  choix avant de binder un champ de dictionnaire metier via `Choix=<XXfdmc>.dhfi`
+  + `NomChoix=<NC>`. Rappelle aussi la norme (ne jamais modifier un `XXfdmc`
+  standard ; gerer son propre `XXfdmc`) et comment localiser/comparer un `XXfdmc`.
 ---
 
 # Reading Multichoix
 
 ## Contenu
 
+- Emplacement, norme et controle des XXfdmc
 - Utilisation rapide
 - Modes
 - Format de sortie
 - Les 3 Types en un coup d'oeil
 - Scripts disponibles
 - References
+
+---
+
+## Emplacement, norme et controle des XXfdmc
+
+Ce skill lit les dictionnaires multichoix de **n'importe quel module** : `gtfdmc`,
+`ccfdmc`, ... (notes generiquement `XXfdmc`).
+
+### Emplacement
+
+Les `XXfdmc` se trouvent **generalement dans les repertoires de sources** du pack,
+mais **rien ne l'impose** -- ils peuvent etre ailleurs. Pour les localiser de facon
+fiable, resoudre les **chemins de recherche** du workspace via le skill
+**`understanding-integrator-workspace`** (`divaltopath.cfg`, `fconfig`, profils
+`.dhpt`). A ne pas confondre avec les fichiers d'**erreur** `XXferr`, qui sont
+plutot dans `objets/`.
+
+### Norme : ne jamais modifier un XXfdmc standard
+
+Comme tout source standard, un `XXfdmc` **standard ne doit jamais etre modifie**.
+Un besoin de multichoix specifique se gere dans **le propre `XXfdmc` du partenaire**
+(prefixe partenaire) -- il n'interfere pas avec le standard et **ne genere aucun
+conflit** au passage de Service Pack ou en migration.
+
+Consequence : le scenario « j'ai customise un dmc standard, le SP en livre une
+nouvelle version, il faut fusionner » **ne devrait jamais se produire** si la norme
+est respectee. S'il survient, c'est le **signe d'une violation** (custom place dans
+un dmc standard) -- a corriger en **deplacant le custom vers le `XXfdmc` propre** du
+partenaire, pas en fusionnant.
+
+### Detecter qu'un XXfdmc standard a ete modifie
+
+Un `XXfdmc` standard non touche est **identique a sa reference** (la copie saine du
+pack standard livre). Pour detecter une modification, **comparer le fichier a sa
+reference standard**. Il faut donc disposer d'une **copie de reference propre** ;
+**sans reference, une modification est indetectable** (aucun marqueur fiable dans le
+fichier -- le `datemc` bouge a chaque recompilation). Un simple diff de fichiers
+suffit a **signaler** identique / different.
+
+Pour la **comparaison detaillee**, utiliser l'**outil natif Harmony** :
+`Utilitaires > Comparaison entre 2 dictionnaires de multi-choix`. Ce skill se limite
+a **signaler** une divergence ; le **developpeur** examine (outil natif + `--detail`
+sur les Nc divergents) et reporte ce qui doit l'etre.
 
 ---
 

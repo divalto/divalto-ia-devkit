@@ -22,6 +22,7 @@ description: >
 - [Workflow interactif](#workflow-interactif)
 - [Scripts disponibles](#scripts-disponibles)
 - [Apres ecriture : redemarrage obligatoire](#apres-ecriture-redemarrage-obligatoire)
+- [Verification post-installation](#verification-post-installation)
 - [References](#references)
 
 ---
@@ -47,8 +48,11 @@ Renvoie sur stdout le chemin absolu du `.mcp.json` chez le partenaire. Utilise d
 l'ordre :
 1. `${CLAUDE_PLUGIN_ROOT}/.mcp.json` si la variable d'env est definie (cas du runtime
    plugin)
-2. Recherche en remontant depuis le repertoire courant
-3. Chemins par defaut Claude Code (`~/.claude/plugins/.../divalto-devkit/.mcp.json`)
+2. **Install marketplace** : `~/.claude/plugins/cache/<owner>/divalto-devkit/<version>/.mcp.json`
+   (emplacement reellement charge par Claude Code) et
+   `~/.claude/plugins/marketplaces/.../divalto-devkit/.mcp.json` -- version la plus recente d'abord
+3. Recherche en remontant depuis le repertoire courant
+4. Chemins par defaut Claude Code (`~/.claude/plugins/.../divalto-devkit/.mcp.json`)
 
 > **CHECKPOINT 1** -- Verifier que le chemin renvoye est bien celui attendu (au sein
 > du repertoire d'install du plugin). Si la detection echoue, demander au partenaire
@@ -72,13 +76,25 @@ valeurs sont libres) :
 
 Etape 3 -- Ecrire les credentials dans le `.mcp.json`
 
+> **PIEGE CLE `$$` (frequent, plusieurs partenaires)** : sous bash, une cle contenant
+> `$`, `$$` ou `!` passee en argument (`--apikey "..."`) est **interpretee par le shell
+> AVANT Python** (`$$` -> PID du shell) et la cle est ecrite **tronquee/corrompue**.
+> Toujours passer la cle **hors argv** : par stdin (recommande) ou par fichier.
+
+Methode recommandee -- stdin (aucune interpretation shell) :
 ```
-py scripts/write_credentials.py \
-    --mcp-path "<chemin retourne par locate_mcp_json.py>" \
-    --site "<site>" \
-    --env "<env>" \
-    --apikey "<apikey>"
+printf '%s' '<apikey>' | py scripts/write_credentials.py \
+    --mcp-path "<chemin>" --site "<site>" --env "<env>" --apikey-stdin
 ```
+
+Ou par fichier temporaire (puis supprimer le fichier) :
+```
+py scripts/write_credentials.py --mcp-path "<chemin>" \
+    --site "<site>" --env "<env>" --apikey-file "<fichier>"
+```
+
+(`--apikey "<apikey>"` reste accepte mais **deconseille** sous bash ; si vraiment
+utilise, entourer la cle de **guillemets simples**.)
 
 Le script :
 - Cree une copie `.bak` du `.mcp.json` original (au cas ou)
@@ -102,8 +118,8 @@ Le script :
 
 | Script | Role |
 |--------|------|
-| `locate_mcp_json.py` | Trouve le `.mcp.json` du plugin chez le partenaire. Sortie : chemin absolu sur stdout, ou exit 1 si non trouve. |
-| `write_credentials.py` | Patche le `.mcp.json` avec le bloc `headers`. Atomic write + backup `.bak`. |
+| `locate_mcp_json.py` | Trouve le `.mcp.json` du plugin, **install marketplace comprise** (`cache/.../<version>/` et `marketplaces/...`). Sortie : chemin absolu sur stdout, exit 1 sinon. `--dry-run-show-candidates` liste les chemins testes. |
+| `write_credentials.py` | Patche le `.mcp.json` avec le bloc `headers`. Cle via `--apikey-stdin` / `--apikey-file` (recommande : evite l'expansion shell de `$$`) ou `--apikey`. Atomic write + backup `.bak`. |
 
 Tous les scripts : `argparse` + sortie JSON sur stdout + exit codes (`0` succes, `1`
 erreur applicative, `2` erreur d'usage).
@@ -115,7 +131,8 @@ erreur applicative, `2` erreur d'usage).
 Le `.mcp.json` est lu **uniquement au demarrage de Claude Code**. Aucun rechargement
 runtime. Apres ecriture par ce skill :
 
-1. Le partenaire ferme Claude Code (tous les terminaux / sessions ouvertes)
+1. Le partenaire ferme **tous** les processus Claude (via le gestionnaire des taches si
+   besoin, pas seulement la fenetre -- cf. piege « shadowing » ci-dessous)
 2. Relance Claude Code
 3. Au demarrage, `.mcp.json` est parse, le bloc `headers` est present, diva-mcp se
    connecte avec authentification
@@ -130,8 +147,27 @@ Si le 401 persiste apres redemarrage :
 
 ---
 
+## Verification post-installation
+
+Si, apres redemarrage, les outils `mcp__...diva-mcp__*` **n'apparaissent pas** (ou
+restent indisponibles) alors que les credentials sont corrects, le serveur a peut-etre
+ete **neutralise au chargement** (« shadowing with no-ops ») ou `settings.json` est
+corrompu (BOM UTF-8).
+
+> **CHECKPOINT 4** -- Diagnostic rapide : chercher `shadowing` ou `remote: 0` dans le
+> `main.log` de Claude Code. Si present, diva-mcp n'est pas charge -> appliquer
+> [reference/post-install-checks.md](reference/post-install-checks.md) (diagnostic
+> main.log, piege BOM `settings.json`, redemarrage complet, contournement connu).
+> **Le shadowing depend de la version de Claude Code** : le contournement est documente
+> comme tel ; la procedure officielle est a confirmer avec l'equipe IA Divalto.
+
+---
+
 ## References
 
 - [reference/credentials-format.md](reference/credentials-format.md) -- Format du
   header `X-Api-Key`, comment obtenir une cle, qui contacter chez Divalto en cas de
   probleme.
+- [reference/post-install-checks.md](reference/post-install-checks.md) -- Diagnostic
+  shadowing / BOM, redemarrage complet, contournement version-dependant, et garde-fou
+  de version ERP (AskUserQuestion).

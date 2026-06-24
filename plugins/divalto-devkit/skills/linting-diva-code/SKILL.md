@@ -57,8 +57,8 @@ Chaque element de `errors[]` / `warnings[]` :
 
 | Type | Categories | Regles |
 |------|-----------|--------|
-| `.dhsp` | S, L, Z, M, F, R, CI | S01-S05, L01-L04, Z02-Z03, Z08, Z11-Z12, Z15, M01-M05, F02-F04, R07, CI01-CI04, CI10-CI11 |
-| `.dhsq` | S, R, CI | S07, R01-R05, CI01, CI05-CI06, CI08-CI09 |
+| `.dhsp` | S, L, Z, M, F, R, CI | S01-S04, S10, L01-L04, Z02-Z03, Z08, Z11-Z12, Z15, M01-M05, F02-F04, R07, CI01-CI04, CI10-CI11 |
+| `.dhsq` | S, R, CI | S07, R01-R05, R08, CI01, CI05-CI06, CI08-CI09 |
 | `.dhsd` | D, Z | D01-D14, Z14 |
 | `.dhsf` | S, E, Z, CI | S06, E01, E08-E10, E12-E19, Z16, CI01 |
 | `.dhsi` | CI | CI01 |
@@ -69,9 +69,9 @@ Chaque element de `errors[]` / `warnings[]` :
 
 ### Par severite
 
-**Errors** (bug garanti ou corruption) : S01, S03-S04, S06-S07, L01-L04, P01-P02, P04-P07, D01-D02, D05-D09, E10, E16 (champ audit absent de l'onglet Identifiants), CI02, CI04, CI06, CI08
+**Errors** (bug garanti ou corruption) : S01, S03-S04, S06-S07, S10, R08, L01-L04, P01-P02, P04-P07, D01-D02, D05-D09, E10, E16 (champ audit absent de l'onglet Identifiants), CI02, CI04, CI06, CI08
 
-**Warnings** (best practice manquante) : S02, S05, Z02-Z03, Z08, Z11-Z12, Z15, Z16 (suffixe FK fiable sans f8=<zoom> dans [touches] du masque), M01-M05, R01-R05, R07, P09, P12-P15, D03-D04, D10-D11, E01, E08-E09, E12, E17 (ordre onglet Identifiants non canonique), E19 (taille ecran hors normes), F02-F04, CI01, CI03, CI05, CI07, CI09-CI11
+**Warnings** (best practice manquante) : S02, Z02-Z03, Z08, Z11-Z12, Z15, Z16 (suffixe FK fiable sans f8=<zoom> dans [touches] du masque), M01-M05, R01-R05, R07, P09, P12-P15, D03-D04, D10-D11, E01, E08-E09, E12, E17 (ordre onglet Identifiants non canonique), E19 (taille ecran hors normes), F02-F04, CI01, CI03, CI05, CI07, CI09-CI11
 
 **Infos** (indication non bloquante) : E13-E15, E18 (espacement hors valeurs canoniques 5, 8, 10, 12, 14, 16, 18, 26 -- tolerance pratique constatee en X.13)
 

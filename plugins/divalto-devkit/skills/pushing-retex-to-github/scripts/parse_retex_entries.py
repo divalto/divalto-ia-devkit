@@ -3,7 +3,7 @@ Parse un fichier RETEX-skills.md et extrait la liste des entrees R-NNN.
 
 Format d'entree attendu (markdown) :
 
-    ## R-NNN -- YYYY-MM-DD -- Titre court
+    ### R-NNN -- YYYY-MM-DD -- Titre court
 
     - **Skill(s)** : ...
     - **Categorie** : ...
@@ -51,6 +51,14 @@ HEADER_RE = re.compile(
     r"^(#{1,3})\s*(R-\d+)\s*--\s*(\d{4}-\d{2}-\d{2})\s*--\s*(.+?)\s*$",
     re.MULTILINE,
 )
+
+# Detection souple d'un en-tete R-NNN, pour reperer ceux MAL FORMES (date manquante,
+# separateur incorrect) et les signaler au lieu de les ignorer en silence.
+LOOSE_HEADER_RE = re.compile(r"^#{1,3}\s*(R-\d+)\b.*$", re.MULTILINE)
+
+# Bloc de commentaire HTML (ex : exemple de gabarit en tete de fichier) -- ignore au parsing
+# pour ne pas pousser une entree-exemple comme un vrai RETEX.
+HTML_COMMENT_RE = re.compile(r"<!--.*?-->", re.DOTALL)
 
 # Champ : `- **Nom** : valeur` (multiligne possible jusqu'au prochain `- **` ou header)
 FIELD_NAMES = [
@@ -104,9 +112,27 @@ def parse_entry_body(body: str) -> dict:
     return fields
 
 
-def parse_file(path: Path) -> list:
-    text = path.read_text(encoding="utf-8")
+def parse_file(path: Path):
+    """Parse le fichier. Retourne (entries, warnings).
+
+    - Les blocs `<!-- ... -->` sont retires avant parsing (evite de pousser un
+      exemple de gabarit comme un vrai RETEX).
+    - Les en-tetes `R-NNN` mal formes (date manquante / separateur incorrect) sont
+      remontes en warning au lieu d'etre ignores silencieusement.
+    """
+    raw_text = path.read_text(encoding="utf-8")
+    text = HTML_COMMENT_RE.sub("", raw_text)
+
     headers = list(HEADER_RE.finditer(text))
+    warnings = []
+    strict_starts = {m.start() for m in headers}
+    for lm in LOOSE_HEADER_RE.finditer(text):
+        if lm.start() not in strict_starts:
+            warnings.append(
+                "En-tete R-NNN ignore (mal forme : date manquante ou separateur "
+                f"incorrect) : '{lm.group(0).strip()}'"
+            )
+
     entries = []
     for i, m in enumerate(headers):
         start = m.start()
@@ -126,10 +152,17 @@ def parse_file(path: Path) -> list:
         )
         entry["hash"] = hashlib.sha1(normalized_for_hash.encode("utf-8")).hexdigest()
         entries.append(entry)
-    return entries
+    return entries, warnings
 
 
 def main() -> int:
+    # stdout UTF-8 force : sinon UnicodeEncodeError sur un caractere hors cp1252
+    # (ex U+2248) quand la console Windows est en cp1252.
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except (AttributeError, ValueError):
+        pass
+
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--retex-file", required=True, help="Chemin vers RETEX-skills.md")
     parser.add_argument(
@@ -144,7 +177,7 @@ def main() -> int:
         return 1
 
     try:
-        entries = parse_file(path)
+        entries, warnings = parse_file(path)
     except Exception as e:
         print(f"ERROR: parsing : {e}", file=sys.stderr)
         return 1
@@ -152,7 +185,10 @@ def main() -> int:
     if args.id:
         entries = [e for e in entries if e["id"] == args.id]
 
-    print(json.dumps({"entries": entries}, ensure_ascii=False, indent=2))
+    for w in warnings:
+        print(f"WARN: {w}", file=sys.stderr)
+
+    print(json.dumps({"entries": entries, "warnings": warnings}, ensure_ascii=False, indent=2))
     return 0
 
 

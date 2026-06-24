@@ -289,7 +289,7 @@ Quand un champ existe deja dans le `.dhsd` standard avec `[CHAMP] Nom=<X>,Nature
 | Option | Action | Valide ? |
 |--------|--------|----------|
 | **A** | Reutiliser le champ tel quel (Nature standard inchangee) | OK |
-| **B** | Creer un nouveau champ prefixe (`mi<X>`, `dgs<X>`...) avec Nature librement choisie | OK |
+| **B** | Creer un nouveau champ prefixe (`<prefixe><X>`, ex. `spe<X>`) avec Nature librement choisie | OK |
 | **C** | Redeclarer le `[CHAMP]` standard avec Nature/Gel/Flags differents | **INTERDIT** |
 
 L'option C est interdite car :

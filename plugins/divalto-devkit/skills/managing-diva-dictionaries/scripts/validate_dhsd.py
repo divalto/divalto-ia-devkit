@@ -47,12 +47,12 @@ BASE_PREFIXES = {
 }
 
 
-def validate_blocks(blocks_data):
+def validate_blocks(blocks_data, migration=False):
     """Valide les blocs generes (sortie de generate_dhsd_block.py).
 
     Verifie :
     - D01/D02 : Positions sans trou
-    - D03 : U-field present
+    - D03 : U-field present (warning si migration=True, cf R-041)
     - D04 : coherence champs declares vs utilises
     - D07 : Sections fermees dans le bloc table
     - D10 : CE coherent dans les index
@@ -102,14 +102,16 @@ def validate_blocks(blocks_data):
             "message": f"Taille declaree ({taille}) != taille calculee ({prev_end})",
         })
 
-    # D03 : U-field present
+    # D03 : U-field present (mode migration : warning, R-041)
     u_field_name = f"U{table_name}"
     if u_field_name not in positions:
-        errors.append({
+        d03 = {
             "rule": "D03",
-            "severity": "error",
-            "message": f"Champ reserve distributeur '{u_field_name}' absent",
-        })
+            "severity": "warning" if migration else "error",
+            "message": f"Champ reserve distributeur '{u_field_name}' absent"
+                       + (" (mode migration : etat preexistant, non bloquant)" if migration else ""),
+        }
+        (warnings if migration else errors).append(d03)
 
     # D07 : Verifier que le bloc table contient [/CHAMPS]
     table_block = blocks.get("table", "")
@@ -233,8 +235,14 @@ def parse_dhsd_table(content, table_name):
     return table_info
 
 
-def validate_dhsd_file(path, table_name, dict_name=None):
-    """Valide une table dans un fichier .dhsd existant."""
+def validate_dhsd_file(path, table_name, dict_name=None, migration=False):
+    """Valide une table dans un fichier .dhsd existant.
+
+    migration=True (R-041) : D03 (U-field absent) devient un warning au lieu
+    d'une erreur. Sur une table legacy en cours d'alignement, l'absence de
+    U-field est un etat PREEXISTANT (non introduit par la modif) -- le signal
+    utile reste D01/D02 (chevauchement/trou apres recalcul des positions).
+    """
     errors = []
     warnings = []
 
@@ -350,14 +358,16 @@ def validate_dhsd_file(path, table_name, dict_name=None):
                                f"(pos={next_f['position']}, attendu={expected_next})",
                 })
 
-    # D03 : U-field present
+    # D03 : U-field present (mode migration : warning, R-041)
     u_field_name = f"U{table_name}"
     if not any(c["name"] == u_field_name for c in champs):
-        errors.append({
+        d03 = {
             "rule": "D03",
-            "severity": "error",
-            "message": f"Champ reserve distributeur '{u_field_name}' absent",
-        })
+            "severity": "warning" if migration else "error",
+            "message": f"Champ reserve distributeur '{u_field_name}' absent"
+                       + (" (mode migration : etat preexistant, non bloquant)" if migration else ""),
+        }
+        (warnings if migration else errors).append(d03)
 
     # D04 : Verifier que chaque champ non-standard a une declaration
     for champ in champs:
@@ -726,6 +736,9 @@ def main():
                         help="Nom du dictionnaire pour verifier le prefixe base (D11)")
     parser.add_argument("--dhsd-standard", default=None,
                         help="Chemin vers le .dhsd standard pour activer les checks de surcharge D14/D15/D16")
+    parser.add_argument("--migration", action="store_true",
+                        help="Mode migration (R-041) : D03 (U-field absent) devient un warning "
+                             "sur tables legacy existantes au lieu d'une erreur")
 
     args = parser.parse_args()
 
@@ -737,7 +750,7 @@ def main():
             print(f"Erreur lecture blocs : {e}", file=sys.stderr)
             sys.exit(1)
 
-        report = validate_blocks(blocks_data)
+        report = validate_blocks(blocks_data, migration=args.migration)
 
     elif args.path:
         if not os.path.exists(args.path):
@@ -746,7 +759,7 @@ def main():
 
         # Mode 1 : validation classique d'une table (D01-D11) si --table fourni
         if args.table:
-            report = validate_dhsd_file(args.path, args.table, args.dict_name)
+            report = validate_dhsd_file(args.path, args.table, args.dict_name, migration=args.migration)
         else:
             # Mode 2 : surcharge sans table specifique, on fait D14/D15/D16 sur tout le fichier
             report = {

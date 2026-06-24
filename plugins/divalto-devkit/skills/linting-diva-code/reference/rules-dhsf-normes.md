@@ -1,6 +1,6 @@
 # Regles normes graphiques masques (.dhsf) -- Fragment reference linting-diva-code
 
-> Source canonique : `docs/NORMES-GRAPHIQUES.md` et `docs/ANTI-PATTERNS.md` section 7 (workspace). Ce fragment documente les 6 regles E16-E21 implementees dans `lint_diva.py`.
+> Source : normes graphiques des masques Divalto (reference interne). Ce fragment documente les 6 regles E16-E21 implementees dans `lint_diva.py`.
 
 ## E16 -- Champ audit absent de l'onglet Identifiants
 

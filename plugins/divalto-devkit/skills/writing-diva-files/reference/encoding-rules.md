@@ -19,8 +19,12 @@ Verifie le 2026-04-08 sur les sources ERP X.13 standard.
 | `.dhps` | ISO-8859-1 | CRLF | Rarement | Non — utiliser scripts |
 | `.dhsd` | ISO-8859-1 | CRLF | Oui (descriptions) | Non — utiliser scripts |
 | `.dhsf` | ISO-8859-1 | CRLF | Oui (libelles ecran) | Non — utiliser scripts |
+| `.dhsi` | ISO-8859-1 | CRLF | Oui (masque d'impression) | Non — fichier **structure**, skill `manipulating-dhsf-screens` |
+| `.dhse` | ISO-8859-1 | CRLF | Oui | Non — utiliser scripts |
 | `.dhop` | Binaire | — | — | INTERDIT |
 | `.dhoq` | Binaire | — | — | INTERDIT |
+
+> `.dhsd`, `.dhsf`, `.dhsi` sont des fichiers **structures** (positions/offsets) : ne pas les editer ligne-a-ligne ; passer par les skills dedies (`managing-diva-dictionaries`, `manipulating-dhsf-screens`).
 
 ---
 
@@ -48,3 +52,5 @@ file --mime-encoding fichier.dhsp
 file fichier.dhsp
 # Attendu : "CRLF line terminators"
 ```
+
+> Pieges Windows recurrents (Edit/Write, pipe PowerShell -> BOM, Python mode texte -> LF, pas de CRLF final -> Erreur 135) : voir [safe-methods.md](safe-methods.md#pieges-windows-causes-recurrentes-de-corruption).

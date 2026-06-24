@@ -36,6 +36,25 @@ avant toute autre action.
 
 ## Installation
 
+> **Deux methodes.** La methode **marketplace** (recommandee) installe le plugin `divalto-devkit`
+> via l'interface de Claude Code. La methode **archive** (`install.py`, plus bas) reste disponible
+> pour un deploiement manuel ou scripte.
+
+### Methode 1 -- Marketplace (recommandee)
+
+1. Ouvrir l'**interface graphique Plugins** de Claude Code.
+2. **Add marketplace** -> coller l'URL du depot : `https://github.com/divalto/divalto-ia-devkit`
+3. Installer le plugin **`divalto-devkit`** depuis la liste.
+4. Initialiser le workspace avec la commande slash **`/divalto-devkit-init`** : elle execute `install.py`
+   (injection du bloc de regles dans `CLAUDE.md`, depot de `4PRINCIPLES.md`, `CATALOG.md`, `RETEX-skills.md`
+   a la racine du workspace).
+
+> **Important** : la commande **`/plugin marketplace add <url>` n'est PAS disponible en mode conversation**
+> -- elle renvoie « isn't available in this environment ». L'ajout d'une marketplace se fait **uniquement via
+> l'interface graphique** Plugins decrite ci-dessus.
+
+### Methode 2 -- Archive (`install.py`)
+
 1. Decompresser l'archive dans un dossier temporaire
 2. Ouvrir un terminal dans le dossier decompresse
 3. Executer `py install.py`
@@ -60,79 +79,24 @@ votre-workspace/
     ├── settings.json          (hooks de protection)
     ├── hooks/
     │   └── protect_skills.py  (bloque Edit/Write sur skills/)
-    └── skills/
-        ├── naming-diva-entities/
-        ├── generating-recordsql/
-        ├── generating-objet-metier/
-        ├── generating-zoom-sql/
-        ├── creating-diva-entity/
-        ├── modifying-diva-entity/
-        ├── writing-diva-files/
-        ├── writing-isam-files/
-        ├── reading-isam-files/
-        ├── linting-diva-code/
-        ├── managing-diva-dictionaries/
-        ├── managing-diva-projects/
-        ├── compiling-diva-projects/
-        ├── syncing-diva-sql/
-        ├── manipulating-dhsf-screens/
-        ├── testing-erp/
-        ├── coding-diva-advanced/
-        ├── parsing-diva-request/
-        ├── querying-diva-graph/
-        ├── searching-erp-sources/
-        ├── building-preaction-report/
-        └── analyzing-diva-request/
+    └── skills/                (skills du devkit -- catalogue complet : skill discovering-skills)
 ```
+
+> **Creer vos propres skills locaux.** Les skills ci-dessus sont distribues en **lecture seule** (le hook `protect_skills.py` bloque tout `Edit`/`Write` sous `.claude/skills/`). Pour ajouter **vos propres** skills, editables et non geres par le devkit, **prefixez leur nom par `workspace-`** (ex. `workspace-mon-outil`) : le hook les laisse passer. *(Astuce : restez a la racine de votre workspace -- un `cd` dans un sous-dossier peut perturber la resolution de chemins relatifs d'une config de hook locale.)*
 
 ---
 
 ## Skills disponibles
 
-### Pipeline de creation d'entite
+Le **catalogue complet et toujours a jour** est expose par le skill **`discovering-skills`** :
+vue panoramique par workflow (analyse / creation / modification / fichiers / ISAM / validation /
+test-doc / reference), detail d'un skill, recherche par mot-cle. Invoquez-le simplement --
+par ex. « quels skills DIVA ? », « quel skill pour faire Y ? », « explique-moi <skill> ».
+Reference statique equivalente : `CATALOG.md` (depose a la racine du workspace a l'installation).
 
-| Skill | Role |
-|-------|------|
-| `creating-diva-entity` | **Point d'entree principal** : cree une entite metier complete (RecordSql + Module Check + Zoom SQL + alias) en une seule operation |
-| `naming-diva-entities` | Calcule les tokens de nommage (prefixes, noms de fichiers, instances) pour un domaine/entite/table |
-| `generating-recordsql` | Genere le fichier RecordSql (.dhsq) -- couche d'acces SQL |
-| `generating-objet-metier` | Genere le Module Check (.dhsp) -- couche objet metier |
-| `generating-zoom-sql` | Genere le Zoom SQL (.dhsp) -- interface utilisateur CRUD |
-
-### Validation et qualite
-
-| Skill | Role |
-|-------|------|
-| `linting-diva-code` | Analyse un fichier DIVA et detecte les anti-patterns (~80 regles) |
-| `writing-diva-files` | Verifie et corrige l'encodage des fichiers (ISO-8859-1 + CRLF) |
-
-### Gestion de projet
-
-| Skill | Role |
-|-------|------|
-| `managing-diva-dictionaries` | Ajoute une table dans un dictionnaire .dhsd (5 zones obligatoires) |
-| `managing-diva-projects` | Cree ou modifie les fichiers projet .dhpt et .dhps |
-| `compiling-diva-projects` | Lance la compilation xwin7 et interprete le rapport d'erreurs |
-| `syncing-diva-sql` | Synchronise la base SQL Server apres compilation |
-| `manipulating-dhsf-screens` | Parse, genere et modifie les masques ecran .dhsf (zoom, CRUD, simple) |
-
-### Reference
-
-| Skill | Role |
-|-------|------|
-| `coding-diva-advanced` | Reference des patterns avances : HTTP/REST, JSON/XML, .NET, surcharge, tunnels |
-
-### Analyse pre-action (UC-100 -- nouveau)
+### Analyse pre-action (UC-100)
 
 Quand vous recevez une user story ou un ticket myService et ne savez pas par ou commencer, invoquez `analyzing-diva-request` en collant le texte de la demande.
-
-| Skill | Role |
-|-------|------|
-| `analyzing-diva-request` | **Point d'entree principal** : orchestre l'analyse pre-action en 5 checkpoints -- produit un rapport markdown d'orientation (`output/UC100-<slug>-<date>.md`) |
-| `parsing-diva-request` | Phase 1 : structure la demande en JSON canonique (type, acteurs, donnees, domaine pressenti, keywords) |
-| `querying-diva-graph` | Phase 2 : interroge le graphe Neo4j `diva-mcp` (advisory X.12) si disponible. Optionnel -- degradation automatique en mode direct si MCP absent |
-| `searching-erp-sources` | Phase 3 : verifie dans le code X.13 local (`{CHEMIN_ERP_STANDARD}`) et extrait les snippets -- source de verite |
-| `building-preaction-report` | Phase 4 : assemble le rapport final (markdown 7 sections + JSON de metriques) |
 
 Le rapport contient : exemples de code similaires (`fichier:ligne` verifiable), fonctions DIVA utiles, etude d'impact, propositions d'action, pistes complementaires, points d'attention.
 
@@ -148,9 +112,10 @@ A chaque etape significative, Claude :
 3. **Explique** ce qu'il a fait, ses choix, et les resultats
 4. **Attend votre validation** avant de passer a l'etape suivante
 
-Concretement, pour une creation d'entite (skill `creating-diva-entity`), il y a **10 points d'arret** :
-nommage, generation des sources, coherence inter-fichiers, dictionnaire, integration ERP,
-compilation, sous-projet, synchro SQL, zoom des zooms, menu domaine.
+Concretement, pour une creation d'entite (skill `creating-diva-entity`), Claude s'arrete a
+**chaque etape significative** -- nommage, generation des sources, coherence inter-fichiers,
+dictionnaire, integration ERP, compilation, synchro SQL, menu... -- pour expliquer et attendre
+votre feu vert.
 
 Vous gardez le controle a chaque etape. Si quelque chose ne convient pas,
 dites-le a Claude -- il corrigera et re-presentera le checkpoint.
@@ -218,6 +183,26 @@ Les scripts acceptent des parametres en ligne de commande et produisent du JSON 
 
 > **Important** : dans Claude Code, toujours invoquer les skills via l'outil `Skill`.
 > Ne pas appeler les scripts directement -- c'est reserve aux tests CLI hors Claude.
+
+### Comment fonctionne un skill (a lire si « le skill ne fait que m'afficher sa doc »)
+
+Invoquer un skill **charge ses instructions** dans le contexte de Claude. Un skill
+**n'est pas** une fonction qui « prend des arguments et renvoie la sortie d'un
+script » : c'est un **mode d'emploi** que **Claude lit, puis execute lui-meme** (il
+lance les scripts Python via le terminal, en suivant ces instructions).
+
+- **Ce qui est normal** : Claude commence par charger les instructions du skill --
+  puis il **doit enchainer** sur l'action (generation, lint, compilation...).
+- **Si Claude s'arrete a la doc** sans rien executer : dites-lui simplement
+  « **execute, ne te contente pas d'afficher le README** ». Et notez-le en RETEX
+  (categorie `CLAUDE-TOOL`) -- surtout si ca se reproduit, car un echec **reel** de
+  chargement du skill releverait d'un bug Claude Code a remonter.
+- **Vous, vous decrivez la tache** -- pas besoin de « passer des arguments » :
+  « genere le RecordSql de l'entite X », « compile le projet », « lis le fichier
+  ISAM Y ». Claude choisit le bon skill et lance ses scripts.
+
+L'appel direct `py .claude/skills/<skill>/scripts/<script>.py` reste reserve au
+**depannage / test CLI hors Claude** (exemple ci-dessous).
 
 Exemple de test CLI hors Claude (skill `generating-recordsql`) :
 

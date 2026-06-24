@@ -62,7 +62,7 @@ Select-String -Path $LogFile -Pattern '(^| |\])Erreur' -Context 1,0
 
 **Symptome** : erreur dans un fichier .dhsf
 **Cause** : element graphique mal configure, reference de champ inexistant
-**Solution** : verifier la structure du masque (voir docs/MASQUE-DHSF.md)
+**Solution** : verifier la structure du masque (cf. le skill manipulating-dhsf-screens)
 
 ### Erreur de compilation dictionnaire (.dhsd)
 

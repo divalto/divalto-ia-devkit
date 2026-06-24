@@ -1,0 +1,13 @@
+{
+  "Dictionnaire": "a5dd.dhsd",
+  "Base": "a5ferr",
+  "Table": "XErr",
+  "TailleEnreg": 206,
+  "Description": "Table des messages d'erreur applicatifs (XXferr)",
+  "Keys": {"Index_A": {"Letter": "A", "Fields": ["Errnum"]}},
+  "Structure": [
+    {"Nom": "Nivalerte", "Offset": 0, "Taille": 1, "Type": "N", "Description": "Niveau d'alerte"},
+    {"Nom": "Errnum", "Offset": 1, "Taille": 5, "Type": "N", "Justify": "right", "Description": "Numero du code erreur"},
+    {"Nom": "Errtxt", "Offset": 6, "Taille": 200, "Type": "C", "Description": "Libelle du message ($N = params runtime)"}
+  ]
+}

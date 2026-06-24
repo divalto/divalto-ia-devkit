@@ -16,5 +16,29 @@
     "query": "gh n'est pas installe sur ce poste, que fait le hook quand j'edite RETEX-skills.md ?",
     "files": ["retex/RETEX-skills.md", "retex/.retex-push.log"],
     "expected_behavior": "Le hook log 'gh CLI absent' dans .retex-push.log et exit 0. L'edition de RETEX-skills.md n'est pas bloquee. Aucune issue n'est creee."
+  },
+  {
+    "skills": ["pushing-retex-to-github"],
+    "query": "Une entree RETEX a Categorie 'BUG-SKILL (au depart, c'etait SUGGESTION)'. Quels labels GitHub ?",
+    "files": ["retex/RETEX-skills.md"],
+    "expected_behavior": "derive_labels retire d'abord la note entre parentheses (qui contient une virgule) AVANT de splitter sur +/, -> label 'bug-skill' uniquement, pas de label parasite type 'categorie:c'etait suggestion)'. La virgule dans la note ne casse plus le label (gh ne renvoie plus 'label not found')."
+  },
+  {
+    "skills": ["pushing-retex-to-github"],
+    "query": "Mon RETEX-skills.md contient un bloc <!-- exemple de gabarit avec ### R-999 ... -->. Pousse les entrees.",
+    "files": ["retex/RETEX-skills.md"],
+    "expected_behavior": "Le parser retire les blocs <!-- ... --> avant analyse -> l'exemple R-999 du commentaire n'est PAS parse ni pousse. Seules les vraies entrees R-NNN hors commentaire sont traitees."
+  },
+  {
+    "skills": ["pushing-retex-to-github"],
+    "query": "J'ai un en-tete '### R-042 -- titre' sans date dans RETEX-skills.md. Pourquoi R-042 n'est pas poussee ?",
+    "files": ["retex/RETEX-skills.md", "retex/.retex-push.log"],
+    "expected_behavior": "Un en-tete sans date '-- AAAA-MM-JJ --' ne matche pas le format strict -> il est signale en WARNING (sur stderr + dans .retex-push.log via 'WARN parsing'), pas ignore en silence. Corriger le format de l'en-tete pour qu'il soit pousse."
+  },
+  {
+    "skills": ["pushing-retex-to-github"],
+    "query": "J'ai edite RETEX-skills.md mais rien n'apparait sur GitHub et aucune erreur.",
+    "files": ["retex/RETEX-skills.md"],
+    "expected_behavior": "Diagnostic 'Symptomes courants' : verifier l'existence de .retex-github.json (local ou ~/.claude/ via la cascade). Si absent -> push non configure -> message clair 'RETEX push NON CONFIGURE' (lancer init_config.py, --global pour partager). Aucun RETEX perdu (ils restent dans RETEX-skills.md ; --backfill pour les rattraper)."
   }
 ]

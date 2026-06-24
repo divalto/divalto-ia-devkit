@@ -1,0 +1,42 @@
+[
+  {
+    "skills": ["managing-diva-error-messages"],
+    "query": "Liste les codes et libellés d'erreur du fichier gtferr.dhfi, et donne-moi le libellé du code 1183.",
+    "expected_behavior": [
+      "Localiser gtferr.dhfi (convention objets/, mais via understanding-integrator-workspace si ailleurs)",
+      "Exécute manage_error_messages.py --list (lecture via reading-isam-files, PAS de regex sur octets)",
+      "Sortie {total_codes, codes:[{code, message}]} ; total complet (~4700 sur gtferr réel, pas le sous-compte 2182 d'une regex naïve)",
+      "Pour le code précis : --check 1183 → {found:true, message} ; les $N du libellé sont des paramètres runtime"
+    ]
+  },
+  {
+    "skills": ["managing-diva-error-messages"],
+    "query": "J'ai ajouté un GererErreurCheck(30050) dans mon objet métier mais aucun texte ne s'affiche. Comment vérifier et corriger ?",
+    "expected_behavior": [
+      "Vérifier d'abord si le code existe : --check 30050 (exit 1 / found:false s'il est absent)",
+      "Si absent : il faut ajouter le message dans le XXferr spécifique du partenaire (modifiable)",
+      "Procédure SÛRE : backup .dhfi+.dhfd, puis ajout via l'IHM standard des messages applicatifs (atomique, non scriptable), puis --check 30050 pour vérifier",
+      "Ne JAMAIS écrire le binaire en direct (write_isam) : enregistrements à longueur variable → corruption (cf. writing-isam-files)"
+    ]
+  },
+  {
+    "skills": ["managing-diva-error-messages"],
+    "query": "Je prépare un downgrade. Compare les codes erreur de mon pack courant avec le standard cible pour ne rien perdre.",
+    "expected_behavior": [
+      "Exécute --diff <courant>/gtferr.dhfi <standard>/gtferr.dhfi (lecture seule via reading-isam-files)",
+      "Sortie count_a/count_b/common/only_in_a/only_in_b",
+      "only_in_a (présent chez moi, absent du standard) = codes CUSTOM à PRESERVER → fusion, jamais d'adoption aveugle du standard",
+      "Rappeler qu'un code custom trouvé dans un fichier STANDARD = violation de norme (le custom doit vivre dans le XXferr propre)",
+      "Cross-ref migrating-erp-downgrade (même logique d'arbitrage)"
+    ]
+  },
+  {
+    "skills": ["managing-diva-error-messages"],
+    "query": "Est-ce que je peux modifier gtferr.dhfi pour y mettre mes messages custom ?",
+    "expected_behavior": [
+      "Non : gtferr est un fichier d'erreur STANDARD → lecture seule, jamais modifié (norme)",
+      "Les messages custom vont dans le XXferr SPÉCIFIQUE du partenaire (<prefixe>ferr), qui lui est modifiable",
+      "Et même sur le fichier spécifique : passer par l'IHM standard, pas d'écriture binaire directe"
+    ]
+  }
+]

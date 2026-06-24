@@ -1,4 +1,4 @@
-# Corpus `docs/` cible pour E4
+# Corpus de référentiel cible pour E4
 
 Liste figee des fichiers du referentiel DIVA confrontes au livrable par `detect_doc_contradictions.py`.
 
@@ -33,7 +33,7 @@ Si un fichier du corpus est absent chez le collaborateur (cas peu probable sur u
 
 ## H1 -- Nature vs suffixe typee
 
-**Regle referentiel** : `docs/DICTIONNAIRE-DHSD.md` documente une table de suffixes de nom de champ qui induisent une Nature attendue. Ex : suffixe `Dt` -> Nature `D8` (date), suffixe `Dh` -> Nature `DH` (datetime), suffixe `Fl` -> Nature flottante.
+**Regle referentiel** : le référentiel dictionnaire (interne) documente une table de suffixes de nom de champ qui induisent une Nature attendue. Ex : suffixe `Dt` -> Nature `D8` (date), suffixe `Dh` -> Nature `DH` (datetime), suffixe `Fl` -> Nature flottante.
 
 **Verification** : pour chaque champ du livrable (`entity.technical.fields[]`), extraire le suffixe typee du nom. Si le suffixe est liste dans la table referentiel et que la Nature declaree ne matche pas la Nature attendue -> contradiction.
 
@@ -79,7 +79,7 @@ Challenge : suffixe "Dt" attendu en Nature D8, livrable declare Ch10.
 
 ## H3 -- Pattern 3 fichiers respecte
 
-**Regle referentiel** : `docs/ARCHITECTURE-ENTITE.md` documente que chaque entite metier est implementee par 3 fichiers avec naming strict :
+**Regle referentiel** : le référentiel architecture d'entité (interne) documente que chaque entite metier est implementee par 3 fichiers avec naming strict :
 - `.dhsq` (RecordSql) : fichier `Gtt<entite>.dhsq`
 - `.dhop` (Module Check) : fichier `Gttmchk<entite>.dhop` ou equivalent selon domaine
 - `.dhsp` (Zoom SQL) : fichier `Gttzoom<entite>.dhsp` ou equivalent
@@ -102,7 +102,7 @@ Challenge : suffixe "Dt" attendu en Nature D8, livrable declare Ch10.
 
 ## H5 -- Domaine coherent avec prefixe
 
-**Regle referentiel** : `docs/MODULES-ERP.md` section 4 liste les domaines ERP (DAV, COMPTA, DAFF, GS, ...) avec leur(s) prefixe(s) attendu(s) pour les fichiers sources.
+**Regle referentiel** : le référentiel des modules ERP (interne) section 4 liste les domaines ERP (DAV, COMPTA, DAFF, GS, ...) avec leur(s) prefixe(s) attendu(s) pour les fichiers sources.
 
 **Verification** : pour chaque entite du livrable, extraire le domaine declare (`module.yaml -> domain`, ou inference depuis les citations). Comparer au prefixe des fichiers cites. Incoherence -> contradiction.
 
@@ -134,7 +134,7 @@ Challenge : domaine declare COMPTA mais prefixe de fichier Gtt (attendu Gfc).
 
 ## H6 -- Anti-patterns connus
 
-**Regle referentiel** : `docs/ANTI-PATTERNS.md` documente ~20 regles `Zxx` chacune avec un pattern detectable.
+**Regle referentiel** : le référentiel anti-patterns (interne) documente ~20 regles `Zxx` chacune avec un pattern detectable.
 
 **Verification** : pour chaque entite, appliquer les regles applicables au livrable (certaines regles ciblent du code DIVA, pas un livrable de doc -- filtrage necessaire).
 
@@ -150,9 +150,9 @@ Regles applicables a un livrable UC-200 :
 ## Ce qui N'EST PAS dans le corpus
 
 Hors scope v1 :
-- `docs/LANGAGE-AVANCE.md` (patterns HTTP/REST/JSON) -- utile pour `coding-diva-advanced`, pas pour un livrable de doc
-- `docs/ZOOM-INTEGRATION.md` -- cible de la fonctionnalite zoom, non structurante pour un livrable
-- `docs/FORMATS-FICHIERS.md` -- reference technique encodage, non structurante pour la semantique du livrable
+- la référence interne langage avancé (patterns HTTP/REST/JSON) -- utile pour `coding-diva-advanced`, pas pour un livrable de doc
+- la référence d'intégration zoom (interne) -- cible de la fonctionnalite zoom, non structurante pour un livrable
+- la référence des formats de fichiers (interne) -- reference technique encodage, non structurante pour la semantique du livrable
 - Tout `docs/*.md` non liste ci-dessus
 
 Enrichissement possible si de nouvelles heuristiques sont proposees dans un chantier ulterieur (pas dans scope UC-201 v1).

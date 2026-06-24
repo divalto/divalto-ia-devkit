@@ -106,7 +106,7 @@ Structure type :
 ```ini
 ; Dans le .dhpt (projet)
 [communs]
-nom="dgs recordsql"
+nom="<prefixe> recordsql"
 fic="gtrstabu.dhsq"," "
 fic="<autre>u.dhsq"," "
 ```
@@ -114,7 +114,7 @@ fic="<autre>u.dhsq"," "
 ```ini
 ; Dans le .dhps (sous-projet consommateur)
 [communs]
-incl="dgs recordsql"," "
+incl="<prefixe> recordsql"," "
 [fichiers]
 fic="<masque>u.dhsf"," "
 ; PAS de fic="gtrstabu.dhsq"," " ici !
@@ -124,7 +124,7 @@ fic="<masque>u.dhsf"," "
 - `[communs]` du `.dhpt` -- **declaration** du groupe avec ses fichiers (`nom=...` + `fic=...`)
 - `[communs]` du `.dhps` -- **inclusion** du groupe (`incl=...`)
 
-Conventions de nommage de groupe observees dans le standard DGS : `"dgs recordsql"`, `"mi recordsql"`, `"mi recordSQL"`. Voir aussi les projets DGS de reference (`SoiX10`, `dmcX2`, `dmcX12`, `lmcX7`, `AdisX5`).
+Convention de nommage du groupe RecordSQL : `"<prefixe> recordsql"` -- le prefixe varie selon le poste integrateur, et la casse (`recordsql` / `recordSQL`) peut varier aussi. Le nom de groupe exact se lit dans le `[communs]` du `.dhpt` du projet.
 
 ---
 

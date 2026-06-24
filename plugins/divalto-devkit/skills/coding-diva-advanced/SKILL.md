@@ -62,6 +62,13 @@ Ce skill ne couvre PAS la syntaxe de base (types, procedures, fonctions, boucles
 - `GG_*` pour un module DAV → utiliser `GT_*`
 - `GT_*` pour un module Production → utiliser `GG_*`
 
+**Pieges de syntaxe DIVA (a priori mainstream souvent faux) :**
+- `;` introduit un **commentaire** (pas une fin d'instruction) ; le separateur de ligne logique est `|` (ni un OU, ni un commentaire)
+- constante booleenne standard : `OUI = 2`, `NON = 0`, etat intermediaire = `1` -- ne jamais supposer `OUI = 1`
+- date du jour : `today()` -- le champ `MZ.DateJour` n'existe pas
+- borne / valeur par defaut : variable locale typee + `init` (ex `init InvNo_Defaut = '9'`) plutot qu'une constante en dur
+- `_` de continuation dans un `If` multi-ligne combine a des appels prefixes module -> `Erreur 37` ; ecrire la condition sur une seule ligne
+
 ---
 
 ## References

@@ -46,7 +46,7 @@ Ceci constitue une **hypothese documentee dans le RETEX R-005** mais **non-offic
 2. Demande a Divalto (ou lecture de la doc officielle si existante) pour confirmer la convention.
 3. Test d'installation d'un correctif ERP apres creation custom >= 100000 : verifier absence de conflit.
 
-Items A-VERIFIER dans `docs/A-VERIFIER.md`.
+Items à vérifier (suivi interne).
 
 ---
 
@@ -81,7 +81,7 @@ Le RETEX R-002 mentionne une visibilite F7 via M1 (Ce=5 dans `a5f.dhfi`). Certai
 
 ## Items A-VERIFIER
 
-Suivis dans `docs/A-VERIFIER.md` section MULTICHOIX / batch 30 :
+Suivis en interne (MULTICHOIX / batch 30) :
 
 - Confirmation empirique multi-modules (Compta, Paie, GC, Retail, autres) du pattern `< 100000` standard
 - Comportement du framework IHM si un EnrNo >= 100000 est rencontre (acceptation normale ou message d'avertissement ?)

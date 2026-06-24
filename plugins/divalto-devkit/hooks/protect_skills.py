@@ -23,6 +23,14 @@ def main():
     if not file_path:
         sys.exit(0)
 
+    # Resoudre un chemin relatif contre le cwd fourni par Claude Code : sinon un
+    # Write/Edit a chemin relatif (cwd deja dans .claude/skills/) contourne la
+    # protection (la detection par sous-chaine ne verrait pas ".claude/skills/").
+    if not os.path.isabs(file_path):
+        cwd = data.get("cwd", "")
+        if cwd:
+            file_path = os.path.join(cwd, file_path)
+
     # Normaliser les separateurs
     normalized = file_path.replace("\\", "/")
 
@@ -38,13 +46,17 @@ def main():
 
         tool = data.get("tool_name", "?")
         print(
-            f"BLOQUE : modification interdite sur les skills distribues.\n"
+            f"BLOQUE : ecriture refusee sous .claude/skills/{skill_name}/ .\n"
             f"\n"
             f"  Fichier : .claude/skills/{rel}\n"
             f"  Outil   : {tool}\n"
             f"\n"
-            f"Les skills DIVA sont distribues en lecture seule.\n"
-            f"Pour toute modification, contactez l'administrateur des skills.",
+            f"Sous .claude/skills/, seuls les skills de WORKSPACE (nom prefixe 'workspace-')\n"
+            f"sont editables. Les skills DIVA distribues sont en lecture seule (volontaire).\n"
+            f"\n"
+            f"  - Vous CREEZ un skill a vous (workspace) ? Nommez-le avec le prefixe 'workspace-'.\n"
+            f"  - Vous voulez faire EVOLUER un skill distribue ? Passez par le RETEX :\n"
+            f"    ajoutez une entree dans RETEX-skills.md (elle sera traitee puis republiee).",
             file=sys.stderr,
         )
         sys.exit(2)

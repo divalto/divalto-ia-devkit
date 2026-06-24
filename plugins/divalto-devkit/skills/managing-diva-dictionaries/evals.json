@@ -57,7 +57,7 @@
       "skills": [
         "managing-diva-dictionaries"
       ],
-      "query": "Cree une surcharge dictionnaire gtfddu.dhsd qui ajoute le champ dgsTrajetKmMax (Nature 5,0, libelle 'Plafond km deplacement') sur la table T143 du standard gtfdd.dhsd. Prefixe poste dgs, utilisateur rootDGS.",
+      "query": "Cree une surcharge dictionnaire gtfddu.dhsd qui ajoute le champ speTrajetKmMax (Nature 5,0, libelle 'Plafond km deplacement') sur la table T143 du standard gtfdd.dhsd. Prefixe poste spe, utilisateur rootSPE.",
       "files": [],
       "expected_behavior": [
         "Utilise generate_surcharge_field.py avec --output (mode creation)",
@@ -76,17 +76,64 @@
       "skills": [
         "managing-diva-dictionaries"
       ],
-      "query": "Dans la surcharge gtfddu.dhsd existante (qui contient deja dgsTrajetKmMax), ajoute un second champ dgsTrajetKmMin (Nature 5,0). Offset cumule a recalculer automatiquement.",
+      "query": "Dans la surcharge gtfddu.dhsd existante (qui contient deja speTrajetKmMax), ajoute un second champ speTrajetKmMin (Nature 5,0). Offset cumule a recalculer automatiquement.",
       "files": [],
       "expected_behavior": [
         "Utilise generate_surcharge_field.py avec --append-to (mode ajout)",
         "Re-parse la surcharge existante pour identifier les [CHAMPR] actifs et leurs [CHAMPL] sur UT143",
         "Calcule consumed_offset_in_container = 1 (offset du champ existant) + 5 (taille Nature 5,0) - 1 = 5 -> nouveau offset = 6",
         "Insere le nouveau [CHAMP] global avant le 1er [CHAMPR] existant",
-        "Insere une nouvelle ligne Nom=dgsTrajetKmMin,6,0,0,N,1 dans le sous-bloc [CHAMPL] du container UT143",
+        "Insere une nouvelle ligne Nom=speTrajetKmMin,6,0,0,N,1 dans le sous-bloc [CHAMPL] du container UT143",
         "Ne dedouble PAS le [TABLEU] ni les [BASEU] (deja presents)",
         "Sortie JSON mode=append, offset_in_container=6, capacity_remaining mis a jour",
         "Validation post-ecriture : 0 erreurs"
+      ]
+    },
+    {
+      "id": "case-6-modify-nature-shift",
+      "skills": [
+        "managing-diva-dictionaries"
+      ],
+      "query": "Aligne un dictionnaire specifique lors d'une migration de version : le champ Lib passe de Nature 40 a Nature 50. Recalcule les positions dans toutes les tables et tous les index concernes.",
+      "files": [],
+      "expected_behavior": [
+        "Utilise modify_field_nature.py --field Lib --new-nature 50 (politique shift par defaut)",
+        "Lit la Nature actuelle dans le [CHAMP] global, calcule delta = +10",
+        "Met a jour la seule ligne Nature= du [CHAMP] global (pas de Taille= a toucher, la taille derive de Nature)",
+        "Re-propage : dans CHAQUE [TABLE]/[CHAMPS] contenant Lib, decale de +10 les champs de position superieure et augmente Taille de +10 ; dans CHAQUE [INDEX]/[CHAMPS], decale les offsets cumules en aval",
+        "Ecrit en ISO-8859-1 + CRLF avec backup .bak",
+        "Valide chaque table touchee via validate_dhsd en mode migration : 0 erreur D01/D02",
+        "Round-trip (50 -> 40) restitue le fichier d'origine a l'octet pres"
+      ]
+    },
+    {
+      "id": "case-7-modify-nature-cannibalize",
+      "skills": [
+        "managing-diva-dictionaries"
+      ],
+      "query": "Agrandis un champ de 22 a 24 octets dans une table d'un dictionnaire specifique SANS changer la taille de l'enregistrement (donnees en production).",
+      "files": [],
+      "expected_behavior": [
+        "Utilise modify_field_nature.py --field <Champ> --new-nature 24 --filler-policy cannibalize",
+        "delta = +2 ; verifie qu'un Filler suit le champ dans la table et que sa taille >= delta",
+        "Decale de +2 les champs entre le champ et le Filler ; reduit le Filler de 2 ; ne touche pas aux champs apres le Filler",
+        "Taille de la table INCHANGEE (record byte-compatible, pas de reconstruction ISAM)",
+        "Si une table concernee n'a pas de Filler suffisant -> erreur explicite, aucune ecriture",
+        "Validation mode migration : 0 erreur D01/D02"
+      ]
+    },
+    {
+      "id": "case-8-validate-migration",
+      "skills": [
+        "managing-diva-dictionaries"
+      ],
+      "query": "Valide une table d'un dictionnaire legacy en cours de migration : je veux voir les chevauchements/trous mais pas le bruit du U-field absent.",
+      "files": [],
+      "expected_behavior": [
+        "Utilise validate_dhsd.py --path --table <Table> --migration",
+        "Sans --migration : D03 (U-field absent) est une erreur -> valid=false",
+        "Avec --migration : D03 devient un warning (etat preexistant non bloquant) -> valid=true si D01/D02/D05/D06 sont propres",
+        "Les regles D01 (chevauchement) et D02 (trou) restent des erreurs : le signal d'une modif de positions n'est pas noye"
       ]
     }
   ]

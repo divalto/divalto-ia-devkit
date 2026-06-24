@@ -20,7 +20,7 @@
 
 Regles transposees des moulinettes de controle qualite executees en CI nightly (pipeline GenererIntegration.ps1). Ces controles etaient historiquement decouverts au lendemain via mail Weasel ; ils sont desormais disponibles au moment du developpement.
 
-> Source : `docs/MOULINETTES.md`, `docs/MOULINETTES-CATALOGUE.md`
+> Source : moulinettes de controle qualite executees en CI nightly (catalogue interne Divalto).
 
 ---
 

@@ -89,12 +89,36 @@ def atomic_write(path: Path, content: str) -> None:
     os.replace(tmp, path)
 
 
+def resolve_apikey(args):
+    """Resout la cle API depuis une seule source (stdin / fichier / argv).
+
+    Retourne (apikey, erreur). Lire la cle hors argv evite que le shell
+    n'interprete '$$' (PID), '$VAR' ou '!' avant que Python ne la voie
+    (cause racine des cles tronquees signalee par plusieurs partenaires).
+    """
+    chosen = [bool(args.apikey), bool(args.apikey_file), bool(args.apikey_stdin)]
+    if sum(chosen) == 0:
+        return None, "Aucune cle fournie. Utiliser --apikey-stdin (recommande), --apikey-file <fichier>, ou --apikey."
+    if sum(chosen) > 1:
+        return None, "Une seule source de cle a la fois (--apikey / --apikey-file / --apikey-stdin)."
+    if args.apikey_stdin:
+        return sys.stdin.read().strip(), None
+    if args.apikey_file:
+        try:
+            return Path(args.apikey_file).read_text(encoding="utf-8").strip(), None
+        except OSError as e:
+            return None, f"Lecture --apikey-file impossible : {e}"
+    return args.apikey, None
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--mcp-path", required=True, help="Chemin absolu vers le .mcp.json a patcher")
     parser.add_argument("--site", required=True, help="Code site (ex: GENEVE)")
     parser.add_argument("--env", required=True, help="Environnement (ex: PROD)")
-    parser.add_argument("--apikey", required=True, help="API key diva-mcp")
+    parser.add_argument("--apikey", help="API key en clair via argv. DECONSEILLE sous bash : '$$' y est expanse en PID et corrompt la cle. Preferer --apikey-stdin / --apikey-file (ou, en dernier recours, des guillemets simples).")
+    parser.add_argument("--apikey-file", help="Lit la cle depuis un fichier UTF-8 (echappe toute interpretation shell de $, $$, !...).")
+    parser.add_argument("--apikey-stdin", action="store_true", help="Lit la cle depuis stdin (echappe toute interpretation shell). Recommande.")
     parser.add_argument("--no-backup", action="store_true", help="Ne cree pas de .bak avant ecriture")
     args = parser.parse_args()
 
@@ -106,7 +130,12 @@ def main() -> int:
         )
         return 1
 
-    err = validate_inputs(args.site, args.env, args.apikey)
+    apikey, key_err = resolve_apikey(args)
+    if key_err:
+        print(json.dumps({"status": "error", "error": key_err, "mcp_path": str(mcp_path), "backup": None, "header": None}))
+        return 2
+
+    err = validate_inputs(args.site, args.env, apikey)
     if err:
         print(json.dumps({"status": "error", "error": err, "mcp_path": str(mcp_path), "backup": None, "header": None}))
         return 2
@@ -119,7 +148,7 @@ def main() -> int:
             backup_path.write_text(mcp_path.read_text(encoding="utf-8"), encoding="utf-8")
 
     try:
-        data = patch_mcp_json(mcp_path, args.site, args.env, args.apikey)
+        data = patch_mcp_json(mcp_path, args.site, args.env, apikey)
     except (json.JSONDecodeError, RuntimeError) as e:
         print(json.dumps({"status": "error", "error": str(e), "mcp_path": str(mcp_path), "backup": str(backup_path) if backup_path else None, "header": None}))
         return 1
@@ -127,7 +156,7 @@ def main() -> int:
     new_content = json.dumps(data, ensure_ascii=False, indent=2) + "\n"
     atomic_write(mcp_path, new_content)
 
-    masked_header = f"X-Api-Key: {args.site}-{args.env}@{mask_apikey(args.apikey)}"
+    masked_header = f"X-Api-Key: {args.site}-{args.env}@{mask_apikey(apikey)}"
     print(
         json.dumps(
             {

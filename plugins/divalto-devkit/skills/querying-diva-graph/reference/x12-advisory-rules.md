@@ -4,12 +4,24 @@ Regles strictes d'usage des resultats Neo4j `diva-mcp`. Ces regles sont **obliga
 
 ## Le probleme : X.12 n'est pas X.13
 
-Le graphe est un snapshot de la version X.12 de l'ERP Divalto. La version en production est X.13. Consequences (extrait de `docs/MCP-DIVA-GRAPH.md`) :
+Le graphe est un snapshot de la version X.12 de l'ERP Divalto. La version en production est X.13. Consequences (extrait de le référentiel du graphe diva-mcp (interne)) :
 
 - Une fonction presente dans X.12 peut avoir ete supprimee/renommee en X.13
 - Une table presente en X.12 peut avoir des champs differents en X.13
 - Un pattern detecte a 90 % en X.12 peut etre a 0 % en X.13 (reecriture)
 - Des fonctions/tables X.13 ne figurent pas dans le graphe
+
+## Deuxieme dimension de fraicheur : retard sur les revisions (R-067)
+
+Au-dela de l'ecart de version X.12 / X.13, le graphe indexe une **revision donnee** du standard
+et peut **retarder sur les ouvertures recentes** : une procedure introduite dans un service pack
+recent peut etre **absente du graphe** sans avertissement, **meme sur la version indexee**.
+
+Consequence operationnelle : un `search_code` ou un `get_call_graph` qui retourne `[]` sur un
+programme **existant** ne prouve **pas** l'absence -- c'est peut-etre un simple retard
+d'indexation. **Verifier dans les sources locales** (`grep` du `.dhsp`) avant de conclure a
+l'absence d'un appel ou d'une procedure. C'est precisement le role de `searching-erp-sources`
+(filet de verification X.13 locale).
 
 ## Regle 1 -- Marquage systematique
 
@@ -91,5 +103,5 @@ Ce skill **est distribue** dans le zip des skills DIVA, mais sa dependance au MC
 
 ## References
 
-- `docs/MCP-DIVA-GRAPH.md` -- source canonique des regles d'usage, avertissement X.12, limitations APOC
-- `docs/RECHERCHE-ERP.md` -- workflow hybride, format des disclaimers dans le rapport
+- le référentiel du graphe diva-mcp (interne) -- source canonique des regles d'usage, avertissement X.12, limitations APOC
+- la référence recherche ERP (interne) -- workflow hybride, format des disclaimers dans le rapport

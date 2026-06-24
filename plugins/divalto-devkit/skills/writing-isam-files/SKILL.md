@@ -11,7 +11,7 @@ description: >
 
 ## Contenu
 
-- Regle fondamentale
+- Regle fondamentale (dont garde-fou taille d'enregistrement)
 - Utilisation rapide
 - Operations (--op insert / update / delete)
 - Workflow complet
@@ -29,6 +29,45 @@ Les fichiers `.dhfi` sont des fichiers binaires proprietaires Divalto. Ils ne pe
 - **Encoding des enregistrements** : Windows-1252 (ANSI)
 - **Padding** : les champs texte sont paddes a droite avec des espaces (0x20)
 - **Interdit** : toute manipulation directe du fichier binaire
+
+### Garde-fou taille d'enregistrement (multi-tables) -- anti-corruption
+
+Un fichier `.dhfi` peut contenir **plusieurs tables**, chacune avec sa **propre
+taille d'enregistrement**. Exemple reel (base `A5f`) : `M1`=50 octets, `M4`=1000,
+`M7`=508 ; la "taille fichier" globale vaut alors 0 (pas de taille unique). Ecrire
+un enregistrement dont la taille ne correspond a **aucune table reelle** du fichier
+le **corrompt en silence** (l'ecriture "reussit" cote DLL mais decale les
+enregistrements).
+
+**Garde-fou automatique** (insert / update / delete) : avant toute ecriture,
+`write_isam.py` verifie que la structure declaree correspond a une table reelle du
+dictionnaire. La **source de verite est la structure JSON elle-meme** -- elle
+declare `Dictionnaire`, `Base`, `Table`, `TailleEnreg` (et `Ce` quand il existe).
+Le script :
+
+1. localise le `.dhsd` nomme par `Dictionnaire` (cf. `--dico-path` ci-dessous) ;
+2. y resout les tables de la `Base` via le bloc `[BASE]` -> sous-section `[TABLES]` ;
+3. lit la `Taille` (et le `CE`) reels de la `Table` dans son bloc `[TABLE]` ;
+4. **refuse l'ecriture** (`error_code -2`) si la `Table` est absente de la base, si
+   `TailleEnreg` != taille reelle, ou si `Ce` != Ce reel. Le `CE` n'est verifie que
+   s'il est present des deux cotes (certaines tables mono-table n'en ont pas : `XErr`/206,
+   `XQ`...).
+
+> Pas besoin de l'en-tete binaire du `.dhfi` (dont le format n'est pas universel --
+> ex. `gtfdmc.dhfi` ne porte aucun lien dico). La structure suffit.
+
+**Localisation du dictionnaire** (`--dico-path DIR`, cumulable) : le `.dhsd` est
+cherche dans les `--dico-path` fournis, puis dans le repertoire du `.dhfi` cible.
+Cas frequent ou c'est necessaire : le dico est **deporte** (les fichiers d'erreur
+`*ferr.dhfi` vivent dans `objets/`, mais leur dico `a5dd.dhsd` est dans `fichiers/`).
+
+**Degradation gracieuse** : si le dico est introuvable, la base absente, ou la
+metadata `Dictionnaire`/`Base`/`Table` manquante, le garde-fou **n'effectue pas** la
+verification, **emet un warning** sur stderr et **autorise l'ecriture** (jamais de
+faux blocage). La protection couvre donc tous les fichiers dont le dico est
+localisable ; les autres passent avec avertissement.
+
+**Desactivation** : `--skip-dict-check` (a n'utiliser qu'en connaissance de cause).
 
 ### Identifier le bon chemin du .dhfi cible (R-006)
 
@@ -320,14 +359,14 @@ Utile pour verifier le format des JSON sur une machine sans Divalto installe.
 
 | Script | Role | Entree | Sortie JSON |
 |--------|------|--------|-------------|
-| `scripts/write_isam.py` | Insert / update / delete d'enregistrements ISAM | `--params-file` ou `--stdin` [+ `--op insert\|update\|delete`] [+ `--structure-dir`] [+ `--dry-run`] | `{success, total, written, skipped, errors[]}` |
+| `scripts/write_isam.py` | Insert / update / delete d'enregistrements ISAM | `--params-file` ou `--stdin` [+ `--op insert\|update\|delete`] [+ `--structure-dir`] [+ `--dico-path`] [+ `--skip-dict-check`] [+ `--dry-run`] | `{success, total, written, skipped, errors[]}` |
 | `scripts/validate_structure.py` | Valide un fichier de structure JSON | `--path` | `{valid, errors[], fields, record_size}` |
 
 **Exit codes** :
 
 | Script | 0 | 1 | 2 |
 |--------|---|---|---|
-| `write_isam.py` | Tous ecrits | Erreurs partielles | Fatal (DLL absente, params illisible) |
+| `write_isam.py` | Tous ecrits | Erreurs partielles (dont `error_code -2` = garde-fou dico : taille incoherente) | Fatal (DLL absente, params illisible) |
 | `validate_structure.py` | Structure valide | Structure invalide | Fichier introuvable |
 
 ---

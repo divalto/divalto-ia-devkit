@@ -132,6 +132,21 @@ Actions :
 
 Chaque action met a jour automatiquement `dernier_id` et le timestamp.
 
+**`add-column` -- parametre optionnel `fl_aff` (R-015)** : controle l'etat
+d'affichage de la colonne dans `[param_colonne]`. Trois valeurs :
+
+| `fl_aff` (param) | Comportement | Ligne generee dans `[param_colonne]` |
+|------------------|--------------|----------------------------------------|
+| `toujours` | Colonne **toujours** affichee (non masquable) | **aucune** ligne `fl_aff` |
+| `oui` | Affichee **par defaut** mais masquable par l'utilisateur | `fl_aff=oui` |
+| `non` | **Non affichee** par defaut (masquee, activable par l'utilisateur) | `fl_aff=non` |
+
+Piege : dans le `.dhsf`, `fl_aff` **absent** n'est PAS "non par defaut" -- c'est
+"toujours affichee". C'est pourquoi l'etat "toujours" se code par l'**omission**
+de la ligne (valeur de param `toujours`), et non par une valeur litterale.
+Pour une colonne masquee par defaut, passer `fl_aff=non`. **Defaut du script :
+`non`** (une valeur de param inconnue est ramenee a `non`).
+
 **`add-groupbox` (mode wrapper-only)** : calcule la bounding box des
 champs cibles + marges (`margin_top=16` pour la reserve titre, `margin_x=5`,
 `margin_bottom=6`) puis insere le bloc `[groupbox]` avant le 1er champ cible.
@@ -149,8 +164,16 @@ graphiques) reste un chantier dedie a ouvrir si necessaire.
 | R1 | error | `taille_groupbox >= NbLignes * espacement + 18` (borne min : espacement=10) |
 | R2 | warning | `Y(premier enfant) - Y(groupbox) >= 15` (reserve titre) |
 | R3 | warning | Entre deux groupbox consecutives sur meme X : gap >= 8 |
-| R4 | error | `max_X(obj) <= nb_col * 4` (saturation largeur, cause "clip grille") |
-| R5 | error | `max_Y(obj) <= nb_lig * 14` (saturation hauteur) |
+| R4 | error | `max_X(obj) <= nb_col * 4` (saturation largeur, cause "clip grille") -- **exempte** les types tableau (cf. ci-dessous) |
+| R5 | error | `max_Y(obj) <= nb_lig * 14 - GRID_LIG_MARGE` (saturation hauteur) -- **exempte** les types tableau |
+
+> **Exemption R4/R5 des widgets tableau (R-014/R-015)** : les types
+> `tableau`, `arbre`, `panel_wpf`, `champ_tableau`, `multi_choix_tableau`
+> (ensemble `GRID_EXEMPT_TYPES` dans `dhsf_modify.py`) ne sont **pas** soumis a
+> R4/R5 : leur `largeur_col` est en unites de colonne, pas de grille, et les
+> comparer a `nb_col*4` declenchait des faux positifs massifs sur tout zoom a
+> plusieurs colonnes. Faire un `validate` **avant** modification pour figer la
+> baseline des violations pre-existantes (R-008). Cf. `reference/normes-graphiques.md`.
 
 Format du `post_validation` :
 
@@ -195,6 +218,16 @@ bloc `[champ]` apres).
 Ce script fonctionne avec `generating-objet-metier --fk` (FK-02) pour livrer
 les 3 couches solidaires : Module Check (dhsp) + masque structurel (dhsf [champ])
 + callback applicatif (dhsf [diva]).
+
+> **Variante legere -- controle d'existence seul (sans zoom de saisie)** : si l'on
+> veut uniquement **valider** qu'un code saisi existe dans une table standard `T0xx`
+> (sans FK dans l'objet metier ni bouton zoom F8), le pattern est plus simple :
+> importer `Module 'GTTMCHKT0xx.dhop'` dans le `[diva]` de la surcharge, et appeler
+> **`Find_T0xx(<champ>)` directement dans le `diva_apres`** du champ (auto-erreur, pas
+> de check du retour). **Edition manuelle** du `[diva]` -- non automatisee par
+> `dhsf_add_fk.py` (qui, lui, pose le binding zoom complet). Pattern et ancrage corpus
+> documentes dans [`binding-zoom-to-field/reference/fk-pattern.md`](../binding-zoom-to-field/reference/fk-pattern.md)
+> (section *Pattern B*).
 
 ### Contrainte sur add-field : attributs de page obligatoires
 

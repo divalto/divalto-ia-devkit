@@ -1,6 +1,6 @@
 # Patterns observes dans le corpus RecordSql
 
-> **Note** : les chiffres ci-dessous proviennent d'une extraction du graphe `diva-mcp` en date du **2026-04-17** (snapshot alors X.12). Depuis le 2026-04-24 le graphe est passe X.13 ; les volumes ont peu evolue (+3-6 % en moyenne, cf `docs/MCP-DIVA-GRAPH.md`). Les pourcentages et conclusions ci-dessous restent significatifs, mais n'ont pas ete re-executes sur X.13.
+> **Note** : les chiffres ci-dessous proviennent d'une extraction du graphe `diva-mcp` en date du **2026-04-17** (snapshot alors X.12). Depuis le 2026-04-24 le graphe est passe X.13 ; les volumes ont peu evolue (+3-6 % en moyenne, cf le référentiel du graphe diva-mcp (interne)). Les pourcentages et conclusions ci-dessous restent significatifs, mais n'ont pas ete re-executes sur X.13.
 
 ## Contenu
 
@@ -300,4 +300,4 @@ choisir les noms de champs quand on projette un RSQL sur une entite :
 
 **Taxonomie de suffixes typés** : quand un RSQL expose des champs projetes,
 preferer les noms qui respectent la taxonomie (`Dh`->DH 98 %, `Fl`->1,0 95 %,
-`Dt`->D8 93 %). Voir `docs/CONVENTIONS.md` tableau "Suffixes typés".
+`Dt`->D8 93 %). Voir les conventions de nommage internes, tableau "Suffixes typés".

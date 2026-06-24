@@ -43,7 +43,7 @@ Challenge : affirmation non sourcee (ni citation fichier:ligne, ni meta.a_verifi
 **Ce qui N'EST PAS E1** :
 - Un champ vide -> pas d'erreur (rien a sourcer)
 - Un champ qui dit litteralement "[A VERIFIER]" -> OK (marquage explicite)
-- Un champ qui cite une source externe type `docs/X.md:42` -> OK (citation valide, meme si pas X.13)
+- Un champ qui cite une source externe type `<référentiel>:42` -> OK (citation valide, meme si pas X.13)
 
 ---
 
@@ -133,9 +133,9 @@ Challenge : champ present dans le dictionnaire mais absent de technical.fields d
 **Comment la detecter** : heuristiques deterministes sur un corpus cible de `docs/*.md`. Details dans [docs-corpus.md](docs-corpus.md).
 
 Exemples de regles detectables :
-- Le champ `SOC.CodePostal` est declare Nature `Fl` dans le livrable, mais `docs/DICTIONNAIRE-DHSD.md` dit que les codes postaux doivent etre `Ch5` -> contradiction
-- Le livrable declare un domaine `ABC` pour une entite `CLI`, mais `docs/MODULES-ERP.md` liste `CLI` dans le domaine `DAV` -> contradiction
-- Le livrable cite un fichier `Gttcli.dhop` mais le pattern 3 fichiers (documente dans `docs/ARCHITECTURE-ENTITE.md`) attend `Gttmchkcli.dhop` -> contradiction
+- Le champ `SOC.CodePostal` est declare Nature `Fl` dans le livrable, mais le référentiel dictionnaire (interne) dit que les codes postaux doivent etre `Ch5` -> contradiction
+- Le livrable declare un domaine `ABC` pour une entite `CLI`, mais le référentiel des modules ERP (interne) liste `CLI` dans le domaine `DAV` -> contradiction
+- Le livrable cite un fichier `Gttcli.dhop` mais le pattern 3 fichiers (documente dans le référentiel architecture d'entité (interne)) attend `Gttmchkcli.dhop` -> contradiction
 
 **Interdit** :
 - Proposer une modification du referentiel `docs/`

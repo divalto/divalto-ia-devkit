@@ -33,6 +33,30 @@
         "command": "py .claude/skills/manipulating-dhsf-screens/scripts/dhsf_parser.py --path \"{CHEMIN_MASQUES}/gree001.dhsf\" --summary",
         "validation": "Metriques identiques a dhsf_info.py, pas de crash, temps < 10s"
       }
+    },
+    {
+      "name": "Ajout colonne masquee par defaut (fl_aff=non)",
+      "input": "Ajouter une colonne champ_tableau masquee par defaut sur la page 3 d'un zoom (R-015) -- fl_aff doit etre injecte explicitement",
+      "expected": {
+        "command": "py .claude/skills/manipulating-dhsf-screens/scripts/dhsf_modify.py --path output/rtez099_test.dhsf --action add-column --params \"{\\\"page_numero\\\":3,\\\"titre\\\":\\\"Banque\\\",\\\"vue\\\":\\\"famrglt\\\",\\\"champ\\\":\\\"bqcpce\\\",\\\"alias\\\":\\\"FamRglt\\\",\\\"fl_aff\\\":\\\"non\\\"}\"",
+        "validation": "success:true, le bloc [param_colonne] genere contient 'fl_aff=non' (et non absent = 'toujours')"
+      }
+    },
+    {
+      "name": "Validate exempte les widgets tableau de R4/R5",
+      "input": "Valider un zoom standard a plusieurs colonnes (champ_tableau) -- aucune violation R4/R5 sur les types de la famille tableau (R-014, faux positifs corriges)",
+      "expected": {
+        "command": "py .claude/skills/manipulating-dhsf-screens/scripts/dhsf_modify.py --path \"{CHEMIN_MASQUES}/gtez046_sql.dhsf\" --action validate --params \"{}\"",
+        "validation": "post_validation ne contient aucune violation R4/R5 dont type ∈ {tableau, arbre, panel_wpf, champ_tableau, multi_choix_tableau}"
+      }
+    },
+    {
+      "name": "Surcharge masque sans doublon [diva_base]",
+      "input": "Scaffolder une surcharge _sqlu.dhsf depuis un standard : le [diva_base] vide pre-existant ne doit pas creer de doublon apres migration (R-009)",
+      "expected": {
+        "command": "py .claude/skills/manipulating-dhsf-screens/scripts/surcharge_mask.py --standard \"{CHEMIN_MASQUES}/gtee748_sql.dhsf\" --output-dir output --force",
+        "validation": "JSON diva_migration.removed_empty_diva_base >= 1 ; le _sqlu.dhsf genere contient exactement un [diva_base] et des blocs equilibres (nb [/diva] == nb [diva]+[diva_base])"
+      }
     }
   ]
 }
