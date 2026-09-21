@@ -11,8 +11,7 @@
 
 Liste complete des champs utilisables dans les JSON d'entree de `write_isam.py`
 pour les etapes CP9 (zoom des zooms, enregistrement M4) et CP10 (menu domaine,
-enregistrement M2). Source autoritative : la référence d'intégration zoom (interne) sections
-2.5, 2.5bis, 5.6 (confirmes par test reel).
+enregistrement M2). Les champs listes ici sont confirmes par test reel sur l'ERP.
 
 ---
 

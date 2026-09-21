@@ -42,7 +42,7 @@ Le flag est consulte par le framework **apres** le retour de la procedure surcha
 
 ## Couverture validee
 
-Hooks confirmes terrain ce 2026-05-04 (RETEX R-013, projet ClaudeIntegration sur ERP X.13 v2026_erpX13_p223a) :
+Hooks confirmes terrain ce 2026-05-04 (RETEX, projet ClaudeIntegration sur ERP X.13 v2026_erpX13_p223a) :
 
 | Hook | Codes testes | Status |
 |------|--------------|--------|
@@ -57,7 +57,7 @@ Hypothese de travail (a confirmer cas par cas) : les hooks `ZoomCreation` et `Zo
 
 Hooks dont la grille de codes retour reste a documenter empiriquement :
 
-- `ZoomAbandon` -- cas connu de divergence (R-012) : `Zoom.Ok = 'I'` ne bloque PAS l'abandon malgre l'analogie avec les autres hooks. Le mecanisme reel de la procedure `ZoomAbandon` differe et n'est pas (encore) accessible via cette reference. Solution actuelle : utiliser une `MessageBox` interactive avant de laisser le standard executer son abandon -- voir [overwrite-pattern.md](overwrite-pattern.md) section "Pattern canonique de surcharge de procedure".
+- `ZoomAbandon` -- cas connu de divergence : `Zoom.Ok = 'I'` ne bloque PAS l'abandon malgre l'analogie avec les autres hooks. Le mecanisme reel de la procedure `ZoomAbandon` differe et n'est pas (encore) accessible via cette reference. Solution actuelle : utiliser une `MessageBox` interactive avant de laisser le standard executer son abandon -- voir [overwrite-pattern.md](overwrite-pattern.md) section "Pattern canonique de surcharge de procedure".
 - `ZoomImpression` -- non teste
 - `ZoomEnvoiMail` -- non teste
 - `ZoomDebut`, `ZoomFin`, `ZoomArret` -- hooks de cycle de vie, semantique differente (pas de "refus")
@@ -97,7 +97,7 @@ Voir [overwrite-pattern.md](overwrite-pattern.md) sections "Declaration des proc
 
 ## Anti-patterns connus
 
-1. **Deduire un code retour par analogie sans validation runtime** -- chaque hook peut avoir sa propre grille. Un `'I'` qui marche sur `ZoomCreation` peut ne rien faire sur `ZoomAbandon` (cas R-012). Toujours tester sur la version ERP cible.
+1. **Deduire un code retour par analogie sans validation runtime** -- chaque hook peut avoir sa propre grille. Un `'I'` qui marche sur `ZoomCreation` peut ne rien faire sur `ZoomAbandon` (cas). Toujours tester sur la version ERP cible.
 2. **Omettre `Standard.<hook>()`** -- meme si le standard est vide aujourd'hui, ca cree une dette de compatibilite ascendante (cf. [overwrite-pattern.md](overwrite-pattern.md) "Pattern canonique de surcharge de procedure", regle 1).
 3. **Positionner le flag de retour AVANT `Standard.<hook>()`** -- le standard ecrasera la valeur ou se comportera de maniere imprevue selon le hook.
 4. **Compter sur le compilateur pour signaler un mauvais code retour** -- le compilateur accepte `Zoom.Ok = 'Z'` (chaine arbitraire). Le bug est silencieux au runtime.

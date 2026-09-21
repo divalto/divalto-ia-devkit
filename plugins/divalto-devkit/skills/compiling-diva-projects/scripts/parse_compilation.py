@@ -7,28 +7,38 @@ Usage :
     py parse_compilation.py --path rapport.txt
     py parse_compilation.py --path rapport.txt --errors-only
 
+Deux formats de rapport reels (cf. les fixtures) :
+  - build incremental : entete "[TOTAL_ERRORS]N" + lignes "[INFO]/[WARNING]/[ERROR]"
+    (PAS de ligne francaise "Erreur(s)=" -- seul le buildall en produit une).
+  - buildall complet   : idem + resume final "Erreur(s)=N Warning(s)=M Diva=.. ...".
+
+Regle de verdict (success=true SEULEMENT si TOUT) : un resume dit 0 erreur (via
+[TOTAL_ERRORS]0 ou Erreur(s)=0), ET aucune ligne [ERROR], ET aucune erreur HORS
+compilation ("N ERREUR(S) autre(s)" / "absent ou inaccessible. Code=" -- souvent un
+mauvais implicite, #310), ET pas d'interruption/abandon ("Compilation interrompue" /
+"Construction du projet arretee" / "Fin anormale", #236). Un build interrompu affiche
+"Erreur(s) 0" mais les objets ne sont PAS a jour -> jamais un succes.
+
 Sortie JSON :
     {
         "file": "rapport.txt",
         "success": true,
-        "summary": {
-            "errors": 0,
-            "warnings": 0,
-            "diva": 42,
-            "masques": 5,
-            "dictionnaires": 3,
-            "sql": 8,
-            "objets_proteges": 0,
-            "duree": "0:01:23"
-        },
+        "summary": {"errors": 0, "warnings": 0, "diva": 42, ..., "duree": "0:01:23"},
         "errors": [],
-        "warnings": []
+        "warnings": [],
+        "build_incomplet": true,     # present si build interrompu/abandonne (#236)
+        "other_errors": [...],       # present si erreurs hors-compilation (#310)
+        "up_to_date": true,          # present si "Le projet est a jour"
+        "log_vide": true,            # present si le log est VIDE (xwin7 n'a rien produit) --
+                                     # SEUL etat ou --check-outputs peut rattraper le verdict
+        "summary_absent": true       # present si AUCUN resume reconnu ; summary.errors vaut
+                                     # alors -1 = compteur INCONNU (jamais un marqueur d'etat)
     }
 
 Exit codes :
-    0 = compilation reussie (0 erreur)
-    1 = compilation echouee (erreurs trouvees)
-    2 = erreur interne (rapport illisible)
+    0 = compilation reussie (0 erreur, aucune anomalie)
+    1 = compilation echouee / incomplete (erreurs, erreurs hors-compilation, interruption)
+    2 = erreur interne (rapport illisible : ni [TOTAL_ERRORS] ni Erreur(s)=)
 """
 
 import argparse
@@ -85,22 +95,64 @@ def parse_duration_line(line):
 
 
 def extract_errors(lines):
-    """Extrait les erreurs avec contexte (1 ligne avant = fichier source).
+    """Extrait les erreurs avec contexte et fichier source.
+
+    Le fichier source est cherche dans un ORDRE DE PRIORITE calque sur les formats
+    reels de xwin7 (observes sur des rapports captures) :
+      1. la ligne d'erreur ELLE-MEME  -- `[ERROR]/chemin/monentite.dhsp (7) Erreur 99 : ...`
+      2. la ligne SUIVANTE si c'est la continuation `Fichier:... Ligne:N` de xwin7 --
+         `[ERROR]Parametre manquant` / ` Fichier:.../harness.dhpt Ligne:16 Erreur numero 8`
+      3. a defaut seulement, la ligne PRECEDENTE (`[INFO]<...monentite.dhsp> version : ...`)
+    La ligne precedente est IGNOREE si c'est elle-meme une continuation `Fichier:` : elle
+    appartient alors a l'erreur d'AVANT, et la reprendre attribuait silencieusement la 2e
+    erreur au fichier de la 1re (mauvaise attribution sur erreurs consecutives).
 
     Returns:
-        list of dict: [{line: N, message: "...", context: "...", file: "..."}]
+        list of dict: [{line: N, message: "...", context: "...", source_file: "..."}]
     """
     errors = []
-    error_pattern = re.compile(r'(^| |\])Erreur', re.IGNORECASE)
+    error_pattern = re.compile(r'(^| |\])Erreur|\[ERROR\]', re.IGNORECASE)
+    # Les lignes [WARNING]/[INFO]/[TOTAL_ERRORS] ne sont PAS des erreurs, meme si leur
+    # texte contient le mot "erreur" (ex: un warning "Attention ! risque d'erreur") --
+    # sinon faux positif qui casse le verdict.
+    skip_pattern = re.compile(r'^\s*\[(WARNING|INFO|TOTAL_ERRORS)\]', re.IGNORECASE)
+    # Un nom DIVA contient couramment des ESPACES ("gt_piece nouvellepiece.dhps",
+    # "divalto achat-venteu.dhpt"). On tente donc d'abord la forme CHEMIN : ce qui suit le
+    # dernier separateur, espaces compris. A defaut SEULEMENT, un nom nu (motif conservateur
+    # sans espace -- sinon on avalerait la prose autour du nom).
+    _EXT = r'(?:dhsp|dhsq|dhsd|dhsf|dhsi|dhpt|dhps)'
+    file_path_re = re.compile(r'[/\\]([^/\\<>:"|*?]*\.' + _EXT + r')', re.IGNORECASE)
+    file_bare_re = re.compile(r'[-\w]+\.' + _EXT, re.IGNORECASE)
+    fichier_cont_re = re.compile(r'^\s*Fichier\s*:', re.IGNORECASE)
 
+    def first_file(text):
+        text = text or ""
+        m = file_path_re.search(text)
+        if m:
+            return m.group(1).strip()
+        m = file_bare_re.search(text)
+        return m.group(0) if m else ""
+
+    # Une ligne de CONTINUATION xwin7 (" Fichier:... Ligne:N Erreur numero 8") DECRIT
+    # l'erreur precedente : ce n'est pas une erreur de plus. Sans ce filtre, une erreur
+    # reelle en affichait 2 a 3 -> compteur gonfle pour l'agent (le verdict, lui, vient
+    # du compteur du resume et n'etait pas affecte).
+    prev_was_error = False
     for i, line in enumerate(lines):
+        if skip_pattern.match(line):
+            prev_was_error = False
+            continue
+        if prev_was_error and fichier_cont_re.match(line):
+            continue          # continuation de l'erreur precedente, deja comptee
         if error_pattern.search(line):
             context = lines[i - 1].strip() if i > 0 else ""
-            # Tenter d'extraire le nom de fichier du contexte
-            source_file = ""
-            file_match = re.search(r'[\w]+\.(dhsp|dhsq|dhsd|dhsf|dhpt|dhps)', context)
-            if file_match:
-                source_file = file_match.group(0)
+            next_line = lines[i + 1] if i + 1 < len(lines) else ""
+
+            source_file = first_file(line)                      # 1) la ligne d'erreur
+            if not source_file and fichier_cont_re.match(next_line):
+                source_file = first_file(next_line)             # 2) continuation "Fichier:"
+            if not source_file and not fichier_cont_re.match(context):
+                source_file = first_file(context)               # 3) contexte precedent
 
             errors.append({
                 "line": i + 1,
@@ -108,12 +160,15 @@ def extract_errors(lines):
                 "context": context,
                 "source_file": source_file
             })
+            prev_was_error = True
+        else:
+            prev_was_error = False
 
     return errors
 
 
 # ---------------------------------------------------------------------------
-# Diagnostic "Objet en dehors de la clip grille" (R-007 2026-04-23)
+# Diagnostic "Objet en dehors de la clip grille" (2026-04-23)
 # ---------------------------------------------------------------------------
 
 # L'erreur xwin7 "Objet en dehors de la clip grille" a deux causes possibles :
@@ -139,7 +194,7 @@ def compute_dhsf_bounds(dhsf_path):
     """Pour un .dhsf, calcule les bornes max_X / max_Y par page et flags saturation.
 
     Lit le fichier en regex sans dependance au parseur complet (reste leger).
-    Convention : position=Y,X et taille=H,L (cf reference/normes-graphiques.md).
+    Convention : position=Y,X et taille=H,L (cf. manipulating-dhsf-screens, reference/normes-graphiques.md).
 
     Returns:
         list[dict] : [{"page": N, "nb_col": int, "nb_lig": int,
@@ -318,7 +373,7 @@ def extract_warnings(lines):
         list of dict: [{line: N, message: "..."}]
     """
     warnings = []
-    warning_pattern = re.compile(r'(^| |\])Warning', re.IGNORECASE)
+    warning_pattern = re.compile(r'(^| |\])Warning|\[WARNING\]', re.IGNORECASE)
 
     for i, line in enumerate(lines):
         if warning_pattern.search(line):
@@ -335,6 +390,22 @@ def extract_warnings(lines):
     return warnings
 
 
+# --- Signaux de verdict (formats reels xwin7, cf. les fixtures) ---
+# [TOTAL_ERRORS]N : resume "crochet", present sur build incremental ET buildall (1re classe).
+TOTAL_ERRORS_RE = re.compile(r'\[TOTAL_ERRORS\](\d+)')
+# "N ERREUR(S) autre(s) que des erreurs de compilation" : erreurs HORS compilation (#310).
+OTHER_ERRORS_RE = re.compile(r'\d+\s+ERREUR\(S\)\s+autre', re.IGNORECASE)
+# "... absent ou inaccessible. Code=0x14" : source/objet non resolu (mauvais implicite, #310).
+ABSENT_RE = re.compile(r'absent ou inaccessible', re.IGNORECASE)
+# Build INTERROMPU / abandonne : objets pas a jour -> jamais un succes, meme avec 0 erreur.
+INTERRUPTED_RE = re.compile(
+    r'compilation interrompue|construction du projet arr[e\xea]t|fin anormale|abandon de la compilation',
+    re.IGNORECASE,
+)
+# "Le projet est a jour, aucune compilation a effectuer".
+UP_TO_DATE_RE = re.compile(r'projet est\b.*\bjour', re.IGNORECASE)
+
+
 def parse_report(file_path, errors_only=False, dhsf_base_dir=None):
     """Parse un rapport de compilation complet.
 
@@ -342,7 +413,7 @@ def parse_report(file_path, errors_only=False, dhsf_base_dir=None):
         file_path: chemin du fichier rapport
         errors_only: si True, ne retourne que les erreurs
         dhsf_base_dir: si fourni, utilise pour localiser les .dhsf mentionnes dans
-            les erreurs "clip grille" et enrichir avec un diagnostic X/Y (R-007).
+            les erreurs "clip grille" et enrichir avec un diagnostic X/Y.
 
     Returns:
         dict: resultat structure
@@ -362,6 +433,11 @@ def parse_report(file_path, errors_only=False, dhsf_base_dir=None):
         return {
             "file": file_path,
             "success": False,
+            # Drapeau EXPLICITE : seul etat ou `--check-outputs` peut rattraper un verdict
+            # (cf. main()). NE PAS se fier a `summary.errors == -1` pour le detecter : cette
+            # sentinelle vaut AUSSI "aucun resume reconnu mais des signaux d'echec presents"
+            # (cf. le repli plus bas), ce qui melangeait un log vide avec un build interrompu.
+            "log_vide": True,
             "summary": {"errors": -1, "warnings": -1,
                          "message": "Log vide -- xwin7 n'a pas produit de resume. "
                                     "Verifier que la compilation a reellement eu lieu "
@@ -372,10 +448,19 @@ def parse_report(file_path, errors_only=False, dhsf_base_dir=None):
 
     lines = content.split("\n")
 
-    # Chercher la ligne de resume (peut etre sur plusieurs lignes proches de la fin)
+    # --- Signaux extraits du rapport (cf. regex de module ci-dessus) ---
+    # 1) Resume "crochet" [TOTAL_ERRORS]N : source de 1re classe (le build incremental
+    #    n'a PAS de ligne francaise "Erreur(s)=" -- seul le buildall en produit une).
+    total_errors = None
+    for line in lines:
+        m = TOTAL_ERRORS_RE.search(line)
+        if m:
+            total_errors = int(m.group(1))
+            break
+
+    # 2) Resume francais "Erreur(s)=N Warning(s)=M ..." : buildall uniquement (fin normale).
     summary = None
     duration = None
-
     for line in reversed(lines):
         if duration is None:
             duration = parse_duration_line(line)
@@ -384,99 +469,123 @@ def parse_report(file_path, errors_only=False, dhsf_base_dir=None):
         if summary and duration:
             break
 
-    if summary is None:
-        # Verifier le format "abandon de la compilation"
-        abandon = any(
-            "abandon" in line.lower() and "compilation" in line.lower()
-            for line in lines
-        )
-        if abandon:
-            # Extraire le total_errors si present
-            total_errors = 0
-            for line in lines:
-                te_match = re.search(r'\[TOTAL_ERRORS\](\d+)', line)
-                if te_match:
-                    total_errors = int(te_match.group(1))
-                    break
-            errors = extract_errors(lines)
-            # Ajouter les lignes "Fichier ... absent" comme erreurs
-            for i, line in enumerate(lines):
-                if "absent ou inaccessible" in line.lower() or "abandon" in line.lower():
-                    if not any(e["line"] == i + 1 for e in errors):
-                        errors.append({
-                            "line": i + 1,
-                            "message": line.strip(),
-                            "context": lines[i - 1].strip() if i > 0 else "",
-                            "source_file": ""
-                        })
-            return {
-                "file": file_path,
-                "success": False,
-                "summary": {"errors": len(errors), "warnings": 0,
-                            "message": "Compilation abandonnee"},
-                "errors": errors,
-                "warnings": []
-            }
+    # 3) Interruption / abandon : un build interrompu affiche "Erreur(s) 0" mais les objets
+    #    ne sont PAS a jour -> jamais un succes (capture reelle "Compilation interrompue"
+    #    + #236 "Construction du projet arretee / Fin anormale").
+    interrupted = any(INTERRUPTED_RE.search(line) for line in lines)
 
-        # Verifier le format "rien a compiler"
-        up_to_date = any(
-            "projet est" in line.lower() and "jour" in line.lower()
-            for line in lines
-        )
-        if up_to_date:
-            # Extraire le total_errors si present
-            total_errors = 0
-            for line in lines:
-                te_match = re.search(r'\[TOTAL_ERRORS\](\d+)', line)
-                if te_match:
-                    total_errors = int(te_match.group(1))
-                    break
-            return {
-                "file": file_path,
-                "success": total_errors == 0,
-                "summary": {"errors": total_errors, "warnings": 0, "message": "Le projet est a jour, aucune compilation a effectuer"},
-                "errors": [],
-                "warnings": []
-            }
+    # 4) Erreurs HORS compilation (#310) : "N ERREUR(S) autre(s)" + "absent ou inaccessible.
+    #    Code=0x14". [TOTAL_ERRORS]0 les ignore -> faux positif de succes a bloquer.
+    # Une ligne "[ERROR]" est une vraie erreur de COMPILATION (meme si elle mentionne
+    # "absent" -- ex. include fatal) -> elle va dans `errors`, pas dans `other_errors`.
+    other_errors = [line.strip() for line in lines
+                    if (OTHER_ERRORS_RE.search(line) or ABSENT_RE.search(line))
+                    and not line.lstrip().upper().startswith("[ERROR]")]
 
+    up_to_date = any(UP_TO_DATE_RE.search(line) for line in lines)
+
+    # 5) Erreurs de compilation detaillees ([ERROR]... / "Erreur NN : ..."), en excluant
+    #    la ligne de resume, les erreurs hors-compilation et la ligne d'interruption
+    #    (comptees a part).
+    errors = extract_errors(lines)
+    errors = [e for e in errors
+              if "Erreur(s)=" not in e["message"]
+              and not INTERRUPTED_RE.search(e["message"])
+              and not ((OTHER_ERRORS_RE.search(e["message"]) or ABSENT_RE.search(e["message"]))
+                       and not e["message"].lstrip().upper().startswith("[ERROR]"))]
+
+    # --- Compte d'erreurs : priorite au resume francais, sinon [TOTAL_ERRORS] ---
+    has_summary = (summary is not None) or (total_errors is not None)
+    summary_absent = False
+    if summary is not None:
+        if duration:
+            summary["duree"] = duration
+        errors_count = summary.get("errors", -1)
+    elif total_errors is not None:
+        summary = {"errors": total_errors, "warnings": len(extract_warnings(lines))}
+        if duration:
+            summary["duree"] = duration
+        errors_count = total_errors
+    else:
+        # `-1` = compteur INCONNU (aucun resume reconnu), PAS un marqueur d'etat.
+        # NE JAMAIS tester `summary["errors"] == -1` pour deduire un etat : utiliser les
+        # drapeaux explicites `log_vide` (log vraiment vide) et `summary_absent` (ici).
+        # C'est ce raccourci qui rendait `--check-outputs` capable d'ecraser le verdict.
+        summary = {"errors": -1, "warnings": -1}
+        errors_count = None
+        summary_absent = True
+
+    # Aucun resume reconnu ET aucun signal d'erreur/interruption : rapport illisible.
+    if not has_summary and not interrupted and not other_errors and not errors:
         return {
-            "error": "Ligne de resume introuvable dans le rapport. "
-                     "Verifier que le rapport est un fichier buildall xwin7."
+            "error": "Ligne de resume introuvable ([TOTAL_ERRORS] ni Erreur(s)=). "
+                     "Verifier que le rapport est bien un fichier de compilation xwin7."
         }
 
-    if duration:
-        summary["duree"] = duration
+    # --- Regle de verdict (validee + affinee sur des fixtures reelles) ---
+    # Succes SEULEMENT si : un resume dit 0 erreur, AUCUNE erreur detaillee, AUCUNE erreur
+    # hors-compilation (#310), PAS d'interruption/abandon.
+    success = (
+        has_summary
+        and errors_count == 0
+        and not errors
+        and not other_errors
+        and not interrupted
+    )
 
-    # Extraire les erreurs
-    errors = extract_errors(lines)
+    # Messages explicatifs
+    msgs = []
+    if interrupted:
+        msgs.append("compilation INTERROMPUE/abandonnee : build INCOMPLET, les objets ne sont "
+                    "pas tous a jour -- ne PAS considerer comme un succes malgre un compteur a 0")
+    if other_errors:
+        msgs.append(f"{len(other_errors)} erreur(s) HORS compilation (fichier/objet absent ou "
+                    "inaccessible) -- souvent un mauvais implicite actif : verifier que "
+                    "l'environnement charge correspond au workspace du .dhpt (#310/#161)")
+    if up_to_date and success:
+        msgs.append("Le projet est a jour, aucune compilation a effectuer")
 
-    # Filtrer les erreurs qui font partie de la ligne de resume
-    errors = [e for e in errors if "Erreur(s)=" not in e["message"]]
-
-    # Enrichir les erreurs "clip grille" avec un diagnostic X/Y (R-007 2026-04-23).
-    # Non bloquant : si le .dhsf n'est pas localise, on ajoute une note explicative.
+    # Enrichir les erreurs "clip grille" avec un diagnostic X/Y. Non bloquant.
     for err in errors:
         diag = diagnose_clip_grille(err, base_dir=dhsf_base_dir)
         if diag is not None:
             err["diagnosis"] = diag
 
-    # Extraire les warnings
-    warnings = [] if errors_only else extract_warnings(lines)
-
     result = {
         "file": file_path,
-        "success": summary.get("errors", -1) == 0,
+        "success": success,
         "summary": summary,
         "errors": errors,
     }
+    if interrupted:
+        result["build_incomplet"] = True
+    if summary_absent:
+        # Aucun resume reconnu : summary.errors vaut -1 (compteur INCONNU). Ce drapeau
+        # evite a l'appelant de deduire l'etat depuis la valeur -1 (cf. commentaire plus haut).
+        result["summary_absent"] = True
+    if other_errors:
+        result["other_errors"] = other_errors
+    # up_to_date n'est emis que sur un vrai succes (a jour ET propre) : un "a jour"
+    # accompagne d'erreurs hors-compilation (#310) est un FAUX a-jour -> pas d'emission.
+    if up_to_date and success:
+        result["up_to_date"] = True
+    if msgs:
+        result["summary"]["message"] = " | ".join(msgs)
 
     if not errors_only:
-        result["warnings"] = warnings
+        result["warnings"] = extract_warnings(lines)
 
     return result
 
 
 def main():
+    # Sortie en UTF-8 (stdout + stderr) : sinon json.dump(ensure_ascii=False) encode avec la
+    # console (cp1252 sur Windows) et les accents des messages [ERROR]/[WARNING] cassent un
+    # json.loads(utf-8) cote appelant. Meme garde-fou que les scripts writing-diva-files.
+    for _stream in (sys.stdout, sys.stderr):
+        if hasattr(_stream, "reconfigure") and (_stream.encoding or "").lower() != "utf-8":
+            _stream.reconfigure(encoding="utf-8")
+
     parser = argparse.ArgumentParser(
         description="Parse un rapport de compilation xwin7 buildall"
     )
@@ -490,7 +599,10 @@ def main():
     )
     parser.add_argument(
         "--check-outputs", nargs="*", default=None,
-        help="Fichiers compiles attendus (.dhop, .dhoq). Si log vide mais outputs presents avec timestamp recent, considerer comme succes (warning)."
+        help="Fichiers compiles attendus (.dhop, .dhoq). Rattrapage UNIQUEMENT si le log est VIDE : "
+             "si tous les fichiers existent et font >= 2048 octets, le verdict passe a succes. "
+             "AUCUN controle de fraicheur (un objet perime d'un build anterieur satisfait le test). "
+             "N'a aucun effet sur un log non vide : le verdict lu dans le log reste souverain."
     )
     parser.add_argument(
         "--dhsf-base-dir", default=None,
@@ -505,10 +617,17 @@ def main():
 
     result = parse_report(args.path, args.errors_only, dhsf_base_dir=args.dhsf_base_dir)
 
-    # Si log vide et --check-outputs fourni, verifier les fichiers compiles
-    # Un fichier compile valide fait au moins 2048 octets (1024B = stub vide = echec)
+    # Si log VIDE et --check-outputs fourni, verifier les fichiers compiles.
+    # Un fichier compile valide fait au moins 2048 octets (1024B = stub vide = echec).
+    #
+    # GARDE-FOU : ce rattrapage est reserve au SEUL cas "log reellement vide"
+    # (drapeau `log_vide` pose par parse_report). Il ne doit JAMAIS surcharger le verdict :
+    # l'ancien test `summary.errors == -1` attrapait aussi les rapports SANS ligne de resume
+    # mais AVEC des signaux d'echec ([ERROR], erreurs hors-compilation #310, build interrompu
+    # #236) -> il rendait `success:true` sur un build INTERROMPU (avec `build_incomplet:true`
+    # dans le meme JSON), soit exactement le faux positif que la regle de verdict interdit.
     MIN_COMPILED_SIZE = 2048
-    if not result.get("success") and result.get("summary", {}).get("errors") == -1 and args.check_outputs:
+    if result.get("log_vide") and args.check_outputs:
         missing = []
         too_small = []
         for f in args.check_outputs:
@@ -530,7 +649,9 @@ def main():
                 details.append(f"Absents : {', '.join(os.path.basename(f) for f in missing)}")
             if too_small:
                 details.append(f"Trop petits (< {MIN_COMPILED_SIZE}B, stub echec) : {', '.join(too_small)}")
-            result["summary"]["message"] += " " + ". ".join(details)
+            # .get() defensif : ne jamais transformer un diagnostic en traceback KeyError.
+            base_msg = result["summary"].get("message", "")
+            result["summary"]["message"] = (base_msg + " " + ". ".join(details)).strip()
 
     if "error" in result:
         print(f"Erreur : {result['error']}", file=sys.stderr)

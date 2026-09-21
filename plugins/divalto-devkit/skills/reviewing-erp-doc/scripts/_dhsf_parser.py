@@ -2,7 +2,7 @@
 """_dhsf_parser.py -- Mini-parseur de masque ecran Divalto (.dhsf).
 
 **Parseur dedie relecture** : n'extrait que les liens zooms `f8=<code>` par champ,
-ce qui suffit aux heuristiques E3 (zooms declares cote source) et E4 (anti-pattern Z16).
+ce qui suffit aux heuristiques E3 (zooms declares cote source) et E4 (anti-pattern `Z16` de `linting-diva-code`).
 
 Le vrai dhsf_parser complet (manipulating-dhsf-screens/scripts/dhsf_parser.py) produit
 un arbre structurel, overkill pour ce besoin. Implementation 50 lignes, deterministe.

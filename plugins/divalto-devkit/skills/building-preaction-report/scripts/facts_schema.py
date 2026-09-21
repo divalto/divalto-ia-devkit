@@ -1,5 +1,5 @@
 """
-facts_schema.py -- Schema du fond (facts.json) de l'analyse pre-action UC-100.
+facts_schema.py -- Schema du fond (facts.json) de l'analyse pre-action.
 
 Separation fond / forme :
 - Le fond (ce module) : affirmations atomiques referencees aux sources de verite X.13
@@ -113,13 +113,19 @@ class Coverage:
 
 @dataclass
 class SelectionEntry:
-    """Trace de la decision d'inclusion d'un type de contenu (CA10)."""
+    """Trace de la decision d'inclusion d'un type de contenu."""
     id: int
     slug: str
     score: float
     included: bool
     layer: str                      # strategic | tactical | technical
     reason: str
+    # Libelle humain du type, repris tel quel de `content_types.py` (ContentType.title).
+    # Il est emis ICI pour que le rendu du livrable n'ait pas a tenir sa PROPRE table de
+    # libelles : deux tables finiraient par diverger. Le slug (`endroit_agir`) est du
+    # jargon de pipeline et la couche strategique s'adresse a un chef de projet.
+    # OPTIONNEL : un facts.json anterieur n'en a pas, et le rendu retombe sur le slug.
+    title: str = ""
 
 
 @dataclass

@@ -1,8 +1,8 @@
 # RETEX Skills DIVA -- Journal d'experience
 
 > Ce fichier est rempli automatiquement par Claude apres chaque utilisation
-> significative des skills. Renvoyez-le periodiquement a Stephane Castelain
-> pour enrichir les skills.
+> significative des skills. **Rien a renvoyer** : les entrees remontent en issues sur le
+> depot du devkit, poussees par le skill `pushing-retex-to-github`.
 
 ---
 

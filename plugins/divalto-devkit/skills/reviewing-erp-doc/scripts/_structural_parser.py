@@ -22,9 +22,20 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 # Prefixes de visibilite optionnels precedent Procedure/Function en DIVA
-_VIS_PREFIX = r'(?:Public\s+|Private\s+)?'
+_VIS_PREFIX = r'(?:Public\s+|Private\s+|Protected\s+)?'
+
+# `Procedure` est suivie DIRECTEMENT de son nom. `Function` est suivie de son TYPE DE
+# RETOUR puis de son nom : `Function Int Verifier_Rubrique(...)`. La forme minimale d'une
+# declaration `Function` est donc "type + nom" -- verifie sur les ~70 000 declarations
+# `Function` du standard X.13, dont aucune n'a un seul jeton apres le mot-cle.
+#
+# Le motif d'origine capturait `(\w+)` juste apres `Function`, soit le TYPE DE RETOUR.
+# Mesure sur ~1200 fichiers du standard : **99,8 % des noms de fonctions etaient faux**
+# (13 050 `int`, 5151 `char`, 43 `string`, 40 `long`), ce qui produisait en aval des
+# affirmations illisibles du genre « la fonction `char` est utilisable dans ce contexte »
+# ou « investiguer `char` » (#332).
 PROC_DECL_PAT = re.compile(rf'^\s*{_VIS_PREFIX}Procedure\s+(\w+)', re.IGNORECASE)
-FUNC_DECL_PAT = re.compile(rf'^\s*{_VIS_PREFIX}Function\s+(\w+)', re.IGNORECASE)
+FUNC_DECL_PAT = re.compile(rf'^\s*{_VIS_PREFIX}Function\s+\w+\s+(\w+)', re.IGNORECASE)
 BEGINP_PAT = re.compile(r'^\s*BeginP\b', re.IGNORECASE)
 BEGINF_PAT = re.compile(r'^\s*BeginF\b', re.IGNORECASE)
 ENDP_PAT = re.compile(r'^\s*EndP\b', re.IGNORECASE)

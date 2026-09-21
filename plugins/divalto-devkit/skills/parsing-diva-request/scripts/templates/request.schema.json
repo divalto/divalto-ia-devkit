@@ -43,7 +43,7 @@
     },
     "domaine_pressenti": {
       "type": ["string", "null"],
-      "description": "Prefixe ERP (GT_, RT_, CC_...) ou null si non identifie. Voir docs/MODULES-ERP.md."
+      "description": "Prefixe ERP (GT_, RT_, CC_...) ou null si non identifie."
     },
     "keywords_techniques": {
       "type": "array",

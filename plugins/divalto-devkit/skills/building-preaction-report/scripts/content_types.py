@@ -64,7 +64,7 @@ def score_type_1_exemples(ctx: ReportContext) -> float:
 
     Regle : score = min(1.0, confirmed_x13 / 3). 3 confirmes = 1.0, 1 confirme = 0.33.
     Seuil defaut 0.5 -> inclus si >= 2 confirmed. Si 1 confirmed (score 0.33 < 0.5), type
-    omis pour eviter un exemple isole. Le collaborateur peut surcharger via CP4.
+    omis pour eviter un exemple isole. Le collaborateur peut surcharger ce choix.
     """
     return min(1.0, ctx.confirmed_x13 / 3.0)
 
@@ -74,7 +74,7 @@ def score_type_4_endroit_agir(ctx: ReportContext) -> float:
 
     Regle : score = 1.0 si >= 1 confirmed (il y a quelque chose a proposer), sinon 0.0.
     Pas de proposition sans ancrage X.13 -- c'est la valeur principale pour un ticket,
-    et le point d'entree pour une feature (meme si la conclusion est souvent UC-001).
+    et le point d'entree pour une feature (meme si la conclusion est souvent une creation d'entite).
     """
     return 1.0 if ctx.confirmed_x13 >= 1 else 0.0
 

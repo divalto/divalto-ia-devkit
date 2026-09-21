@@ -1,0 +1,5 @@
+[INFO]---------------Compilation. Construction du sous-projet monsousprojet.dhps
+[ERROR]Parametre manquant
+ Fichier:/specifs/monworkspace/projets/monprojet.dhpt Ligne:16 Erreur numero 8
+ Mot: nom
+[TOTAL_ERRORS]1

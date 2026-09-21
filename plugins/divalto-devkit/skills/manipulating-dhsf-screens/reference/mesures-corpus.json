@@ -1,0 +1,265 @@
+{
+  "_principe": [
+    "Releve DATE de mesures faites sur le corpus des masques .dhsf du standard livre.",
+    "Les pages de reference de ce skill citent ces chiffres ; une suite de tests verifie",
+    "que les deux concordent. Une page qui derive des mesures qui la fondent est pire",
+    "qu'une page sans chiffres.",
+    "",
+    "Ce qui est MESURE l'est sur le corpus. Ce qui vient d'un retour partenaire est",
+    "marque comme tel. Ce qui n'est pas etabli porte une reserve explicite.",
+    "",
+    "Les scripts du plugin n'interrogent JAMAIS le corpus ni le MCP : la mesure est le",
+    "travail de l'orchestrateur, le test ne fait que confronter page et releve, hors ligne."
+  ],
+  "source": "corpus des masques .dhsf d'un pack standard X.13",
+  "version_erp": "X.13",
+  "date_mesure": "2026-08-30",
+  "corpus": {
+    "masques_dhsf": 2438,
+    "_note": "chemin volontairement absent : il depend du poste. Rejouer la mesure sur le pack du partenaire si les chiffres doivent etre reverifies."
+  },
+  "esp_si_zero": {
+    "_issue": "#254",
+    "occurrences": 33576,
+    "masques_porteurs": 2014,
+    "sous_section_unique": "param_saisie",
+    "occurrences_hors_param_saisie": 0,
+    "composants_porteurs": {
+      "champ_tableau": 11018,
+      "champ": 9504,
+      "multi_choix_tableau": 6758,
+      "multi_choix": 5421,
+      "case_a_cocher_tableau": 875
+    },
+    "avec_saisie_non": 22451,
+    "part_saisie_non_pct": 67,
+    "regle": "esp_si_zero vit EXCLUSIVEMENT dans [param_saisie], sous cinq composants. Le placer ailleurs -- notamment dans [description] -- ne compile pas. saisie=non n'y change rien : c'est le cas dominant.",
+    "correction_du_retex": "Le RETEX #254 concluait que esp_si_zero n'est pas un attribut valide dans cette version et qu'il ne faut pas l'inclure. C'est FAUX : 33576 occurrences dans 2014 des 2438 masques. Ses suppressions (B), (C) et (D) portaient sur des formes que le standard emploie massivement. Seul son point (E) est juste -- un esp_si_zero place dans [description], ce que le corpus ne montre jamais.",
+    "niveau": "mesure"
+  },
+  "col_depl": {
+    "_issue": "#283",
+    "occurrences": 1704,
+    "masques_porteurs": 1309,
+    "valeurs_observees": {
+      "3": 569,
+      "2": 555,
+      "4": 213,
+      "5": 110,
+      "1": 73,
+      "8": 48,
+      "6": 43,
+      "7": 38,
+      "10": 15,
+      "9": 13,
+      "17": 12,
+      "11": 5,
+      "13": 4,
+      "16": 3,
+      "12": 2
+    },
+    "param_tableau_total": 2817,
+    "param_tableau_sans_col_depl": 1113,
+    "part_sans_col_depl_pct": 40,
+    "regle_de_lint_ecartee": "Le RETEX demande un avertissement quand [param_tableau] n'a pas de col_depl. MESUREE PUIS ECARTEE : 1113 des 2817 blocs du standard n'en ont pas -- la regle produirait 1113 faux positifs sur du code livre. Meme verdict que S09 et l'angle mort CI03.",
+    "observe_partenaire": "Son absence peut figer un tableau A5PMTAB : les lignes s'affichent, mais ni le clavier ni la souris ne changent la ligne selectionnee. Aucune erreur de compilation, aucun message runtime.",
+    "non_verifie": "la semantique exacte du nombre. La distribution 1..17 est coherente avec un indice de colonne, mais rien ne l'etablit -- ni la documentation (0 occurrence), ni le corpus. Le RETEX lui-meme suggere de la clarifier aupres de Divalto.",
+    "niveau": "mesure"
+  },
+  "rich_edit": {
+    "_issue": "#260",
+    "blocs": 355,
+    "masques_porteurs": 166,
+    "parent": "page",
+    "cles_systematiques": {
+      "presentation": [
+        "position",
+        "taille",
+        "id",
+        "wstyle"
+      ],
+      "description": [
+        "donnee"
+      ],
+      "param_rich_edit": [
+        "largeur"
+      ]
+    },
+    "param_rich_edit_cles": {
+      "largeur": 355,
+      "entree_saisie_clav": 74,
+      "format": 46,
+      "mode_ecriture": 24
+    },
+    "wstyle_observes": {
+      "CHAMP_NON_SAISI": 126,
+      "STD": 105,
+      "CHAMP_SAISI": 85,
+      "RTF_NOTE": 28,
+      "CHAMP_AFF": 9,
+      "CHAMP_TPV_AFF": 1,
+      "CHAMP_TPV_NON_SAISI": 1
+    },
+    "correction_du_retex": "Le RETEX #260 donne wstyle=\"RTF_NOTE\" comme LE style du rich_edit. Il est le 4e en frequence (28 sur 355). Les trois dominants sont CHAMP_NON_SAISI, STD et CHAMP_SAISI. Le RETEX a generalise depuis le seul masque qu'il avait ouvert.",
+    "observe_partenaire": "Le composant [champ] simple ne fait pas de multiligne, meme avec une grande hauteur. Non reverifie ici : le workspace n'a pas de compilateur.",
+    "niveau": "mesure"
+  },
+  "widgets_de_page": {
+    "_issue": "#260",
+    "_note": "Mesure des blocs dont le parent DIRECT est [page] : ce sont les widgets. La liste blanche WIDGET_TYPES du parser en ignorait six.",
+    "ajoutes_au_parser": {
+      "case_a_cocher": 6854,
+      "cadre": 2579,
+      "bitmap_constante": 487,
+      "rich_edit": 355,
+      "bitmap_variable": 107,
+      "graphe": 93
+    },
+    "enfants_de_tableau_ajoutes": {
+      "case_a_cocher_tableau": 875,
+      "bitmap_variable_tab": 75
+    },
+    "contradiction_interne_corrigee": "TROIS des six composants que ce skill DOCUMENTE -- cadre, bitmap_constante, bitmap_variable -- etaient absents de la liste blanche de son propre parser. Un masque qui en contient etait parse sans les voir.",
+    "non_ajoutes_volontairement": {
+      "aide_page": "2614 sous [page], mais c'est vraisemblablement une SECTION de page (aide contextuelle), pas un widget. Non tranche.",
+      "boutons": "34 sous [page] seulement, contre 23543 ailleurs : c'est un sous-bloc, pas un widget de page.",
+      "hierarchie_grille_wpf": "lignes_grille (397) > ligne (652) > cellules_ligne (652) > cellule (994) : quatre niveaux imbriques sous grille_wpf. Les ajouter demande de comprendre le modele de grille, ce qui depasse #260. Trace."
+    },
+    "consequence_assumee": "COUNTED_WIDGET_TYPES s'elargit : les comptes de widgets rendus par le parser augmentent sur les masques concernes. C'est la correction d'un sous-comptage, pas une regression.",
+    "niveau": "mesure"
+  },
+  "chaine_des_pages": {
+    "_issues": [
+      "#259",
+      "#254"
+    ],
+    "regle": "suiv= et prec= chainent les pages. Une page sans successeur n'a PAS de ligne suiv= : l'omission est la fin de chaine. Un suiv=/prec= pointant une page absente ne produit AUCUNE erreur de compilation -- l'ecran meurt a l'OUVERTURE avec « page N du masque inexistante ».",
+    "template_zoom_sql": "porte une page 12 « Identifiants » et la paire suiv=12 / prec=11 qui la chaine a la page 11. Les trois sont INDISSOCIABLES : supprimer la page 12 -- obligatoire des que la table n'a pas le socle audit -- impose de retirer AUSSI les deux liens.",
+    "decision": "Le template n'est PAS modifie : il est correct tant que la page 12 est la. C'est le controle qui manquait, et c'est ce que le RETEX #259 demande litteralement. action_validate croise desormais suiv/prec avec la liste des pages presentes.",
+    "niveau": "mesure"
+  },
+  "param_case": {
+    "_issue": "#254",
+    "occurrences": 7729,
+    "masques_porteurs": 1217,
+    "parents_observes": {
+      "case_a_cocher": 6854,
+      "case_a_cocher_tableau": 875
+    },
+    "occurrences_ailleurs": 0,
+    "systematique": "OUI : 6854 [param_case] pour 6854 [case_a_cocher], et 875 pour 875 [case_a_cocher_tableau] -- un pour un. Le bloc est donc obligatoire dans ces deux composants, pas seulement autorise.",
+    "regle": "[param_case] n'est valide QUE dans [case_a_cocher] et [case_a_cocher_tableau], ou il est systematique. Zero occurrence ailleurs dans le corpus. Dans un [champ] ordinaire il fait echouer la compilation ; un [champ] avec saisie=non affiche la valeur numerique brute.",
+    "confirme_le_retex": "Le point (A) de #254 est confirme par la mesure, et renforce : le bloc n'est pas seulement limite a ces deux composants, il y est systematique.",
+    "niveau": "mesure"
+  },
+  "bloc_ressources": {
+    "_issue": "#173",
+    "masques_avec_ressources": 2340,
+    "ressources_apres_la_derniere_page": 2340,
+    "exceptions": 0,
+    "regle": "Le bloc [ressources] (menus + toolbars) est de portee MASQUE et se place APRES la derniere [page]. Sur 2340 masques du corpus qui en portent un, 2340 le placent la : aucune exception. L'adjacence avec la derniere page est donc trompeuse par construction.",
+    "cas_vecu": "En transformant la derniere page d'un masque en pop-up, le [ressources] qui la SUIVAIT a ete pris pour un menu/toolbar propre a cette page et absorbe dans la zone remplacee : menu principal, 5 toolbars et un bouton custom disparus a l'execution. Recupere grace a un backup.",
+    "garde_fou": "Le parser rend deja pages_count, widgets_total, toolbars_count et menus_count. Il manquait le compteur des ITEMS : un bouton perdu dans un toolbar conserve laisse toolbars_count inchange. Ajoute au 2026-08-30 sous le nom ressources_items_count.",
+    "niveau": "mesure"
+  },
+  "plancher_id": {
+    "_issue": "#268",
+    "defaut": "compute_max_id() ne regarde que les id PRESENTS dans le fichier et ignore dernier_id, que le parser expose pourtant. Sur un masque de surcharge (dernier_id=1000000, id presents restes ceux du standard), add-column allouait donc un id STANDARD a un element ajoute en surcharge.",
+    "asymetrie_interne": "action_add_page respectait deja dernier_id_page ; action_add_field, action_add_column et action_add_groupbox ne respectaient pas dernier_id. Trois sites sur quatre, dans le MEME fichier -- motif d'asymetrie entre scripts freres.",
+    "correctif": "compute_id_floor(tree) = max(compute_max_id(tree), masque.dernier_id), utilise par les trois actions. Ni detection de surcharge, ni 1000000 code en dur : la valeur est declaree par le fichier.",
+    "pourquoi_pas_la_suggestion_du_retex": "Le RETEX proposait max(dernier_id, 1000000) quand surcharge=oui. Trois objections : le parser n'expose PAS surcharge=oui ; 1000000 code en dur duplique une convention qui vit deja dans surcharge_mask.py ; et respecter dernier_id est correct pour un masque standard aussi -- mesure sur un masque du standard : max_id_found=2623, dernier_id=2623, les deux coincident.",
+    "verifie_en_conditions_reelles": "masque a dernier_id=1000000 et id presents <= 26 : add-column alloue 1000001 (avant le correctif : 27) et met dernier_id a jour.",
+    "niveau": "mesure"
+  },
+  "grille_et_panels": {
+    "_issue": "#187",
+    "grilles_exploitables": 338,
+    "panels": 810,
+    "mecanisme": {
+      "panel_presentation": [
+        "position",
+        "taille",
+        "id",
+        "grille_parent",
+        "wstyle"
+      ],
+      "panel_param": [
+        "page"
+      ],
+      "systematique": "810/810 pour chacune de ces six cles",
+      "grille_parent": "<idGrille>,<ligne>,<colonne> -- rattache le panel a une cellule de la grille",
+      "param_panel_page": "numero de la [page] affichee dans le panel"
+    },
+    "unite_de_ligne": {
+      "rapport_hauteur_panel_sur_nb_lig": "mediane 8,00",
+      "arrondi_a_8": 683,
+      "arrondi_a_9": 104,
+      "arrondi_a_7": 19,
+      "sur_total": 810,
+      "ecart_nul_avec_k8_pct": 67,
+      "ecart_max_1_ligne_avec_k8_pct": 87
+    },
+    "marge": "La somme des hauteurs de panels vaut la hauteur de la grille MOINS environ 12 unites : ecart -12 dominant, sur 112 grilles. Coherent avec une marge de 6 unites en haut et en bas.",
+    "panels_par_grille": {
+      "1": 24,
+      "2": 154,
+      "3": 156,
+      "4": 2
+    },
+    "regle_du_retex_NON_VERIFIEE": "Le RETEX enonce que « le total des nb_lig des pages de panels doit correspondre a la hauteur de la grille ». Mesuree sous plusieurs formes (k=8 ou 8,5 ; avec ou sans marge de 12), elle plafonne a 23 % des 336 grilles a plus ou moins 4 unites. Les ecarts positifs importants -- jusqu'a 200 unites -- montrent que des pages sont BIEN PLUS HAUTES que leur panel : le panel est une fenetre, pas un contenant exact. La formule n'est donc pas ecrite, et aucun lint n'en decoule.",
+    "ce_qui_reste_vrai": "Son SYMPTOME : ajouter un panel dans une grille sans revoir les hauteurs ecrase les panels. Et attache_lgy=oui ne dispense pas de l'ajustement -- il gere le redimensionnement de fenetre a l'execution, pas la mise en place initiale.",
+    "signale_non_traite": "La regle DHSF05 du validate de ce skill utilise nb_lig * 14, la ou la mesure donne 8 dans le contexte des panels. Les deux ne parlent peut-etre pas de la meme chose (page pleine vs page en panel). Signale, NON touche : hors perimetre, et cela merite sa propre verification.",
+    "niveau": "mesure"
+  },
+  "masquage_colonne": {
+    "_page": "xmesetattribut-dynamique.md",
+    "_issue": "#180",
+    "_note": "Mesure sur les sources livrees du pack : 4506 .dhsp, 811 .dhsi, 267 .dhsq, 2438 .dhsf -- 8022 fichiers. Plus une lecture de ddsys.dhsd (dictionnaire systeme) fournie par l'architecte.",
+    "date": "2026-08-30",
+    "deux_contextes": {
+      "zoomentetetableau_programmes": 718,
+      "zoomentetetableau_de_famille_zoom": 718,
+      "xmelistgetid_programmes": 119,
+      "xmelistgetid_hors_famille_zoom": 93,
+      "xmelistgetid_sans_zoom_idtableau": 106,
+      "intersection": 13,
+      "regle": "ZoomEnteteTableau n'est appelee QUE par le moteur Zoom SQL. Hors de ce contexte, l'identifiant s'obtient par XmeListGetId et le traitement se branche dans une surcharge du masque."
+    },
+    "xmelistgetid": {
+      "appels": 132,
+      "a_quatre_arguments": 131,
+      "premier_argument": {
+        "MZ.*": 86,
+        "Zoom.*": 29,
+        "HQL.*": 9,
+        "Harmony.*": 4
+      },
+      "troisieme_argument_litteral": 108,
+      "correction_du_retex": "Le RETEX ecrit XmeListGetId(\"NomDuTableau\") -- UN argument, et le nom en premiere position. La mesure dit quatre arguments, le nom en TROISIEME, et une cle de masque en premier. Suivre le RETEX a la lettre donne une erreur de nombre de parametres."
+    },
+    "numero_de_colonne": {
+      "appels_get_et_set": 103,
+      "second_argument_litteral": 38,
+      "second_argument_variable": 65,
+      "second_argument_nom": 0,
+      "confirme_le_retex": "Le 2e argument est TOUJOURS un numero, jamais un nom : la remarque du RETEX sur l'ordinal Xwin est confirmee, et aucune fonction de correspondance nom -> numero n'existe."
+    },
+    "columninfo": {
+      "source": "ddsys.dhsd, dictionnaire systeme",
+      "nb_champs": 40,
+      "champ_affichage": "EXISTE, position 903",
+      "champ_visibilite": "EXISTE aussi, position 687 -- distinct, ne pas confondre",
+      "champs_employes_par_le_standard": {
+        "Libelle": 133,
+        "Nomdonnee": 49,
+        "Bulle": 42,
+        "Bitmap1": 25,
+        "Indices": 5,
+        "Sequence": 1
+      },
+      "affichage_employe_par_le_standard": 0
+    },
+    "non_verifie": "Les VALEURS AFFCOL_NON et AFFCOL_JAMAIS nommees par le RETEX : zero occurrence sur les 8022 sources livrees ET dans le repertoire systeme. Vraisemblablement declarees dans un module compile non livre -- meme situation que SQL_RESULTOK au. Le CHAMP Affichage, lui, est verifie. Et la difference entre Affichage et Visibilite n'est pas etablie.",
+    "niveau": "mesure"
+  }
+}

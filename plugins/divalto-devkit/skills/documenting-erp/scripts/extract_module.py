@@ -2,7 +2,7 @@
 """extract_module.py -- Cree l'identite d'un module ERP.
 
 Les parametres (bases, entities, prefix, label) sont fournis explicitement
-en CLI par le collaborateur au CP1. Le skill consulte
+en CLI par le collaborateur lors du cadrage initial. Le skill consulte
 `reference/modules-erp-summary.md` pour rappel du mapping module/prefixe/dico
 des modules standards.
 

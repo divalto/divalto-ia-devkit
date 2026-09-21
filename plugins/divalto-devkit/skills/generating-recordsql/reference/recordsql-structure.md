@@ -46,7 +46,7 @@ Un RecordSql est une vue SQL declarative en syntaxe XML/DIVA. Il definit comment
 |----------|------|:-----------:|
 | `DefaultDictionary` | Dictionnaire par defaut pour les tables | Oui |
 | `DataBase` | Base de donnees logique (toujours `DAV`) | Oui |
-| `overwrittenby` | Fichier de surcharge (personnalisation client) | Oui (R02) |
+| `overwrittenby` | Fichier de surcharge (personnalisation client) | Oui (RSQ02) |
 | `ModuleInfo` | Version du fichier (format `$Id:`) | Oui |
 
 ---
@@ -91,7 +91,7 @@ Les attributs `Insert`, `Update`, `Delete` controlent les droits DML sur la tabl
 
 ```xml
 <WHERE>
-    {TableSQL}.Dos = MZ.Dos            ← Filtre multi-dossier OBLIGATOIRE (R01)
+    {TableSQL}.Dos = MZ.Dos            ← Filtre multi-dossier OBLIGATOIRE (RSQ01)
 
     Case Equal_{ChampCle}(char code)   ← Recherche exacte par cle
         {TableSQL}.{ChampCle} = code
@@ -114,7 +114,7 @@ Les attributs `Insert`, `Update`, `Delete` controlent les droits DML sur la tabl
 
 Le filtre `{TableSQL}.Dos = MZ.Dos` est **en dehors de tout Case** — il s'applique a toutes les requetes. C'est une **obligation de securite** pour le multi-dossier.
 
-**Typage des parametres de Case (R-017)** : les parametres declares entre parentheses d'un
+**Typage des parametres de Case** : les parametres declares entre parentheses d'un
 Case (`<Where>`, mais aussi `<Having>` / `<SubQuery>`) prennent un type comme `char`, `int`,
 `date`. **La casse est LIBRE** : `CHAR`, `INT`, `DATE` (capitalises) compilent aussi bien que
 les minuscules. Le seul piege : le type **`long` n'est pas valide** dans une condition

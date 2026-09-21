@@ -1,0 +1,1740 @@
+{
+  "_principe": [
+    "RELEVE des verifications de ce skill. Deux sources, de valeur INEGALE :",
+    "",
+    " 1. objet/proto_a5pmtab.dhsp -- le fichier de PROTOTYPES livre avec l'ERP. C'est la",
+    "    source AUTORITAIRE : son role est de declarer le contrat. 188 declarations.",
+    " 2. A5/source/ExtraitsErp/divalto_a5pmtab_*.dhsp -- les extraits de code a copier,",
+    "    indexes dans le graphe. 34 fichiers. Utiles pour les CORPS, mais leurs signatures",
+    "    DIVERGENT du prototype sur le passage de Id (voir non_verifie).",
+    "",
+    "Un test verifie que les pages du skill concordent avec ce releve.",
+    "Les scripts du devkit n'appellent JAMAIS le MCP -- convention du plugin."
+  ],
+  "sources": {
+    "prototype": "Standard/Version X.13/objet/proto_a5pmtab.dhsp (2151 lignes, 188 declarations) -- AUTORITAIRE",
+    "extraits": "Standard/A5/source/ExtraitsErp/divalto_a5pmtab_*.dhsp (34 fichiers, 45 routines, 0 protegee) -- via diva-mcp",
+    "ecran_standard": "un ecran du standard livre appelant AP_Interroger_Tableaux, lu en entier"
+  },
+  "version_erp": "X.13",
+  "date_verification": "2026-08-28",
+  "regle_du_suffixe": {
+    "enonce": "C'est l'option Fperso qui decide de la forme appelee, PAS le nombre de tableaux. Fperso=true (+ Nom='<X>') -> A5PMTAB appelle la forme SUFFIXEE DefProcInterro_<X>_*, qui ne recoit PAS Id. Sans Fperso -> il appelle la forme non suffixee, qui recoit Id en premier parametre, PAR ADRESSE. Le suffixe n'est donc pas une convention qu'on invente : c'est la valeur passee dans Nom=.",
+    "suffixees": 90,
+    "non_suffixees": 90,
+    "paires_appariees": 82,
+    "paires_avec_un_parametre_d_ecart": 75,
+    "non_suffixees_avec_id_par_adresse": 0,
+    "consequence": "C'est l'explication exacte du message runtime 'Nombre de parametres errone ... la fonction attend 0 parametre(s) et l'appelant a place 1 parametre(s) sur la pile' : A5PMTAB a appele la forme suffixee alors que le code declarait la non suffixee, ou l'inverse.",
+    "regle_pratique": "Un tableau -> forme non suffixee avec Id. Plusieurs tableaux -> une serie suffixee par tableau, sans Id. Ne jamais melanger.",
+    "declarations_brutes": 188,
+    "noms_distincts": 180,
+    "_note_ecart": "188 declarations dans le fichier, mais 180 NOMS distincts : les callbacks Defaut et Apres existent en deux declarations chacune -- une 'Function Int' avec parametres et une '(XMT) Procedure' sans -- soit 8 doublons de nom (4 noms x 2 familles).",
+    "mecanisme": "Fperso / Nom= de Creer_Parametre, plus le tag HMP <Perso>",
+    "confiance": "architecte + standard",
+    "correction_du_2026_08_28": "Notre premiere redaction disait 'un tableau -> non suffixee, plusieurs tableaux -> suffixee'. JUSTE DANS L'EFFET, FAUX DANS LA CAUSE : le nombre de tableaux ne fait que correler (le tableau principal se passe de Perso, le secondaire en a besoin pour se distinguer). Le mecanisme est Fperso. Corrige sur reponse de l'architecte.",
+    "ou_c_est_visible": "Un ecran du standard porte LES DEUX FORMES cote a cote : sa procedure de tableau principal appelle Creer_Parametre SANS Fperso ni Nom, sa procedure de tableau imbrique l'appelle avec Fperso=<vrai> et Nom='<suffixe>' plus le tag <Perso>."
+  },
+  "callbacks_prototype": {
+    "DefProcSaisie_G1T1_AvantBoucle": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": true,
+      "params": [
+        "&ToucheInitiale",
+        "&ArretInitial",
+        "&ToucheFinale",
+        "&ArretFinal"
+      ],
+      "nb_params": 4
+    },
+    "DefProcInterro_G1T1_AvantBoucle": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": true,
+      "params": [
+        "&ToucheInitiale",
+        "&ArretInitial",
+        "&ToucheFinale",
+        "&ArretFinal"
+      ],
+      "nb_params": 4
+    },
+    "DefProcSaisie_AvantBoucle": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": false,
+      "params": [
+        "Id",
+        "&ToucheInitiale",
+        "&ArretInitial",
+        "&ToucheFinale",
+        "&ArretFinal"
+      ],
+      "nb_params": 5
+    },
+    "DefProcInterro_AvantBoucle": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": false,
+      "params": [
+        "Id",
+        "&ToucheInitiale",
+        "&ArretInitial",
+        "&ToucheFinale",
+        "&ArretFinal"
+      ],
+      "nb_params": 5
+    },
+    "DefProcSaisie_G1T1_Pilotage": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": true,
+      "params": [
+        "&ToucheInitiale",
+        "&ArretInitial",
+        "&ToucheFinale",
+        "&ArretFinal"
+      ],
+      "nb_params": 4
+    },
+    "DefProcInterro_G1T1_Pilotage": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": true,
+      "params": [
+        "&ToucheInitiale",
+        "&ArretInitial",
+        "&ToucheFinale",
+        "&ArretFinal"
+      ],
+      "nb_params": 4
+    },
+    "DefProcSaisie_Pilotage": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": false,
+      "params": [
+        "Id",
+        "&ToucheInitiale",
+        "&ArretInitial",
+        "&ToucheFinale",
+        "&ArretFinal"
+      ],
+      "nb_params": 5
+    },
+    "DefProcInterro_Pilotage": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": false,
+      "params": [
+        "Id",
+        "&ToucheInitiale",
+        "&ArretInitial",
+        "&ToucheFinale",
+        "&ArretFinal"
+      ],
+      "nb_params": 5
+    },
+    "DefProcSaisie_G1T1_AvantConsult": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": true,
+      "params": [],
+      "nb_params": 0
+    },
+    "DefProcInterro_G1T1_AvantConsult": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": true,
+      "params": [],
+      "nb_params": 0
+    },
+    "DefProcSaisie_AvantConsult": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": false,
+      "params": [
+        "Id"
+      ],
+      "nb_params": 1
+    },
+    "DefProcInterro_AvantConsult": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": false,
+      "params": [
+        "Id"
+      ],
+      "nb_params": 1
+    },
+    "DefProcSaisie_G1T1_ArretSpecifique": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": true,
+      "params": [
+        "&Sortie"
+      ],
+      "nb_params": 1
+    },
+    "DefProcInterro_G1T1_ArretSpecifique": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": true,
+      "params": [
+        "&Sortie"
+      ],
+      "nb_params": 1
+    },
+    "DefProcSaisie_ArretSpecifique": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": false,
+      "params": [
+        "Id",
+        "&Sortie"
+      ],
+      "nb_params": 2
+    },
+    "DefProcInterro_ArretSpecifique": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": false,
+      "params": [
+        "Id",
+        "&Sortie"
+      ],
+      "nb_params": 2
+    },
+    "DefProcSaisie_G1T1_Abandon": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": true,
+      "params": [],
+      "nb_params": 0
+    },
+    "DefProcInterro_G1T1_Abandon": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": true,
+      "params": [],
+      "nb_params": 0
+    },
+    "DefProcSaisie_Abandon": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": false,
+      "params": [
+        "Id"
+      ],
+      "nb_params": 1
+    },
+    "DefProcInterro_Abandon": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": false,
+      "params": [
+        "Id"
+      ],
+      "nb_params": 1
+    },
+    "DefProcSaisie_G1T1_Validation": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": true,
+      "params": [],
+      "nb_params": 0
+    },
+    "DefProcInterro_G1T1_Validation": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": true,
+      "params": [],
+      "nb_params": 0
+    },
+    "DefProcSaisie_Validation": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": false,
+      "params": [
+        "Id"
+      ],
+      "nb_params": 1
+    },
+    "DefProcInterro_Validation": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": false,
+      "params": [
+        "Id"
+      ],
+      "nb_params": 1
+    },
+    "DefProcSaisie_G1T1_ModeFiche": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": true,
+      "params": [],
+      "nb_params": 0
+    },
+    "DefProcInterro_G1T1_ModeFiche": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": true,
+      "params": [],
+      "nb_params": 0
+    },
+    "DefProcSaisie_ModeFiche": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": false,
+      "params": [
+        "Id"
+      ],
+      "nb_params": 1
+    },
+    "DefProcInterro_ModeFiche": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": false,
+      "params": [
+        "Id"
+      ],
+      "nb_params": 1
+    },
+    "DefProcSaisie_G1T1_Precedent": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": true,
+      "params": [],
+      "nb_params": 0
+    },
+    "DefProcInterro_G1T1_Precedent": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": true,
+      "params": [],
+      "nb_params": 0
+    },
+    "DefProcSaisie_Precedent": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": false,
+      "params": [
+        "Id"
+      ],
+      "nb_params": 1
+    },
+    "DefProcInterro_Precedent": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": false,
+      "params": [
+        "Id"
+      ],
+      "nb_params": 1
+    },
+    "DefProcSaisie_G1T1_Suivant": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": true,
+      "params": [],
+      "nb_params": 0
+    },
+    "DefProcInterro_G1T1_Suivant": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": true,
+      "params": [],
+      "nb_params": 0
+    },
+    "DefProcSaisie_Suivant": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": false,
+      "params": [
+        "Id"
+      ],
+      "nb_params": 1
+    },
+    "DefProcInterro_Suivant": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": false,
+      "params": [
+        "Id"
+      ],
+      "nb_params": 1
+    },
+    "DefProcSaisie_G1T1_Defaut": {
+      "nature": "procedure",
+      "type_retour": null,
+      "suffixee": true,
+      "params": [],
+      "nb_params": 0
+    },
+    "DefProcInterro_G1T1_Defaut": {
+      "nature": "procedure",
+      "type_retour": null,
+      "suffixee": true,
+      "params": [],
+      "nb_params": 0
+    },
+    "DefProcSaisie_Defaut": {
+      "nature": "procedure",
+      "type_retour": null,
+      "suffixee": false,
+      "params": [],
+      "nb_params": 0
+    },
+    "DefProcInterro_Defaut": {
+      "nature": "procedure",
+      "type_retour": null,
+      "suffixee": false,
+      "params": [],
+      "nb_params": 0
+    },
+    "DefProcSaisie_G1T1_Apres": {
+      "nature": "procedure",
+      "type_retour": null,
+      "suffixee": true,
+      "params": [],
+      "nb_params": 0
+    },
+    "DefProcInterro_G1T1_Apres": {
+      "nature": "procedure",
+      "type_retour": null,
+      "suffixee": true,
+      "params": [],
+      "nb_params": 0
+    },
+    "DefProcSaisie_Apres": {
+      "nature": "procedure",
+      "type_retour": null,
+      "suffixee": false,
+      "params": [],
+      "nb_params": 0
+    },
+    "DefProcInterro_Apres": {
+      "nature": "procedure",
+      "type_retour": null,
+      "suffixee": false,
+      "params": [],
+      "nb_params": 0
+    },
+    "DefProcSaisie_G1T1_Fin": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": true,
+      "params": [],
+      "nb_params": 0
+    },
+    "DefProcInterro_G1T1_Fin": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": true,
+      "params": [],
+      "nb_params": 0
+    },
+    "DefProcSaisie_Fin": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": false,
+      "params": [
+        "Id"
+      ],
+      "nb_params": 1
+    },
+    "DefProcInterro_Fin": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": false,
+      "params": [
+        "Id"
+      ],
+      "nb_params": 1
+    },
+    "DefProcSaisie_G1T1_F11": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": true,
+      "params": [],
+      "nb_params": 0
+    },
+    "DefProcInterro_G1T1_F11": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": true,
+      "params": [],
+      "nb_params": 0
+    },
+    "DefProcSaisie_F11": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": false,
+      "params": [
+        "Id"
+      ],
+      "nb_params": 1
+    },
+    "DefProcInterro_F11": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": false,
+      "params": [
+        "Id"
+      ],
+      "nb_params": 1
+    },
+    "DefProcSaisie_G1T1_InitColRecherche": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": true,
+      "params": [
+        "&Colonne"
+      ],
+      "nb_params": 1
+    },
+    "DefProcInterro_G1T1_InitColRecherche": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": true,
+      "params": [
+        "&Colonne"
+      ],
+      "nb_params": 1
+    },
+    "DefProcSaisie_InitColRecherche": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": false,
+      "params": [
+        "Id",
+        "&Colonne"
+      ],
+      "nb_params": 2
+    },
+    "DefProcInterro_InitColRecherche": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": false,
+      "params": [
+        "Id",
+        "&Colonne"
+      ],
+      "nb_params": 2
+    },
+    "DefProcSaisie_G1T1_Recherche": {
+      "nature": "function",
+      "type_retour": "char",
+      "suffixee": true,
+      "params": [
+        "&Ligne",
+        "&Ascenseur"
+      ],
+      "nb_params": 2
+    },
+    "DefProcInterro_G1T1_Recherche": {
+      "nature": "function",
+      "type_retour": "char",
+      "suffixee": true,
+      "params": [
+        "&Ligne",
+        "&Ascenseur"
+      ],
+      "nb_params": 2
+    },
+    "DefProcSaisie_Recherche": {
+      "nature": "function",
+      "type_retour": "char",
+      "suffixee": false,
+      "params": [
+        "Id",
+        "&Ligne",
+        "&Ascenseur"
+      ],
+      "nb_params": 3
+    },
+    "DefProcInterro_Recherche": {
+      "nature": "function",
+      "type_retour": "char",
+      "suffixee": false,
+      "params": [
+        "Id",
+        "&Ligne",
+        "&Ascenseur"
+      ],
+      "nb_params": 3
+    },
+    "DefProcSaisie_G1T1_InitTri": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": true,
+      "params": [
+        "&Colonne"
+      ],
+      "nb_params": 1
+    },
+    "DefProcInterro_G1T1_InitTri": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": true,
+      "params": [
+        "&Colonne"
+      ],
+      "nb_params": 1
+    },
+    "DefProcSaisie_InitTri": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": false,
+      "params": [
+        "Id",
+        "&Colonne"
+      ],
+      "nb_params": 2
+    },
+    "DefProcInterro_InitTri": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": false,
+      "params": [
+        "Id",
+        "&Colonne"
+      ],
+      "nb_params": 2
+    },
+    "DefProcSaisie_G1T1_Init_Protection_Export": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": true,
+      "params": [],
+      "nb_params": 0
+    },
+    "DefProcInterro_G1T1_Init_Protection_Export": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": true,
+      "params": [],
+      "nb_params": 0
+    },
+    "DefProcSaisie_Init_Protection_Export": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": false,
+      "params": [
+        "Id"
+      ],
+      "nb_params": 1
+    },
+    "DefProcInterro_Init_Protection_Export": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": false,
+      "params": [
+        "Id"
+      ],
+      "nb_params": 1
+    },
+    "DefProcSaisie_G1T1_InitFiltre": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": true,
+      "params": [],
+      "nb_params": 0
+    },
+    "DefProcInterro_G1T1_InitFiltre": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": true,
+      "params": [],
+      "nb_params": 0
+    },
+    "DefProcSaisie_InitFiltre": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": false,
+      "params": [
+        "Id"
+      ],
+      "nb_params": 1
+    },
+    "DefProcInterro_InitFiltre": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": false,
+      "params": [
+        "Id"
+      ],
+      "nb_params": 1
+    },
+    "DefProcSaisie_G1T1_InitOption": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": true,
+      "params": [],
+      "nb_params": 0
+    },
+    "DefProcInterro_G1T1_InitOption": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": true,
+      "params": [],
+      "nb_params": 0
+    },
+    "DefProcSaisie_InitOption": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": false,
+      "params": [
+        "Id"
+      ],
+      "nb_params": 1
+    },
+    "DefProcInterro_InitOption": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": false,
+      "params": [
+        "Id"
+      ],
+      "nb_params": 1
+    },
+    "DefProcSaisie_G1T1_Charger_Dynamique_debut": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": true,
+      "params": [],
+      "nb_params": 0
+    },
+    "DefProcInterro_G1T1_Charger_Dynamique_debut": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": true,
+      "params": [],
+      "nb_params": 0
+    },
+    "DefProcSaisie_Charger_Dynamique_debut": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": false,
+      "params": [
+        "Id"
+      ],
+      "nb_params": 1
+    },
+    "DefProcInterro_Charger_Dynamique_debut": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": false,
+      "params": [
+        "Id"
+      ],
+      "nb_params": 1
+    },
+    "DefProcSaisie_G1T1_Charger_Dynamique_fin": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": true,
+      "params": [],
+      "nb_params": 0
+    },
+    "DefProcInterro_G1T1_Charger_Dynamique_fin": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": true,
+      "params": [],
+      "nb_params": 0
+    },
+    "DefProcSaisie_Charger_Dynamique_fin": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": false,
+      "params": [
+        "Id"
+      ],
+      "nb_params": 1
+    },
+    "DefProcInterro_Charger_Dynamique_fin": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": false,
+      "params": [
+        "Id"
+      ],
+      "nb_params": 1
+    },
+    "DefProcSaisie_G1T1_Charger_Dynamique": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": true,
+      "params": [
+        "&cle",
+        "Avant"
+      ],
+      "nb_params": 2
+    },
+    "DefProcInterro_G1T1_Charger_Dynamique": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": true,
+      "params": [
+        "&cle",
+        "Avant"
+      ],
+      "nb_params": 2
+    },
+    "DefProcSaisie_Charger_Dynamique": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": false,
+      "params": [
+        "Id",
+        "&cle",
+        "Avant"
+      ],
+      "nb_params": 3
+    },
+    "DefProcInterro_Charger_Dynamique": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": false,
+      "params": [
+        "Id",
+        "&cle",
+        "Avant"
+      ],
+      "nb_params": 3
+    },
+    "DefProcSaisie_G1T1_Charger_Dynamique_SousNiveau": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": true,
+      "params": [
+        "&nombre",
+        "&Avant"
+      ],
+      "nb_params": 2
+    },
+    "DefProcInterro_G1T1_Charger_Dynamique_SousNiveau": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": true,
+      "params": [
+        "&nombre",
+        "&Avant"
+      ],
+      "nb_params": 2
+    },
+    "DefProcSaisie_Charger_Dynamique_SousNiveau": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": false,
+      "params": [
+        "Id",
+        "&nombre",
+        "&Avant"
+      ],
+      "nb_params": 3
+    },
+    "DefProcInterro_Charger_Dynamique_SousNiveau": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": false,
+      "params": [
+        "Id",
+        "&nombre",
+        "&Avant"
+      ],
+      "nb_params": 3
+    },
+    "DefProcSaisie_G1T1_Charger": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": true,
+      "params": [],
+      "nb_params": 0
+    },
+    "DefProcInterro_G1T1_Charger": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": true,
+      "params": [],
+      "nb_params": 0
+    },
+    "DefProcSaisie_Charger": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": false,
+      "params": [
+        "Id"
+      ],
+      "nb_params": 1
+    },
+    "DefProcInterro_Charger": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": false,
+      "params": [
+        "Id"
+      ],
+      "nb_params": 1
+    },
+    "DefProcSaisie_G1T1_Charger_Dynamique_recharge_init": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": true,
+      "params": [],
+      "nb_params": 0
+    },
+    "DefProcInterro_G1T1_Charger_Dynamique_recharge_init": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": true,
+      "params": [],
+      "nb_params": 0
+    },
+    "DefProcSaisie_Charger_Dynamique_recharge_init": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": false,
+      "params": [
+        "Id"
+      ],
+      "nb_params": 1
+    },
+    "DefProcInterro_Charger_Dynamique_recharge_init": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": false,
+      "params": [
+        "Id"
+      ],
+      "nb_params": 1
+    },
+    "DefProcSaisie_G1T1_Charger_Dynamique_recharge_modif": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": true,
+      "params": [],
+      "nb_params": 0
+    },
+    "DefProcInterro_G1T1_Charger_Dynamique_recharge_modif": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": true,
+      "params": [],
+      "nb_params": 0
+    },
+    "DefProcSaisie_Charger_Dynamique_recharge_modif": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": false,
+      "params": [
+        "Id"
+      ],
+      "nb_params": 1
+    },
+    "DefProcInterro_Charger_Dynamique_recharge_modif": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": false,
+      "params": [
+        "Id"
+      ],
+      "nb_params": 1
+    },
+    "DefProcSaisie_G1T1_Charger_Dynamique_Debut_Init": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": true,
+      "params": [],
+      "nb_params": 0
+    },
+    "DefProcInterro_G1T1_Charger_Dynamique_Debut_Init": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": true,
+      "params": [],
+      "nb_params": 0
+    },
+    "DefProcSaisie_Charger_Dynamique_Debut_Init": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": false,
+      "params": [
+        "Id"
+      ],
+      "nb_params": 1
+    },
+    "DefProcInterro_Charger_Dynamique_Debut_Init": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": false,
+      "params": [
+        "Id"
+      ],
+      "nb_params": 1
+    },
+    "DefProcSaisie_G1T1_Charger_Dynamique_Fin_Init": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": true,
+      "params": [],
+      "nb_params": 0
+    },
+    "DefProcInterro_G1T1_Charger_Dynamique_Fin_Init": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": true,
+      "params": [],
+      "nb_params": 0
+    },
+    "DefProcSaisie_Charger_Dynamique_Fin_Init": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": false,
+      "params": [
+        "Id"
+      ],
+      "nb_params": 1
+    },
+    "DefProcInterro_Charger_Dynamique_Fin_Init": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": false,
+      "params": [
+        "Id"
+      ],
+      "nb_params": 1
+    },
+    "DefProc_G1T1_Couleur_Colonne_Tableau_Actif": {
+      "nature": "function",
+      "type_retour": "char",
+      "suffixee": true,
+      "params": [
+        "Actif",
+        "i"
+      ],
+      "nb_params": 2
+    },
+    "DefProc_Couleur_Colonne_Tableau_Actif": {
+      "nature": "function",
+      "type_retour": "char",
+      "suffixee": false,
+      "params": [
+        "Id",
+        "Actif",
+        "i"
+      ],
+      "nb_params": 3
+    },
+    "DefProc_G1T1_Image_Colonne_Etat": {
+      "nature": "function",
+      "type_retour": "char",
+      "suffixee": true,
+      "params": [],
+      "nb_params": 0
+    },
+    "DefProc_Image_Colonne_Etat": {
+      "nature": "function",
+      "type_retour": "char",
+      "suffixee": false,
+      "params": [
+        "Id"
+      ],
+      "nb_params": 1
+    },
+    "DefProc_G1T1_Click_Autre_Tableau": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": true,
+      "params": [
+        "arret"
+      ],
+      "nb_params": 1
+    },
+    "DefProc_Click_Autre_Tableau": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": false,
+      "params": [
+        "arret"
+      ],
+      "nb_params": 1
+    },
+    "DefProcSaisie_G1T1_Saisie": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": true,
+      "params": [
+        "Operation"
+      ],
+      "nb_params": 1
+    },
+    "DefProcSaisie": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": false,
+      "params": [
+        "Id",
+        "Operation"
+      ],
+      "nb_params": 2
+    },
+    "DefProcSaisie_G1T1_Delete": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": true,
+      "params": [
+        "Operation"
+      ],
+      "nb_params": 1
+    },
+    "DefProcDelete": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": false,
+      "params": [
+        "Id",
+        "Operation"
+      ],
+      "nb_params": 2
+    },
+    "DefProcSaisie_G1T1_Copier": {
+      "nature": "procedure",
+      "type_retour": null,
+      "suffixee": true,
+      "params": [],
+      "nb_params": 0
+    },
+    "DefProcCopier": {
+      "nature": "procedure",
+      "type_retour": null,
+      "suffixee": false,
+      "params": [
+        "Id"
+      ],
+      "nb_params": 1
+    },
+    "DefProcSaisie_G1T1_Coller": {
+      "nature": "procedure",
+      "type_retour": null,
+      "suffixee": true,
+      "params": [],
+      "nb_params": 0
+    },
+    "DefProcColler": {
+      "nature": "procedure",
+      "type_retour": null,
+      "suffixee": false,
+      "params": [
+        "Id"
+      ],
+      "nb_params": 1
+    },
+    "DefProcSaisie_G1T1_AIV_Renvoyer_Id": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": true,
+      "params": [],
+      "nb_params": 0
+    },
+    "DefProcSaisie_AIV_Renvoyer_Id": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": false,
+      "params": [
+        "Id"
+      ],
+      "nb_params": 1
+    },
+    "DefProcSaisie_G1T1_AIV_Maj_Ligne_fonctionel": {
+      "nature": "procedure",
+      "type_retour": null,
+      "suffixee": true,
+      "params": [
+        "&Naiv",
+        "&Eid",
+        "&Ligne"
+      ],
+      "nb_params": 3
+    },
+    "DefProcSaisie_AIV_Maj_Ligne_fonctionel": {
+      "nature": "procedure",
+      "type_retour": null,
+      "suffixee": false,
+      "params": [
+        "Id",
+        "&Naiv",
+        "&Eid",
+        "&Ligne"
+      ],
+      "nb_params": 4
+    },
+    "DefProcSaisie_G1T1_AIV_Maj_Ligne_tableau": {
+      "nature": "procedure",
+      "type_retour": null,
+      "suffixee": true,
+      "params": [
+        "&Ligne",
+        "&Idc",
+        "&Eid"
+      ],
+      "nb_params": 3
+    },
+    "DefProcSaisie_AIV_Maj_Ligne_tableau": {
+      "nature": "procedure",
+      "type_retour": null,
+      "suffixee": false,
+      "params": [
+        "Id",
+        "&Ligne",
+        "&Idc",
+        "&Eid"
+      ],
+      "nb_params": 4
+    },
+    "DefProcSaisie_G1T1_AIV_Sup_Branche_fonctionel": {
+      "nature": "procedure",
+      "type_retour": null,
+      "suffixee": true,
+      "params": [
+        "BorneGa",
+        "BorneDr"
+      ],
+      "nb_params": 2
+    },
+    "DefProcSaisie_AIV_Sup_Branche_fonctionel": {
+      "nature": "procedure",
+      "type_retour": null,
+      "suffixee": false,
+      "params": [
+        "Id",
+        "BorneGa",
+        "BorneDr"
+      ],
+      "nb_params": 3
+    },
+    "DefProc_G1T1_DeploiementNiveaux_Maj": {
+      "nature": "procedure",
+      "type_retour": null,
+      "suffixee": true,
+      "params": [],
+      "nb_params": 0
+    },
+    "DefProc_DeploiementNiveaux_Maj": {
+      "nature": "procedure",
+      "type_retour": null,
+      "suffixee": false,
+      "params": [
+        "Id"
+      ],
+      "nb_params": 1
+    },
+    "DefProc_G1T1_Couleur_Tableau_Actif": {
+      "nature": "procedure",
+      "type_retour": null,
+      "suffixee": true,
+      "params": [
+        "Actif"
+      ],
+      "nb_params": 1
+    },
+    "DefProc_Couleur_Tableau_Actif": {
+      "nature": "procedure",
+      "type_retour": null,
+      "suffixee": false,
+      "params": [
+        "Id",
+        "Actif"
+      ],
+      "nb_params": 2
+    },
+    "DefProc_G1T1_TriAvant": {
+      "nature": "procedure",
+      "type_retour": null,
+      "suffixee": true,
+      "params": [],
+      "nb_params": 0
+    },
+    "DefProcTriAvant": {
+      "nature": "procedure",
+      "type_retour": null,
+      "suffixee": false,
+      "params": [
+        "Id"
+      ],
+      "nb_params": 1
+    },
+    "DefProc_G1T1_TriApres": {
+      "nature": "procedure",
+      "type_retour": null,
+      "suffixee": true,
+      "params": [],
+      "nb_params": 0
+    },
+    "DefProcTriApres": {
+      "nature": "procedure",
+      "type_retour": null,
+      "suffixee": false,
+      "params": [
+        "Id"
+      ],
+      "nb_params": 1
+    },
+    "DefProc_G1T1_TriSelectionNiveau": {
+      "nature": "procedure",
+      "type_retour": null,
+      "suffixee": true,
+      "params": [
+        "&Ligne"
+      ],
+      "nb_params": 1
+    },
+    "DefProcTriSelectionNiveau": {
+      "nature": "procedure",
+      "type_retour": null,
+      "suffixee": false,
+      "params": [
+        "Id",
+        "&Ligne"
+      ],
+      "nb_params": 2
+    },
+    "DefProc_G1T1_TriTraiterNiveau": {
+      "nature": "procedure",
+      "type_retour": null,
+      "suffixee": true,
+      "params": [
+        "&Ligne"
+      ],
+      "nb_params": 1
+    },
+    "DefProcTriTraiterNiveau": {
+      "nature": "procedure",
+      "type_retour": null,
+      "suffixee": false,
+      "params": [
+        "Id",
+        "&Ligne"
+      ],
+      "nb_params": 2
+    },
+    "DefProc_G1T1_TriAvantNiveau": {
+      "nature": "procedure",
+      "type_retour": null,
+      "suffixee": true,
+      "params": [
+        "&Ligne",
+        "Niveau",
+        "NivMax"
+      ],
+      "nb_params": 3
+    },
+    "DefProcTriAvantNiveau": {
+      "nature": "procedure",
+      "type_retour": null,
+      "suffixee": false,
+      "params": [
+        "Id",
+        "&Ligne",
+        "Niveau",
+        "NivMax"
+      ],
+      "nb_params": 4
+    },
+    "DefProc_G1T1_TriAvantErase": {
+      "nature": "procedure",
+      "type_retour": null,
+      "suffixee": true,
+      "params": [],
+      "nb_params": 0
+    },
+    "DefProcTriAvantErase": {
+      "nature": "procedure",
+      "type_retour": null,
+      "suffixee": false,
+      "params": [
+        "Id"
+      ],
+      "nb_params": 1
+    },
+    "DefProc_G1T1_TriLecturElemTrie": {
+      "nature": "procedure",
+      "type_retour": null,
+      "suffixee": true,
+      "params": [
+        "Ligne"
+      ],
+      "nb_params": 1
+    },
+    "DefProcTriLecturElemTrie": {
+      "nature": "procedure",
+      "type_retour": null,
+      "suffixee": false,
+      "params": [
+        "Id",
+        "Ligne"
+      ],
+      "nb_params": 2
+    },
+    "DefProcSaisie_G1T1_Expanser": {
+      "nature": "procedure",
+      "type_retour": null,
+      "suffixee": true,
+      "params": [],
+      "nb_params": 0
+    },
+    "DefProcExpanser": {
+      "nature": "procedure",
+      "type_retour": null,
+      "suffixee": false,
+      "params": [
+        "Id"
+      ],
+      "nb_params": 1
+    },
+    "DefProc_G1T1_List_Height_Changing": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": true,
+      "params": [],
+      "nb_params": 0
+    },
+    "DefProc_List_Height_Changing": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": false,
+      "params": [
+        "Id"
+      ],
+      "nb_params": 1
+    },
+    "DefProcSaisie_G1T1_Lecture_Ligne_tableau_Av": {
+      "nature": "procedure",
+      "type_retour": null,
+      "suffixee": true,
+      "params": [
+        "&Ligne"
+      ],
+      "nb_params": 1
+    },
+    "DefProcInterro_G1T1_Lecture_Ligne_tableau_Av": {
+      "nature": "procedure",
+      "type_retour": null,
+      "suffixee": true,
+      "params": [
+        "&Ligne"
+      ],
+      "nb_params": 1
+    },
+    "DefProcSaisie_Lecture_Ligne_tableau_Av": {
+      "nature": "procedure",
+      "type_retour": null,
+      "suffixee": false,
+      "params": [
+        "Id",
+        "&Ligne"
+      ],
+      "nb_params": 2
+    },
+    "DefProcInterro_Lecture_Ligne_tableau_Av": {
+      "nature": "procedure",
+      "type_retour": null,
+      "suffixee": false,
+      "params": [
+        "Id",
+        "&Ligne"
+      ],
+      "nb_params": 2
+    },
+    "DefProcSaisie_G1T1_Lecture_Ligne_tableau_Ap": {
+      "nature": "procedure",
+      "type_retour": null,
+      "suffixee": true,
+      "params": [
+        "&Ligne"
+      ],
+      "nb_params": 1
+    },
+    "DefProcInterro_G1T1_Lecture_Ligne_tableau_Ap": {
+      "nature": "procedure",
+      "type_retour": null,
+      "suffixee": true,
+      "params": [
+        "&Ligne"
+      ],
+      "nb_params": 1
+    },
+    "DefProcSaisie_Lecture_Ligne_tableau_Ap": {
+      "nature": "procedure",
+      "type_retour": null,
+      "suffixee": false,
+      "params": [
+        "Id",
+        "&Ligne"
+      ],
+      "nb_params": 2
+    },
+    "DefProcInterro_Lecture_Ligne_tableau_Ap": {
+      "nature": "procedure",
+      "type_retour": null,
+      "suffixee": false,
+      "params": [
+        "Id",
+        "&Ligne"
+      ],
+      "nb_params": 2
+    },
+    "DefProcSaisie_G1T1_Rupture_Ligne_tableau": {
+      "nature": "procedure",
+      "type_retour": null,
+      "suffixee": true,
+      "params": [
+        "&Niv",
+        "&Ligne"
+      ],
+      "nb_params": 2
+    },
+    "DefProcInterro_G1T1_Rupture_Ligne_tableau": {
+      "nature": "procedure",
+      "type_retour": null,
+      "suffixee": true,
+      "params": [
+        "&Niv",
+        "&Ligne"
+      ],
+      "nb_params": 2
+    },
+    "DefProcSaisie_Rupture_Ligne_tableau": {
+      "nature": "procedure",
+      "type_retour": null,
+      "suffixee": false,
+      "params": [
+        "Id",
+        "&Niv",
+        "&Ligne"
+      ],
+      "nb_params": 3
+    },
+    "DefProcInterro_Rupture_Ligne_tableau": {
+      "nature": "procedure",
+      "type_retour": null,
+      "suffixee": false,
+      "params": [
+        "Id",
+        "&Niv",
+        "&Ligne"
+      ],
+      "nb_params": 3
+    },
+    "DefProcSaisie_G1T1_Rupture_Ligne_tableau_Av": {
+      "nature": "procedure",
+      "type_retour": null,
+      "suffixee": true,
+      "params": [
+        "&Ligne"
+      ],
+      "nb_params": 1
+    },
+    "DefProcInterro_G1T1_Rupture_Ligne_tableau_Av": {
+      "nature": "procedure",
+      "type_retour": null,
+      "suffixee": true,
+      "params": [
+        "&Ligne"
+      ],
+      "nb_params": 1
+    },
+    "DefProcSaisie_Rupture_Ligne_tableau_Av": {
+      "nature": "procedure",
+      "type_retour": null,
+      "suffixee": false,
+      "params": [
+        "Id",
+        "&Ligne"
+      ],
+      "nb_params": 2
+    },
+    "DefProcInterro_Rupture_Ligne_tableau_Av": {
+      "nature": "procedure",
+      "type_retour": null,
+      "suffixee": false,
+      "params": [
+        "Id",
+        "&Ligne"
+      ],
+      "nb_params": 2
+    },
+    "DefProcSaisie_G1T1_Rupture_Ligne_tableau_Ap": {
+      "nature": "procedure",
+      "type_retour": null,
+      "suffixee": true,
+      "params": [
+        "&Ligne"
+      ],
+      "nb_params": 1
+    },
+    "DefProcInterro_G1T1_Rupture_Ligne_tableau_Ap": {
+      "nature": "procedure",
+      "type_retour": null,
+      "suffixee": true,
+      "params": [
+        "&Ligne"
+      ],
+      "nb_params": 1
+    },
+    "DefProcSaisie_Rupture_Ligne_tableau_Ap": {
+      "nature": "procedure",
+      "type_retour": null,
+      "suffixee": false,
+      "params": [
+        "Id",
+        "&Ligne"
+      ],
+      "nb_params": 2
+    },
+    "DefProcInterro_Rupture_Ligne_tableau_Ap": {
+      "nature": "procedure",
+      "type_retour": null,
+      "suffixee": false,
+      "params": [
+        "Id",
+        "&Ligne"
+      ],
+      "nb_params": 2
+    },
+    "DefProcSaisie_G1T1_Filtre_Av": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": true,
+      "params": [],
+      "nb_params": 0
+    },
+    "DefProcInterro_G1T1_Filtre_Av": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": true,
+      "params": [],
+      "nb_params": 0
+    },
+    "DefProcSaisie_Filtre_Av": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": false,
+      "params": [
+        "Id"
+      ],
+      "nb_params": 1
+    },
+    "DefProcInterro_Filtre_Av": {
+      "nature": "function",
+      "type_retour": "int",
+      "suffixee": false,
+      "params": [
+        "Id"
+      ],
+      "nb_params": 1
+    }
+  },
+  "mesures_graphe": {
+    "date": "2026-08-28",
+    "callbacks_dans_le_standard": 7663,
+    "programmes_utilisant_des_callbacks": 661,
+    "callbacks_suffixes": 3110,
+    "callbacks_non_suffixes": 4553,
+    "programmes_avec_suffixe": 228,
+    "routines_appelant_ap_tableaux": 56,
+    "programmes_appelant_ap_tableaux": 33,
+    "dont_ap_saisir_tableaux": 13,
+    "routines_a5pmtab_utilisant_xmenext": 0,
+    "_note_xmenext": "ZERO routine du standard appelant AP_Interroger_Tableaux ou AP_Saisir_Tableaux n'utilise XmeNext. Le motif bFirstInput/XmeNext signale par un RETEX n'a donc AUCUNE base dans le standard.",
+    "extraits_erp": 34,
+    "routines_dans_les_extraits": 45,
+    "extraits_proteges": 0
+  },
+  "irregularites_du_fichier_livre": [
+    "Certaines formes non suffixees perdent le tiret bas : DefProcSaisie (et non DefProcSaisie_Saisie), DefProcDelete, DefProcTriAvant, DefProcTriApres. Le nom se LIT, il ne se deduit pas.",
+    "DefProc_Click_Autre_Tableau(arret) declare '1 Id L' dans son corps SANS lister Id dans sa signature.",
+    "Defaut et Apres existent en DEUX declarations chacune : une Function Int avec parametres, et une (XMT) Procedure sans parametre."
+  ],
+  "non_verifie": {
+    "mecanisme_de_la_corruption_1A": "La doc etablit que 'A' accole au niveau force l'ALIGNEMENT sur adresse paire, et que les donnees de niveau 1 sont deja alignees automatiquement. Un partenaire a mesure que '1A Sortir B' compile et casse au runtime. Que la casse vienne PRECISEMENT du decalage d'implantation induit par l'alignement est notre DEDUCTION -- coherente, non demontree. Le prototype utilise '1A Retour X' legitimement, sur un LOCAL de type X.",
+    "resolution_des_callbacks_par_le_moteur": "Comment A5PMTAB trouve les callbacks n'est pas etabli -- voir resolution_des_callbacks."
+  },
+  "niveaux_de_confiance": {
+    "prototype": "declaration lue dans objet/proto_a5pmtab.dhsp -- fiable pour la LISTE des callbacks et leur NOMBRE de parametres, PAS pour le mode de passage (voir piege_id_du_prototype)",
+    "extraits": "signature lue dans A5/source/ExtraitsErp/divalto_a5pmtab_*.dhsp",
+    "standard": "forme lue dans un ecran du standard livre, en production",
+    "architecte": "tranche par l'architecte du workspace, sur un point que les fichiers livres se contredisent",
+    "doc": "enonce du manuel de reference, cite",
+    "mesure": "comptage sur le corpus livre",
+    "retex": "rapporte par un partenaire dans son RETEX -- y compris ses sections Contournement et Suggestion, qui portent ce qu'il a TROUVE et ce qu'il demande. Preuve d'experience vecue, non reproduite par nous."
+  },
+  "piege_id_du_prototype": {
+    "fait_etabli": "Id est passe PAR ADRESSE : la signature s'ecrit '&Id', la declaration reste '1 Id L'.",
+    "confiance": "architecte",
+    "le_piege": "objet/proto_a5pmtab.dhsp ecrit 'DefProcInterro_Apres(Id)' SANS esperluette, et 0 de ses 90 callbacks non suffixees n'en porte. Le fichier dont le role est de declarer le contrat se trompe donc sur le mode de passage -- le point le plus dangereux, puisqu'un ecart byref/byvalue COMPILE et casse a l'execution sans message.",
+    "sources_correctes": [
+      "A5/source/ExtraitsErp/divalto_a5pmtab_*.dhsp",
+      "les ecrans du standard livre en production"
+    ],
+    "consequence_de_methode": "Utiliser proto_a5pmtab.dhsp pour la LISTE des callbacks et le NOMBRE de parametres. Pour le MODE DE PASSAGE, se referer aux extraits ou a un ecran du standard.",
+    "historique": "Notre premiere redaction avait suivi le prototype et prescrit 'Id' sans esperluette. Inverse le 2026-08-28 sur reponse de l'architecte."
+  },
+  "creer_parametre": {
+    "signature": "Creer_Parametre(<idOuNomTableauXme>, <codeArret>, <recordLigne>, <recordAscenseur> [, Fperso = <booleen>] [, Nom = '<suffixe>'])",
+    "confiance": "standard",
+    "role": "Construit la chaine de configuration du moteur de saisie/consultation du tableau. Les options s'ajoutent ensuite par options &= '<Tag>' & HmpEncode(valeur).",
+    "parametre_4": "l'ASCENSEUR DU TABLEAU, pas un jeton fixe : un ecran passe SCROLLBAR32 pour son tableau principal et <RECORD>_ASC / SCROLLBAR_<X> pour un autre. Notre premiere redaction presentait SCROLLBAR32 comme constant.",
+    "parametres_nommes": "Fperso et Nom sont OPTIONNELS et NOMMES. Ce sont eux qui commandent la forme des callbacks appelees.",
+    "codeArret": "code numerique : vu sous forme de constante (C_..._Arret) et de litteral (3002)."
+  },
+  "codes_de_sortie": {
+    "_note": "Ce que rend AP_Interroger_Tableaux / AP_Saisir_Tableaux au code appelant, selon la callback qui a provoque la sortie. Lu dans les commentaires des squelettes ExtraitsErp.",
+    "confiance": "extraits",
+    "1": "Abandon a rendu False",
+    "2": "Validation a rendu False",
+    "3": "Apres a rendu True",
+    "4": "ArretSpecifique a positionne son parametre de sortie a True",
+    "le_retour_est_exploitable": "AP_Saisir_Tableaux est appele en affectation dans le standard (res = AP_Saisir_Tableaux(...)), alors qu'un autre ecran appelle AP_Interroger_Tableaux en instruction et ignore son retour."
+  },
+  "callbacks_optionnelles": "Les callbacks ne sont PAS obligatoires. Un ecran du standard confie un tableau en SAISIE via AP_Saisir_Tableaux sans declarer AUCUNE callback DefProc* : le moteur tourne sur ses defauts (DefProc*_Defaut -> XmeListConsultDefault).",
+  "resolution_des_callbacks": "NON ETABLI : rien dans Creer_Parametre ni dans AP_*_Tableaux ne passe un nom de callback. A5PMTAB les resout implicitement, par convention de nommage. Contraste avec les fonctions Collate des RecordSql, qui prennent les noms de procedures EN CHAINE.",
+  "semantique_du_retour": {
+    "fait_etabli": "Pour toute callback DefProc* a retour Int : 0 = 'je gere cet evenement moi-meme, NE PAS faire le traitement par defaut' -- navigation et sortie standard COMPRISES ; 1 = 'je ne gere pas, laisse A5PMTAB faire son traitement normal'. Donc 1 est le REPLI de fin de fonction, et 0 ne va que dans les branches ou l'on se substitue au moteur.",
+    "confiance": "retex",
+    "pourquoi_le_squelette_induit_en_erreur": "Le prototype ecrit '1 Retour L = 0 ; freturn (Retour)' -- il retourne 0 parce que c'est un STUB, pas un defaut fonctionnel : corps vide + 'je gere moi-meme' = ne rien faire = tableau fige. Le Retour du prototype est une variable a POSITIONNER. Et le commentaire de l'extrait est TRONQUE dans le fichier livre ('0 => A5PMTAB testera le parametre sortie,').",
+    "cout_rapporte": "tableau entierement fige, aucune erreur, plus d'une heure et une douzaine de corrections sans rapport avec la cause",
+    "historique": "DECLARE 'NON RESOLU' PAR ERREUR dans la premiere version : nous avions vu une contradiction entre le RETEX et le prototype. Il n'y en a pas. La semantique etait ecrite dans la section Suggestion du RETEX, que nous n'avions pas lue avec assez d'attention -- alors que le partenaire demandait d'en faire un point de tete de chapitre. Corrige le 2026-08-28 sur audit demande par l'architecte."
+  },
+  "sortie_du_tableau": {
+    "depuis_arretspecifique": "positionner le parametre de sortie a True -> AP_*_Tableaux rend 4",
+    "programmatique": "AP_Finir_tableau(<id>) -- 1 parametre. Vu dans un DefProcInterro_Defaut livre, sur Case K_ESCAPE. Pendant : AP_Annule_Finir_Tableau.",
+    "confiance": "standard",
+    "_note": "Les deux fonctions vivent dans le module PROTEGE a5pmtab : appelables, corps non lisible. Signature lue au site d'appel, technique du LOT B."
+  },
+  "aller_retour_saisie_tableau": {
+    "correctif": "Reinitialiser le drapeau de reprise (bFirstInput) a TRUE a CHAQUE sortie du tableau -- dans ArretSpecifique, au meme endroit ou l'on positionne le parametre de sortie a True ou ou l'on appelle AP_Finir_tableau -- et NON a la seule initialisation du programme. Ainsi chaque retour declenche un XmeInput frais (positionne sur Harmony.Sourisseq), jamais un XmeNext sur un contexte perime.",
+    "confiance": "retex",
+    "mesure_qui_reste_vraie": "0 des 56 routines du standard appelant AP_*_Tableaux n'utilise XmeNext.",
+    "historique": "La premiere version declarait ne pas pouvoir montrer la forme correcte, faute d'exemple dans le standard. Le correctif etait dans la section Contournement du RETEX. La mesure restait juste, la conclusion etait trop large."
+  },
+  "ecrans_multi_tableaux": {
+    "voie_1": "convention suffixee : Fperso + Nom='<X>' sur le tableau secondaire, et une serie DefProcInterro_<X>_* dediee. C'est ce que fait un ecran du standard.",
+    "voie_2": "hooks partages + drapeau d'etat au niveau module, mis a TRUE juste avant l'appel imbrique AP_*_Tableaux et remis a FALSE juste apres, pour discriminer quel tableau rafraichir sans dependre uniquement d'Id.",
+    "avertissement": "Le choix doit etre applique UNIFORMEMENT a tous les hooks du tableau secondaire, pas seulement a celui qui a casse en premier. Cas vecu : _Charger avait ete distingue, _Apres non -- c'est _Apres qui a leve l'erreur.",
+    "piste_fausse": "NE PAS supprimer &Id du hook partage pour regler le compte de parametres : la signature officielle l'exige. Premiere piste tentee par le partenaire, incorrecte.",
+    "confiance": "retex + standard"
+  },
+  "differe_declare": {
+    "_note": "Demandes des RETEX non couvertes par ce lot. Ecrites ici pour qu'elles ne soient pas perdues, et pour qu'on ne croie pas le skill complet.",
+    "squelette_complet_mono_tableau": "Main + callbacks de bout en bout -- demande par #280.",
+    "critere_interro_vs_saisie": "Privilege Consultation -> AP_Interroger_Tableaux ; privilege Modification/Suppression -> AP_Saisir_Tableaux. Une meme table peut avoir les deux selon le contexte d'appel. Demande par #280. Un ecran du standard le montre (une procedure Consult_tableau et une Modif_tableau, cette derniere passant un privilege de modification) -- non ecrit.",
+    "motif_selection_plus_tableau": "Empilement de pages (offset_lig) ; grille_wpf / panel_wpf reserves aux tableaux cote a cote. Demande par #280.",
+    "mecanisme_de_retour_vers_la_selection": "Demande par #280.",
+    "lint_1a": "#281 demande une regle de lint detectant, dans un .dhsp important A5PmTab.dhop, une declaration locale '1A <nom> B' correspondant a un parametre '&<nom>' d'une callback connue. NON MESUREE : le critere est etroit, la faisabilite doit etre evaluee avant de statuer. Le RETEX offre lui-meme le repli (documenter), que ce lot a pris.",
+    "materiel_existant": "#280 signale un dossier de FORMATION OFFICIEL Divalto sur A5PMTAB, fourni par le partenaire pendant sa session."
+  }
+}

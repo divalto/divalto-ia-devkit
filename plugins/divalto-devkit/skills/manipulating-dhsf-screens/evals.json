@@ -36,26 +36,90 @@
     },
     {
       "name": "Ajout colonne masquee par defaut (fl_aff=non)",
-      "input": "Ajouter une colonne champ_tableau masquee par defaut sur la page 3 d'un zoom (R-015) -- fl_aff doit etre injecte explicitement",
+      "input": "Ajouter une colonne champ_tableau masquee par defaut sur la page 3 d'un zoom -- fl_aff doit etre injecte explicitement",
       "expected": {
         "command": "py .claude/skills/manipulating-dhsf-screens/scripts/dhsf_modify.py --path output/rtez099_test.dhsf --action add-column --params \"{\\\"page_numero\\\":3,\\\"titre\\\":\\\"Banque\\\",\\\"vue\\\":\\\"famrglt\\\",\\\"champ\\\":\\\"bqcpce\\\",\\\"alias\\\":\\\"FamRglt\\\",\\\"fl_aff\\\":\\\"non\\\"}\"",
         "validation": "success:true, le bloc [param_colonne] genere contient 'fl_aff=non' (et non absent = 'toujours')"
       }
     },
     {
-      "name": "Validate exempte les widgets tableau de R4/R5",
-      "input": "Valider un zoom standard a plusieurs colonnes (champ_tableau) -- aucune violation R4/R5 sur les types de la famille tableau (R-014, faux positifs corriges)",
+      "name": "Validate exempte les widgets tableau de DHSF04/DHSF05",
+      "input": "Valider un zoom standard a plusieurs colonnes (champ_tableau) -- aucune violation DHSF04/DHSF05 sur les types de la famille tableau (faux positifs corriges)",
       "expected": {
         "command": "py .claude/skills/manipulating-dhsf-screens/scripts/dhsf_modify.py --path \"{CHEMIN_MASQUES}/gtez046_sql.dhsf\" --action validate --params \"{}\"",
-        "validation": "post_validation ne contient aucune violation R4/R5 dont type ∈ {tableau, arbre, panel_wpf, champ_tableau, multi_choix_tableau}"
+        "validation": "post_validation ne contient aucune violation DHSF04/DHSF05 dont type ∈ {tableau, arbre, panel_wpf, champ_tableau, multi_choix_tableau}"
       }
     },
     {
       "name": "Surcharge masque sans doublon [diva_base]",
-      "input": "Scaffolder une surcharge _sqlu.dhsf depuis un standard : le [diva_base] vide pre-existant ne doit pas creer de doublon apres migration (R-009)",
+      "input": "Scaffolder une surcharge _sqlu.dhsf depuis un standard : le [diva_base] vide pre-existant ne doit pas creer de doublon apres migration",
       "expected": {
         "command": "py .claude/skills/manipulating-dhsf-screens/scripts/surcharge_mask.py --standard \"{CHEMIN_MASQUES}/gtee748_sql.dhsf\" --output-dir output --force",
         "validation": "JSON diva_migration.removed_empty_diva_base >= 1 ; le _sqlu.dhsf genere contient exactement un [diva_base] et des blocs equilibres (nb [/diva] == nb [diva]+[diva_base])"
+      }
+    },
+    {
+      "name": "is_surcharge est une presomption, pas un fait",
+      "input": "Le script me dit que rceebordereau.dhsf est une surcharge. Je peux m'y fier ?",
+      "expected": {
+        "command": "py .claude/skills/manipulating-dhsf-screens/scripts/is_dhsf_filename.py --filename rceebordereau.dhsf",
+        "validation": "Repond NON : `is_surcharge` est deduit du SEUL suffixe u du nom (champ `is_surcharge_base` = PRESOMPTION), parce qu'un .dhsf ne porte aucun marqueur interne de surcharge (verifie sur 2962 fichiers) et que ce script ne voit qu'un nom. Cite le champ `is_surcharge_avertissement` et le fait que `rceebordereau` finit par u pour une raison lexicale (bordere-au) : c'est l'un des 5 masques du standard X.13 faussement flagues. Indique comment confirmer autrement (emplacement du fichier en zone specifique, ou en-tete du .dhps qui le reference) et ne conseille PAS de renommer le masque."
+      }
+    },
+    {
+      "name": "Champ texte multiligne",
+      "input": "Comment fait-on un champ de saisie texte multiligne dans un masque ?",
+      "expected": {
+        "reference": "reference/composant-rich-edit.md",
+        "validation": "Repond [rich_edit], PAS un [champ] avec une grande hauteur. Donne les 3 sous-sections systematiques ([presentation] position/taille/id/wstyle, [description] donnee, [param_rich_edit] largeur). Ne presente PAS RTF_NOTE comme le style par defaut : c'est le 4e en frequence, derriere CHAMP_NON_SAISI, STD et CHAMP_SAISI. (#260)"
+      }
+    },
+    {
+      "name": "Erreur de compilation sur esp_si_zero / param_case",
+      "input": "Mon masque ne compile pas apres avoir ajoute des champs. J'ai des esp_si_zero et des [param_case] un peu partout. Faut-il les retirer ?",
+      "expected": {
+        "reference": "reference/dhsf-structure.md",
+        "validation": "Ne conseille PAS de retirer esp_si_zero : il est valide et employe 33 576 fois dans le standard. Distingue une regle de PLACEMENT -- esp_si_zero vit exclusivement dans [param_saisie], jamais dans [description] -- d'une regle de validite. Rappelle que saisie=non n'y change rien (67 % des cas). Pour [param_case] : valide uniquement dans [case_a_cocher] et [case_a_cocher_tableau], ou il est systematique. (#254)"
+      }
+    },
+    {
+      "name": "Page supprimee d'un masque, ecran qui meurt a l'ouverture",
+      "input": "J'ai supprime la page 12 Identifiants de mon zoom parce que ma table n'a pas le socle audit. Ca compile a 0 erreur, mais l'ecran refuse de s'ouvrir.",
+      "expected": {
+        "command": "py .claude/skills/manipulating-dhsf-screens/scripts/dhsf_modify.py --path \"{CHEMIN_MASQUES}/<masque>.dhsf\" --action validate --params \"{}\"",
+        "validation": "Identifie le suiv=/prec= orphelin laisse par la suppression : il compile a 0 erreur et casse a l'OUVERTURE (« page N du masque inexistante »). Dit que la page 12 et ses deux liens sont indissociables. Le controle DHSF06/DHSF07 de validate le signale. (#259)"
+      }
+    },
+    {
+      "name": "Edition destructive d'un masque",
+      "input": "Je veux transformer la derniere page de mon masque en pop-up. Comment je m'y prends ?",
+      "expected": {
+        "reference": "reference/dhsf-structure.md",
+        "validation": "Avertit que le bloc [ressources] (menus + toolbars) SUIT la derniere page et est de portee MASQUE : 2 340 masques du standard sur 2 340 le placent la. L'edition doit s'arreter a la fin de la page. Prescrit la recette compteurs AVANT/APRES via dhsf_parser.py --summary, en citant ressources_items_count -- le seul compteur qui voie un bouton perdu dans un toolbar conserve. Une baisse non voulue arrete l'edition. (#173)"
+      }
+    },
+    {
+      "name": "Ajout de colonne sur un masque de surcharge",
+      "input": "Ajoute une colonne au tableau de mon masque de surcharge (dernier_id=1000000).",
+      "expected": {
+        "command": "py .claude/skills/manipulating-dhsf-screens/scripts/dhsf_modify.py --path \"{CHEMIN_MASQUES}/<masque>u.dhsf\" --action add-column --params \"{...}\"",
+        "validation": "L'id alloue doit etre > 1000000, pas max(id presents)+1. Le script applique un plancher max(id present, dernier_id) + 1 ; si un id standard sort, c'est le defaut #268. N'invente PAS de detection de surcharge=oui et ne code pas 1000000 en dur : la valeur vient du fichier."
+      }
+    },
+    {
+      "name": "Ajout d'un panel dans une grille",
+      "input": "J'ajoute un 3e panel dans la grille de mon ecran. Faut-il toucher au nb_lig des pages ?",
+      "expected": {
+        "reference": "reference/composant-grille-wpf.md",
+        "validation": "Repond OUI : ajouter un panel sans revoir les hauteurs ecrase les panels, et attache_lgy=oui ne dispense pas de l'ajustement (il gere le redimensionnement a l'execution). Donne l'ordre de grandeur mesure -- une ligne vaut environ 8 unites, et les panels occupent la hauteur de grille moins ~12 de marge. NE PRESCRIT PAS la formule « somme des nb_lig = hauteur de grille » : elle ne se verifie que sur 23 % des grilles du standard. (#187)"
+      }
+    },
+    {
+      "name": "Masquer une colonne de tableau",
+      "input": "Je veux masquer une colonne de tableau selon une condition, dans un ecran d'un programme protege. J'ai implemente ZoomEnteteTableau mais elle n'est jamais appelee.",
+      "expected": {
+        "reference": "reference/xmesetattribut-dynamique.md",
+        "validation": "Explique que ZoomEnteteTableau n'est appelee QUE par le moteur Zoom SQL -- 718 programmes du standard l'utilisent, tous de la famille zoom -- et que dans un programme protege elle ne se declenche jamais, SANS erreur. Donne la voie hors Zoom : surcharge du masque + traitement avant affichage + XmeListGetId. ECRIT LA SIGNATURE CORRECTE : XmeListGetId(<cleMasque>, <n>, '<NomTableau>', <id>) -- QUATRE arguments, le nom en TROISIEME, pas XmeListGetId('<NomTableau>'). Rappelle que la colonne se designe par un NUMERO ordinal fige a la compilation, jamais par un nom, et qu'il faut l'ecrire en commentaire car il change silencieusement si l'ordre des colonnes bouge. Sur les valeurs AFFCOL_* : les donne comme NON verifiees (zero occurrence sur 8 022 sources livrees), tout en confirmant que le champ COLUMNINFO.Affichage existe. (#180)"
       }
     }
   ]

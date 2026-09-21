@@ -2,7 +2,7 @@
 
 Formules deterministes pour deriver tous les tokens a partir du triplet (domaine, entite, table SQL).
 
-Source : référentiel interne -- conventions de nommage + squelettes.
+Conventions de nommage : le digest livré avec ce skill.
 
 ---
 

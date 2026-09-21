@@ -1,0 +1,823 @@
+{
+  "_principe": [
+    "RELEVE d'une verification faite par l'orchestrateur LLM contre le graphe de connaissance",
+    "diva-mcp (outil get_native_keyword_doc). Les scripts du devkit n'appellent JAMAIS le MCP",
+    "directement -- c'est une convention du plugin ('scripts pour le determinisme, LLM pour les",
+    "appels MCP', cf. querying-diva-graph/scripts/query_neo4j.py).",
+    "",
+    "A quoi sert ce fichier : la page reference/syntaxe-de-base.md affirme que certains mots-cles",
+    "EXISTENT et que d'autres N'EXISTENT PAS. Une affirmation de ce genre, ecrite de memoire, est",
+    "exactement ce qui a produit le defaut d'origine -- l'issue #233 affirmait que 'Round n'existe",
+    "pas' alors que Round EXISTE, comme instruction sans parametre. Le test du skill verifie donc",
+    "que la page et ce releve concordent : aucune affirmation dans la page sans entree ici.",
+    "",
+    "Re-verifier : refaire les appels get_native_keyword_doc et mettre a jour ce fichier + la date."
+  ],
+  "source": "diva-mcp / get_native_keyword_doc",
+  "version_erp": "X.13",
+  "date_verification": "2026-08-31",
+  "niveaux_de_confiance": {
+    "direct": "reponse get_native_keyword_doc obtenue POUR CE mot-cle",
+    "cite": "mot-cle cite par la page de reference d'un autre mot-cle interroge, non interroge directement -- preuve plus faible, a confirmer si on s'en sert pour trancher",
+    "page": "mot-cle decrit dans le CORPS d'une page de reference obtenue lors de l'interrogation d'un mot-cle de la meme famille, sans avoir ete interroge lui-meme -- preuve intermediaire entre 'direct' et 'cite'",
+    "architecte": "reponse de l'architecte du workspace, sur un point que la documentation ne tranche pas -- fait autorite, mais n'est pas une citation de la doc"
+  },
+  "existe": {
+    "round": {
+      "nb_params": 0,
+      "section": "Instructions diverses",
+      "confiance": "direct",
+      "note": "INSTRUCTION de mode, pas une fonction. Bascule les affectations suivantes en arrondi (mode par defaut). Truncate fait l'inverse. La fonction Round(x) n'existe pas : nb_params = 0."
+    },
+    "truncate": {
+      "nb_params": 0,
+      "section": "Instructions diverses",
+      "confiance": "direct",
+      "note": "Pendant de Round : a partir de son execution, les affectations se font avec TRONCATURE. PORTEE NON ETABLIE -- la doc dit 'a partir de l'execution', sans preciser si le mode survit a un appel de procedure ou de module. Voir non_verifie."
+    },
+    "str": {
+      "nb_params": 1,
+      "section": "Fonctions de conversion",
+      "confiance": "direct",
+      "note": "Conversion numerique -> alphanumerique, cadree au plus juste. Nom exact : Str (sans suffixe)."
+    },
+    "tostring": {
+      "nb_params": 1,
+      "section": "Fonctions de conversion",
+      "confiance": "cite",
+      "note": "Cousine de Str, accepte aussi les types B, X, L et alpha."
+    },
+    "val": {
+      "nb_params": 1,
+      "section": "Fonctions de conversion",
+      "confiance": "cite",
+      "note": "Conversion inverse alpha -> numerique. Rarement utile : l'affectation convertit deja."
+    },
+    "freturn": {
+      "nb_params": 1,
+      "section": "Fonctions et procedures utilisateur",
+      "confiance": "direct",
+      "note": "OBLIGATOIRE pour sortir d'une Function, et prend la valeur de retour. Si aucun FReturn n'est rencontre a l'execution, le programme est INTERROMPU (pas une erreur de compilation)."
+    },
+    "preturn": {
+      "nb_params": 0,
+      "section": "Fonctions et procedures utilisateur",
+      "confiance": "direct",
+      "note": "FACULTATIF, et sans parametre. Sort d'une Procedure avant la derniere instruction ; en son absence le retour se fait normalement en fin de procedure."
+    },
+    "beginf": {
+      "nb_params": 0,
+      "section": "Fonctions et procedures utilisateur",
+      "confiance": "cite",
+      "note": "Ouvre le corps d'une Function (ferme par Endf)."
+    },
+    "endf": {
+      "nb_params": 0,
+      "section": "Fonctions et procedures utilisateur",
+      "confiance": "cite",
+      "note": "Ferme le corps d'une Function."
+    },
+    "beginp": {
+      "nb_params": 0,
+      "section": "Fonctions et procedures utilisateur",
+      "confiance": "cite",
+      "note": "Ouvre le corps d'une Procedure (ferme par Endp)."
+    },
+    "endp": {
+      "nb_params": 0,
+      "section": "Fonctions et procedures utilisateur",
+      "confiance": "cite",
+      "note": "Ferme le corps d'une Procedure."
+    },
+    "else": {
+      "nb_params": 0,
+      "section": "Structure des programmes",
+      "confiance": "direct",
+      "note": "Existe. Mais aucun ElseIf : voir n_existe_pas."
+    },
+    "repeat": {
+      "nb_params": 0,
+      "section": "Structures de Controle",
+      "confiance": "direct",
+      "note": "Boucle Repeat ... Until : le corps est execute au moins une fois."
+    },
+    "until": {
+      "nb_params": 0,
+      "section": "Structures de Controle",
+      "confiance": "page",
+      "note": "Terminateur de Repeat."
+    },
+    "endloop": {
+      "nb_params": 0,
+      "section": "Structures de Controle",
+      "confiance": "page",
+      "note": "Terminateur de Loop."
+    },
+    "wend": {
+      "nb_params": 0,
+      "section": "Structures de Controle",
+      "confiance": "page",
+      "note": "Terminateur des DEUX formes de Do (voir l'entree 'do')."
+    },
+    "next": {
+      "nb_params": 0,
+      "section": "Structures de Controle",
+      "confiance": "page",
+      "note": "Terminateur de For. N'est PAS suivi du nom de la variable compteur (contrairement a VB). Autant de Next que de For imbriques."
+    },
+    "exitfor": {
+      "nb_params": 0,
+      "section": "Structures de Controle",
+      "confiance": "direct",
+      "note": "Sort de la boucle For en cours ; la valeur du compteur n'est pas modifiee. INTERDIT pour sortir d'un Switch : la valeur du selecteur est empilee. Sortir du Switch par Break, puis quitter la boucle APRES Endswitch."
+    },
+    "exitloop": {
+      "nb_params": 0,
+      "section": "Structures de Controle",
+      "confiance": "direct",
+      "note": "Sort de la boucle Loop en cours. INTERDIT pour sortir d'un Switch : la valeur du selecteur est empilee. Sortir du Switch par Break, puis quitter la boucle APRES Endswitch."
+    },
+    "exitdo": {
+      "nb_params": 0,
+      "section": "Structures de Controle",
+      "confiance": "direct",
+      "note": "Sort de la boucle Do en cours. INTERDIT pour sortir d'un Switch : la valeur du selecteur est empilee. Sortir du Switch par Break, puis quitter la boucle APRES Endswitch."
+    },
+    "exitrepeat": {
+      "nb_params": 0,
+      "section": "Structures de Controle",
+      "confiance": "cite",
+      "note": "Sort de la boucle Repeat en cours. INTERDIT pour sortir d'un Switch : la valeur du selecteur est empilee. Sortir du Switch par Break, puis quitter la boucle APRES Endswitch."
+    },
+    "redofor": {
+      "nb_params": 0,
+      "section": "Structures de Controle",
+      "confiance": "direct",
+      "note": "Branche au debut du For en cours, ET le compteur passe a la valeur suivante -- c'est le vrai equivalent de 'continue'."
+    },
+    "redoloop": {
+      "nb_params": 0,
+      "section": "Structures de Controle",
+      "confiance": "direct",
+      "note": "Branche au debut du Loop en cours. Pas de compteur : la condition est simplement reevaluee."
+    },
+    "redorepeat": {
+      "nb_params": 0,
+      "section": "Structures de Controle",
+      "confiance": "cite",
+      "note": "Branche au debut du Repeat en cours."
+    },
+    "redodo": {
+      "nb_params": 0,
+      "section": "Structures de Controle",
+      "confiance": "page",
+      "note": "Branche au debut du Do en cours."
+    },
+    "for": {
+      "nb_params": 0,
+      "section": "Structures de Controle",
+      "confiance": "direct",
+      "note": "Boucle a bornes definies : For cpt = deb To fin [Step pas] ... Next. Pas negatif OBLIGATOIREMENT constant : avec une variable negative, le test de fin de boucle genere par le compilateur est faux. Compteur numerique, lisible et modifiable dans le corps."
+    },
+    "loop": {
+      "nb_params": 1,
+      "section": "Structures de Controle",
+      "confiance": "direct",
+      "note": "Boucle Tant Que : test AVANT la premiere entree ; si la condition est fausse des le depart le corps n'est jamais execute."
+    },
+    "do": {
+      "nb_params": 0,
+      "section": "Structures de Controle",
+      "confiance": "direct",
+      "note": "DEUX formes. Forme 1 'do while expr ... wend' equivaut a Loop/Endloop. Forme 2 'do ... while expr ... wend' place le test AU MILIEU de la boucle -- c'est ce que les autres boucles ne savent pas faire."
+    },
+    "if": {
+      "nb_params": 1,
+      "section": "Structure des programmes",
+      "confiance": "direct",
+      "note": "Existe. Ne pas confondre avec la pseudo-instruction '/If' de compilation CONDITIONNELLE (couple avec /Value, /Else, /Endif), qui est un autre mecanisme."
+    },
+    "case": {
+      "nb_params": 1,
+      "section": "Structures de Controle",
+      "confiance": "direct",
+      "note": "Appartient a la famille SWITCH (Switch / Case / Default / Continue / Break / RedoSwitch / Endswitch), et NON au chainage de conditions -- le remplacant de 'ElseIf' est Elsif. Piege de recherche : la page documentaire renvoyee par le graphe parle de la 'case a cocher' (homonymie francaise)."
+    },
+    "elsif": {
+      "nb_params": 1,
+      "section": "Structures de Controle",
+      "confiance": "direct",
+      "note": "EXISTE. C'est le chainage de conditions de DIVA : If (e1) ... Elsif (e2) ... Else ... Endif. Le faux ami est l'ORTHOGRAPHE VB 'ElseIf' (deux e), pas la construction."
+    },
+    "endif": {
+      "nb_params": 0,
+      "section": "Structure des programmes",
+      "confiance": "direct",
+      "note": "OBLIGATOIRE. Autant de Endif que de If imbriques. Ne pas confondre avec la pseudo-instruction '/Endif' de compilation conditionnelle."
+    },
+    "continue": {
+      "nb_params": 0,
+      "section": "Structures de Controle",
+      "confiance": "direct",
+      "note": "EXISTE, mais PAS avec le sens du C. Continue appartient a la famille Switch et branche sur l'instruction qui suit le Case SUIVANT (fall-through). Il ne relance pas une boucle : l'equivalent du continue du C est RedoFor / RedoLoop / RedoDo / RedoRepeat selon la boucle."
+    },
+    "break": {
+      "section": "Structures de Controle",
+      "confiance": "page",
+      "note": "EXISTE, mais sort de la structure SWITCH (execution reprise apres Endswitch) -- pas d'une boucle. Sortir d'une boucle se fait par ExitFor / ExitLoop / ExitDo / ExitRepeat."
+    },
+    "switch": {
+      "section": "Structures de Controle",
+      "confiance": "page",
+      "note": "Selection generalisee. Le selecteur est l'expression qui suit Switch. Case accepte une constante, une variable, ou une expression de test."
+    },
+    "switch2": {
+      "section": "Structures de Controle",
+      "confiance": "page",
+      "note": "Variante ou les expressions testees sont OBLIGATOIREMENT des constantes. Branchement a temps constant, independant du nombre de cas."
+    },
+    "endswitch": {
+      "section": "Structures de Controle",
+      "confiance": "page",
+      "note": "Terminateur OBLIGATOIRE de Switch / Switch2."
+    },
+    "default": {
+      "section": "Structures de Controle",
+      "confiance": "page",
+      "note": "Cas par defaut d'un Switch. S'il est absent, l'execution reprend apres Endswitch."
+    },
+    "redoswitch": {
+      "section": "Structures de Controle",
+      "confiance": "page",
+      "note": "Branche a l'instruction Switch ; l'expression selectrice est REEVALUEE."
+    },
+    "condition": {
+      "section": "Structures de Controle",
+      "confiance": "page",
+      "note": "Fonction a 3 parametres : Condition(expression, e1, e2). Equivalent compact d'un If/Else. e1 et e2 doivent etre de meme type."
+    },
+    "switchstring": {
+      "section": "Structures de Controle",
+      "confiance": "cite",
+      "note": "Variante de Switch pour un selecteur de type alpha."
+    },
+    "step": {
+      "nb_params": 0,
+      "section": "Structures de Controle",
+      "confiance": "page",
+      "note": "Pas d'incrementation du For. Absent = 1. Un pas NEGATIF doit etre une constante."
+    },
+    "while": {
+      "nb_params": 1,
+      "section": "Structures de Controle",
+      "confiance": "page",
+      "note": "Condition du Do. Placee juste apres Do (test en entree, forme 1) ou au milieu du corps (forme 2)."
+    },
+    "proto": {
+      "nb_params": 0,
+      "section": "Fonctions et procedures utilisateur",
+      "confiance": "direct",
+      "note": "Prefixe le mot-cle Function ou Procedure pour declarer un PROTOTYPE. Permet d'appeler une fonction avant qu'elle soit definie : resout les problemes d'ordre dans les sources et autorise les references croisees dans un meme module."
+    },
+    "endproto": {
+      "nb_params": null,
+      "section": "Fonctions et procedures utilisateur",
+      "confiance": "direct",
+      "note": "OBLIGATOIRE : termine la declaration des parametres formels d'un prototype. C'est lui qui manquait a la reference -- l'absence de EndProto est la cause des messages de compilation peu explicites signales par #299."
+    },
+    "goto": {
+      "nb_params": 0,
+      "section": "Structures de Controle",
+      "confiance": "direct",
+      "note": "Existe, mais la documentation le DECONSEILLE fortement (langage structure). Les etiquettes sont LOCALES a une fonction ou procedure : on ne peut pas sortir d'une fonction par un Goto. Une etiquette non definie est signalee en fin de compilation. INTERDIT pour sortir d'un Switch : la valeur du selecteur est empilee. Sortir du Switch par Break, puis quitter la boucle APRES Endswitch. Les etiquettes sont declarees par le mot-cle Label."
+    },
+    "label": {
+      "nb_params": null,
+      "section": "Structures de Controle",
+      "confiance": "page",
+      "note": "Declare la cible d'un Goto : l'etiquette est une chaine precedee du mot-cle Label."
+    },
+    "sharponoverflow": {
+      "nb_params": null,
+      "section": "Instructions diverses",
+      "confiance": "page",
+      "note": "Demande que la variable receptrice soit garnie de '#' en cas de depassement de capacite. Cite par la page Affectation."
+    },
+    "private": {
+      "nb_params": 0,
+      "section": "Fonctions et procedures utilisateur",
+      "confiance": "direct",
+      "note": "Ne peut se trouver que dans un module de SURCHARGE. Signifie : pas publique ET ne surcharge PAS une fonction du module de base. Corollaire documente : toute fonction d'un module de surcharge qui n'est declaree ni Public ni Private EST une surcharge. Le compilateur ne verifie cela que si l'option de profil 'Verifier que les fonctions non private sont des surcharges' est a oui -- d'ou du code non conforme qui compile. ASYMETRIE, pour une fonction ABSENTE de la base : Private sur une surcharge de MASQUE ([diva] d'un .dhsf), Public sur un traitement de DICTIONNAIRE (bloc [diva] dans un .dhsd -- cas rare et en voie d'abandon, precise par l'architecte le 2026-08-28 ; ne concerne PAS les zones de declaration d'un .dhsd). Les deux phrases de la doc sont conditionnees a la meme chose ('si elles n'existent pas dans le code de base') : le 'peut' de son exemple porte sur le droit d'AJOUTER une fonction, pas sur le choix du modificateur -- il n'y a pas de contradiction de modalite."
+    },
+    "protected": {
+      "nb_params": 0,
+      "section": "Les declarations",
+      "confiance": "direct",
+      "note": "Modificateur de declaration de DONNEES (HFile, HTmpFile, Record, RecordDiva) -- JAMAIS de fonction ni de procedure. Chaque module qui declare une donnee Protected en recoit une instance PROPRE, inaccessible aux autres sauf via Extern. Un enregistrement Protected ne peut pas etre affiche ni saisi dans un masque (les masques n'utilisent que les instances publiques)."
+    },
+    "extern": {
+      "nb_params": 0,
+      "section": "Les declarations",
+      "confiance": "direct",
+      "note": "Precede HFile, HTmpFile, Record ou RecordDiva. Diva n'allloue AUCUNE memoire : a l'appel, la donnee Extern pointe sur l'instance Public ou Protected du module APPELANT. C'est le mecanisme documente de partage de donnees entre modules -- celui que la page ignorait en prescrivant le passage par parametres uniquement."
+    },
+    "public": {
+      "nb_params": 0,
+      "section": "Les declarations",
+      "confiance": "direct",
+      "note": "Precede HFile, HTmpFile, Record, RecordDiva, Function ou Procedure. Les donnees publiques sont COMMUNES a tous les modules et masques qui les ont declarees Public. Les enregistrements utilises dans les masques sont TOUJOURS publics. Sur une fonction qui surcharge le standard -> Erreur 210."
+    },
+    "overwrite": {
+      "nb_params": 0,
+      "section": "Surcharge",
+      "confiance": "direct",
+      "note": "Declare le module surcharge par le module courant. Convention : un 'u' ajoute au nom d'origine, le NOMBRE de 'u' indiquant le niveau de surcharge."
+    },
+    "overwrittenby": {
+      "nb_params": 0,
+      "section": "Surcharge",
+      "confiance": "page",
+      "note": "Declare, dans la BASE, qu'elle est surchargeable. La surchargeabilite est donc OPT-IN : sans cet attribut, la surcharge est refusee. A l'execution, la presence de la surcharge est facultative."
+    },
+    "xmelistgetposition": {
+      "section": "Tableaux",
+      "confiance": "direct",
+      "note": "XmeListGetPosition(Identifiant, Adresse). Le 2e parametre recoit l'adresse du courant ET L'ETAT de la liste -- ce n'est donc pas un simple 'L'. Passer un L produit l'Erreur 142 : il faut un buffer alphanumerique. Identifiant vient de XmeListGetId."
+    },
+    "module": {
+      "nb_params": 0,
+      "section": "Modules et programmes",
+      "confiance": "direct",
+      "note": "Declarative qui declare un module EXTERNE ; toutes ses fonctions/procedures publiques deviennent utilisables. Chargement au PREMIER appel. Un module qui veut utiliser une fonction d'un module externe DOIT le declarer lui-meme : la declaration n'est donc pas transitive. Forme 'Module <addon>.<mod>.dhop AS <alias>' pour les surcharges multiples d'add-ons."
+    },
+    "collateopen": {
+      "section": "Fonctions Collate",
+      "confiance": "direct",
+      "note": "CollateOpen(EndProc) -- l'identifiant de la liste est la VALEUR DE RETOUR, le parametre est une procedure de fin. Notre page le passait en parametre : faux."
+    },
+    "collateaddrecordsql": {
+      "section": "Fonctions Collate",
+      "confiance": "direct",
+      "note": "CollateAddRecordSQL(idCollate, Name, ProcBegin, ProcEnd, ProcDetail, FuncKey [, ModuleName]) -- 6 ou 7 parametres. Name est le NOM du RecordSql public sous forme de chaine ; les quatre suivants des noms de procedures/fonctions publiques. Cette procedure EXECUTE elle-meme le ReaderSelect et lit la premiere ligne : le tri et le filtrage doivent donc etre poses AVANT l'appel. Notre page documentait 2 parametres."
+    },
+    "collatenext": {
+      "section": "Fonctions Collate",
+      "confiance": "direct",
+      "note": "Rend 0 (normal) ou H_EOF (fin d'interclassement). H_EOF est la sentinelle nommee."
+    },
+    "collateclose": {
+      "section": "Fonctions Collate",
+      "confiance": "direct",
+      "note": "CollateClose(idCollate)."
+    },
+    "collateprogressbar": {
+      "section": "Fonctions Collate",
+      "confiance": "direct",
+      "note": "CollateProgressBar(idCollate, ProgressBar) -- absente de notre page."
+    },
+    "ajouter_condition": {
+      "nb_params": 2,
+      "section": "Helpers RecordSql (module protege a5pm000)",
+      "confiance": "page",
+      "note": "Ajouter_Condition(<accumulateur>, '<nom du Case>') -- variante de .<Case>.AddAndCondition(<accumulateur>), prenant le nom du Case en CHAINE. Corps NON LISIBLE (a5pm000 est protege) ; signature lue au site d'appel. 119 routines livrees l'utilisent, contre 3456 pour .AddAndCondition."
+    },
+    "splitlist": {
+      "section": "Fonctions alphanumeriques",
+      "confiance": "architecte",
+      "source": "extrait du manuel de reference fourni par l'architecte le 2026-08-30 (serveur diva-mcp indisponible). A REJOUER au graphe des son retour.",
+      "note": "Decompose une chaine en liste de mots. Rend un Long. Parametres optionnels : separateurs, separateurs par paire, separateurs non rendus, traitement des quotes. NE PAS recopier la signature ici -- l'interroger au graphe.",
+      "_issue": "#96"
+    },
+    "string": {
+      "section": "Fonctions alphanumeriques",
+      "confiance": "architecte",
+      "source": "extrait du manuel de reference fourni par l'architecte le 2026-08-30 (serveur diva-mcp indisponible). A REJOUER au graphe des son retour.",
+      "note": "CHERCHE une chaine dans une autre et rend une POSITION. Faux ami de sens avec le String de BASIC/VB, qui fabrique une chaine repetee. A ne pas confondre non plus avec Str, qui convertit un numerique en alphanumerique.",
+      "_issue": "#96"
+    },
+    "length": {
+      "section": "Fonctions alphanumeriques",
+      "confiance": "architecte",
+      "source": "extrait du manuel de reference fourni par l'architecte le 2026-08-30 (serveur diva-mcp indisponible). A REJOUER au graphe des son retour.",
+      "note": "Longueur du contenu d'une variable, en caracteres significatifs. Accepte un type quelconque.",
+      "_issue": "#96"
+    },
+    "mid": {
+      "nb_params": 3,
+      "section": "Traitement des chaines de caracteres",
+      "confiance": "direct",
+      "code_op": "CD_MID",
+      "type_retour": "TYPE_ALPHA",
+      "note": "Char = Mid(variable, position, [longueur]) -- la LONGUEUR est OPTIONNELLE, ce que la forme observee chez le partenaire (#96) ne montrait pas. Mid peut se trouver A GAUCHE d'une affectation. Famille de 7 variantes typees : Nmid (numerique), Bmid (binaire), Xmid (16 bits), Lmid (32 bits), Zmid (= Mid avec espaces -> 0), Znmid. Verifie au graphe le 2026-08-31 ; l'entree venait d'une OBSERVATION terrain.",
+      "_issue": "#96"
+    },
+    "oui": {
+      "nb_params": 0,
+      "section": "constante declaree -- PAS un mot-cle du langage",
+      "confiance": "direct",
+      "valeur": 2,
+      "portee": "root (programme)",
+      "note": "CONSTANTE DECLAREE PAR PROGRAMME, pas constante du langage : obj_type=consts, scope_type=root, declaree dans 81 programmes du standard, TOUJOURS a la valeur 2 (aucune variation mesuree). Consequence pour un partenaire : ecrire Oui dans son propre module donne « Mot inconnu » tant que le module ne la declare pas (ou n'inclut pas ce qui la declare). La valeur concorde avec la mesure faite en base X.13 (cf. bloc booleen_diva). Verifie au graphe le 2026-08-31.",
+      "_issue": "#252"
+    },
+    "non": {
+      "nb_params": 0,
+      "section": "constante declaree -- PAS un mot-cle du langage",
+      "confiance": "direct",
+      "valeur": 1,
+      "portee": "root (programme)",
+      "note": "Meme nature que `oui` : obj_type=consts, scope_type=root, declaree dans 71 programmes du standard, TOUJOURS a la valeur 1 (aucune variation mesuree). Verifie au graphe le 2026-08-31.",
+      "_issue": "#252"
+    },
+    "nmid": {
+      "nb_params": 4,
+      "section": "Traitement des chaines de caracteres",
+      "confiance": "direct",
+      "code_op": "CD_NMID",
+      "note": "Extraction dont le type devient NUMERIQUE. Nmid(variable, position, longueur, decimales). Obtenue par enumeration de la section entiere au graphe (2026-08-31), comme les 5 autres variantes de la famille Mid."
+    },
+    "bmid": {
+      "nb_params": 2,
+      "section": "Traitement des chaines de caracteres",
+      "confiance": "direct",
+      "code_op": "CD_BMID",
+      "note": "Extraction d'UN caractere dont le type devient BINAIRE. Obtenue par enumeration de la section entiere au graphe (2026-08-31), comme les 5 autres variantes de la famille Mid."
+    },
+    "xmid": {
+      "nb_params": 2,
+      "section": "Traitement des chaines de caracteres",
+      "confiance": "direct",
+      "code_op": "CD_XMID",
+      "note": "Extraction dont le type devient X (numerique 16 bits). Obtenue par enumeration de la section entiere au graphe (2026-08-31), comme les 5 autres variantes de la famille Mid."
+    },
+    "lmid": {
+      "nb_params": 2,
+      "section": "Traitement des chaines de caracteres",
+      "confiance": "direct",
+      "code_op": "CD_LMID",
+      "note": "Extraction dont le type devient L (numerique 32 bits). Obtenue par enumeration de la section entiere au graphe (2026-08-31), comme les 5 autres variantes de la famille Mid."
+    },
+    "zmid": {
+      "nb_params": 3,
+      "section": "Traitement des chaines de caracteres",
+      "confiance": "direct",
+      "code_op": "CD_ZMID",
+      "note": "= Mid, mais a gauche d'une affectation les espaces sont remplaces par des zeros. Utilise par les donnees date et heure, qui ne doivent pas comporter d'espaces. Obtenue par enumeration de la section entiere au graphe (2026-08-31), comme les 5 autres variantes de la famille Mid."
+    },
+    "znmid": {
+      "nb_params": 4,
+      "section": "Traitement des chaines de caracteres",
+      "confiance": "direct",
+      "code_op": "CD_ZNMID",
+      "note": "= Nmid avec remplacement des espaces par des zeros. Obtenue par enumeration de la section entiere au graphe (2026-08-31), comme les 5 autres variantes de la famille Mid."
+    }
+  },
+  "n_existe_pas": {
+    "elseif": {
+      "confiance": "direct",
+      "reponse_mcp": "Keyword 'ElseIf' not found",
+      "variantes_testees": [
+        "ElseIf",
+        "Elsif"
+      ],
+      "remplace_par": "elsif",
+      "note": "Orthographe VB. La construction EXISTE en DIVA sous le nom Elsif (un seul e). Ne PAS conseiller d'imbriquer un If dans le Else : il suffit d'ecrire Elsif."
+    },
+    "endfor": {
+      "confiance": "direct",
+      "reponse_mcp": "Keyword 'EndFor' not found",
+      "note": "Habitude Pascal/VBScript. Le terminateur du For est Next.",
+      "variantes_testees": [
+        "EndFor"
+      ]
+    },
+    "exit": {
+      "confiance": "direct",
+      "reponse_mcp": "Keyword 'Exit' not found",
+      "note": "Il n'y a PAS de sortie de boucle universelle. Le mot-cle depend du type de boucle : ExitFor, ExitLoop, ExitDo, ExitRepeat.",
+      "variantes_testees": [
+        "Exit"
+      ]
+    },
+    "redo": {
+      "confiance": "direct",
+      "reponse_mcp": "Keyword 'Redo' not found",
+      "note": "Symetrique d'Exit : pas de 'continue' universel non plus. RedoFor, RedoLoop, RedoDo, RedoRepeat.",
+      "variantes_testees": [
+        "Redo"
+      ]
+    },
+    "str$": {
+      "confiance": "direct",
+      "reponse_mcp": "Keyword 'Str$' not found",
+      "variantes_testees": [
+        "Str$",
+        "Str"
+      ],
+      "remplace_par": "str",
+      "note": "Habitude BASIC. Le suffixe $ n'appartient pas au nom : la fonction est Str, 1 parametre."
+    },
+    "splitcount": {
+      "confiance": "architecte",
+      "source": "extrait du manuel de reference fourni par l'architecte le 2026-08-30 (serveur diva-mcp indisponible). A REJOUER au graphe des son retour.",
+      "variantes_testees": [],
+      "remplace_par": "splitlist",
+      "note": "Vient d'un autre ecosysteme. DIVA decoupe en UN seul appel, SplitList -- modele different, pas un renommage.",
+      "_reserve": "AUCUNE variante d'orthographe n'a pu etre testee : c'est la regle A2bis (ne jamais conclure a l'inexistence sur une seule graphie) qui reste DUE ici. L'inexistence s'appuie sur trois faits concordants -- un echec de compilation observe chez un partenaire, la position de l'architecte, et l'existence de l'equivalent DIVA -- pas sur une interrogation du graphe.",
+      "_issue": "#96"
+    },
+    "splititem": {
+      "confiance": "architecte",
+      "source": "extrait du manuel de reference fourni par l'architecte le 2026-08-30 (serveur diva-mcp indisponible). A REJOUER au graphe des son retour.",
+      "variantes_testees": [],
+      "remplace_par": "splitlist",
+      "note": "Meme famille que splitcount. Il n'y a pas de couple compter/extraire en DIVA.",
+      "_reserve": "AUCUNE variante d'orthographe n'a pu etre testee : c'est la regle A2bis (ne jamais conclure a l'inexistence sur une seule graphie) qui reste DUE ici. L'inexistence s'appuie sur trois faits concordants -- un echec de compilation observe chez un partenaire, la position de l'architecte, et l'existence de l'equivalent DIVA -- pas sur une interrogation du graphe.",
+      "_issue": "#96"
+    },
+    "pos": {
+      "confiance": "architecte",
+      "source": "extrait du manuel de reference fourni par l'architecte le 2026-08-30 (serveur diva-mcp indisponible). A REJOUER au graphe des son retour.",
+      "variantes_testees": [],
+      "remplace_par": "string",
+      "note": "Graphie BASIC/VB. La recherche de position s'ecrit String.",
+      "_reserve": "AUCUNE variante d'orthographe n'a pu etre testee : c'est la regle A2bis (ne jamais conclure a l'inexistence sur une seule graphie) qui reste DUE ici. L'inexistence s'appuie sur trois faits concordants -- un echec de compilation observe chez un partenaire, la position de l'architecte, et l'existence de l'equivalent DIVA -- pas sur une interrogation du graphe.",
+      "_issue": "#96"
+    },
+    "len": {
+      "confiance": "architecte",
+      "source": "extrait du manuel de reference fourni par l'architecte le 2026-08-30 (serveur diva-mcp indisponible). A REJOUER au graphe des son retour.",
+      "variantes_testees": [],
+      "remplace_par": "length",
+      "note": "Graphie BASIC/VB. La longueur s'ecrit Length.",
+      "_reserve": "AUCUNE variante d'orthographe n'a pu etre testee : c'est la regle A2bis (ne jamais conclure a l'inexistence sur une seule graphie) qui reste DUE ici. L'inexistence s'appuie sur trois faits concordants -- un echec de compilation observe chez un partenaire, la position de l'architecte, et l'existence de l'equivalent DIVA -- pas sur une interrogation du graphe.",
+      "_issue": "#96"
+    }
+  },
+  "non_verifie": {
+    "portee_du_mode_round_truncate": "Round et Truncate fixent un MODE : 'a partir de l'execution de l'instruction, les affectations se font avec arrondi / troncature'. Jusqu'ou porte ce mode (retour de procedure, de module, de tunnel) n'est PAS documente, et l'architecte consulte le 2026-08-28 ne le sait pas non plus. NE PAS reposer la question sans element nouveau. Consequence pratique, validee par l'architecte : recommander l'indicateur [A]/[T]/[S] porte par l'affectation, dont la portee est locale et certaine, plutot que le mode global.",
+    "socle_audit_de_la_methode_update": "On ne sait PAS si <instance>.Update() entretient le socle d'audit (UserMo, UserMoDh) comme le fait la fonction generee Update_<Entite>(inst, majce). Question ouverte par le partenaire qui a signale la methode (#271) : elle demande une verification A L'EXECUTION sur une base reelle, pas une lecture de code. Consigne provisoire ecrite dans recordsql-advanced.md : sur une table portant le socle d'audit, preferer la fonction generee."
+  },
+  "mesures_graphe": {
+    "_note": "Mesures faites au query_cypher contre X.13, citees dans overwrite-pattern.md et tunnels.md. Chaque bloc porte le champ _page qui dit laquelle. Un test verifie que la page et ces chiffres concordent : une page qui derive des mesures qui la fondent est pire qu'une page sans chiffres.",
+    "date": "2026-08-28",
+    "pp_tt": {
+      "programmes_pp": 410,
+      "programmes_tt": 399,
+      "pp_avec_tt_de_meme_numero": 392,
+      "pp_sans_tt": 18,
+      "routines_pp": 11169,
+      "routines_pp_protegees": 11169,
+      "routines_tt": 6447,
+      "routines_tt_protegees": 40,
+      "tt_portant_des_hooks": 301,
+      "hooks_av_ap": 3305,
+      "hooks_quasi_vides": 2195,
+      "critere_protege": "body STARTS WITH 'Programme prot' -- has_body vaut true MEME sur un corps protege, il ne discrimine pas"
+    },
+    "signature_protegee": {
+      "routines_totales": 195665,
+      "params_renseignes": 0,
+      "params_vides": 195665,
+      "propriete_args": "inexistante sur Function / Procedure",
+      "contournement": "remonter a un appelant livre via [:CALLS] et lire son corps ; verifie sur Piece_Imprimer <- gttt545.Integration_BL_Ap"
+    },
+    "conventions_de_retour": {
+      "_note": "Trois familles d'API de lecture, conventions opposees. Mesure sur les routines LIVREES (corps protege exclu), X.13, 2026-08-28.",
+      "routines_livrees": 138838,
+      "wrapper_readernext": 642,
+      "wrapper_readernext_teste_egal_zero": 628,
+      "wrapper_select": 3181,
+      "instance_select": 7,
+      "instance_select_teste_egal_zero": 0,
+      "instance_readernext": 0,
+      "lecon": "Le reflexe '= 0' se forme sur ~3800 occurrences de la forme wrapper, ou il est JUSTE, puis se transpose aux methodes d'instance ou il est FAUX -- et le standard n'offre quasiment aucun exemple pour le contredire.",
+      "formes_observees": {
+        "usages_de_select_instance": 7,
+        "dont_en_commentaire": 4,
+        "test_de_verite_nu": "if <inst>.Select() -- correct, utilise",
+        "compare_a_sql_resultok": 2,
+        "compare_a_1": "vu, en commentaire",
+        "compare_a_0": 0,
+        "sql_resultok": "vaut 1, mais declaree LOCALEMENT dans 2 programmes seulement (a5tcetl000, a5tzetl010_sql), portee root. Ce n'est PAS une constante generale : l'ecrire sans la declarer donne Erreur 99. La forme portable est le test de verite nu, ou <> 0."
+      }
+    },
+    "angle_mort_ci03": {
+      "_note": "Pourquoi la regle qui fermerait l'angle mort de CI03 n'est pas livrable.",
+      "routines_avec_addandcondition": 3456,
+      "sans_aucun_addcondition_dans_le_corps": 223,
+      "dont_accumulateur_passe_par_adresse": 142,
+      "candidats_restants": 81,
+      "verdict": "81 avertissements sur le STANDARD = faux positifs de masse (hooks dont le contrat est que le framework injecte). Meme verdict que S09 : juste et sans prise. Le controle reste humain."
+    },
+    "construire_condition_selection": {
+      "_note": "Ossature du standard pour la surcharge du critere de recherche d'un zoom (#162). Mesure X.13, 2026-08-28.",
+      "occurrences": 1125,
+      "protegees": 2,
+      "avec_garde_champ_non_vide": 1051,
+      "avec_accumulation": 1064,
+      "avec_removecondition": 1071,
+      "limite_de_verification": "L'ossature du STANDARD est mesuree (1125 occurrences). La technique de SURCHARGE a ete confrontee le 2026-08-28 a une surcharge de PRODUCTION fournie par l'architecte -- ce qui a corrige la page sur trois points, cf. correction_apres_lecture_reelle. Elle n'a toujours pas ete COMPILEE par nous.",
+      "correction_apres_lecture_reelle": {
+        "_note": "Ce que la surcharge de production a dementi dans notre premiere redaction.",
+        "1_le_masquage_n_est_pas_la_technique_courante": "Nous presentions le masquage du champ de selection comme LA technique. La surcharge reelle ne masque rien : elle AJOUTE ses criteres sous un nom de condition distinct. Le masquage ne sert qu'a SUPPRIMER un critere standard -- cas plus rare, desormais presente en second.",
+        "2_ordre_de_l_appel_au_standard": "Standard.<proc>() est appele EN PREMIER, tout en haut. Notre squelette le mettait apres le masquage.",
+        "3_helper_ajouter_condition": "La production accumule via Ajouter_Condition(<accu>, '<nom du Case>') -- helper du module protege a5pm000, qui prend le nom du Case en CHAINE. Notre page ne connaissait que .AddAndCondition. Diffusion mesuree : 119 routines livrees pour le helper, 3456 pour .AddAndCondition, 90 utilisant les deux. Le helper est une variante minoritaire, pas l'idiome dominant.",
+        "4_filtrage_sur_nom_non_observe": "Nous prescrivions de filtrer sur le parametre 'nom' avant d'agir. La surcharge de production NE LE FAIT PAS. Retrograde en precaution explicitement non observee."
+      }
+    },
+    "programcall": {
+      "_page": "tunnels.md",
+      "_issue": "#319",
+      "requete": "MATCH (n:DObj) WHERE n.body CONTAINS 'ProgramCall' -- 34 objets, lignes eclatees puis classees",
+      "sites_appel_vivants": 38,
+      "litteral_avec_extension": 24,
+      "litteral_sans_extension": 0,
+      "via_variable_ou_expression": 14,
+      "expressions_distinctes": [
+        "A5_Programme_Tunnel(...)",
+        "C_WM_PrgCall",
+        "Enreg.NomPrg",
+        "M2.ENCHAIN",
+        "NomProg",
+        "windevNomProgramme"
+      ],
+      "appels_en_commentaire": 2,
+      "casses_observees": [
+        ".dhop",
+        ".Dhop"
+      ],
+      "doc_native": "Long ProgramCall (programme, [mode_affichage], [mode_appel], [wpfNoClient]) -- ne dit RIEN de l'extension",
+      "regle": "toujours ecrire l'extension, comme le standard (arbitrage architecte, 2026-08-28)",
+      "niveau": "architecte",
+      "non_etabli": "que le nom NU echoue. Aucune mesure, doc muette, et les 14 appels par variable transportent une valeur illisible (A5_Programme_Tunnel est dans le module protege a5pm000 ; C_WM_PrgCall n'est defini dans aucun DObj du graphe). La regle est de conformite, pas un theoreme sur le runtime."
+    },
+    "contexte_tunnel_xq": {
+      "_page": "tunnels.md",
+      "_issue": "#318",
+      "requete": "MATCH (n:DObj) WHERE n.body CONTAINS 'PingReceive' AND n.body CONTAINS 'Tunnel_Init'",
+      "modules_de_domaine": 10,
+      "routines": 10,
+      "modules": [
+        "gtqc000",
+        "ggqc000",
+        "rtqc000",
+        "wmqc000",
+        "gaqc000",
+        "cctcq000",
+        "rctcq000",
+        "ppqcbas000",
+        "pvqc000",
+        "grqc000"
+      ],
+      "modules_avec_programexit": 10,
+      "branche_tunnel": "If PingReceive('XQ', <M>XQ) = 0 -> MZ.ECHANGE/DOS/ETB sont remplis DEPUIS le XQ recu. Un XQ ou seul .Tunnel est renseigne fait REUSSIR ce test et recopie du vide dans MZ.",
+      "branche_non_tunnel": "la specification a reproduire cote appelant : <M>XQ = ' ' puis TUNNEL / LOGDH / USER / ACCES / DOS / Etb / VERSION / versionExt / JOB / ECHANGE / PRG",
+      "champs_gtqc000": [
+        "TUNNEL",
+        "LOGDH",
+        "USER",
+        "ACCES",
+        "DOS",
+        "Etb",
+        "VERSION",
+        "versionExt",
+        "JOB",
+        "ECHANGE",
+        "PRG"
+      ],
+      "ecarts_par_domaine": {
+        "DosCpt_en_plus": [
+          "cctcq000",
+          "rctcq000"
+        ],
+        "NomPrg8_au_lieu_de_Prg": [
+          "rctcq000"
+        ],
+        "User_et_Prg_commentes": [
+          "ppqcbas000"
+        ],
+        "second_pingreceive_zechange_gtpce": [
+          "gtqc000",
+          "ggqc000",
+          "pvqc000"
+        ]
+      },
+      "tunnel_type": "2,0 -- numerique a deux chiffres, donc un CODE d'action et pas un booleen (architecte, 2026-08-28). Le standard l'initialise par Tunnel_Init(C_APPLIC_<domaine>) ; un emetteur reel ecrit 'G3XQ_Print.Tunnel = 1' commente ';Imprimer piece'. Ecrire TRUE n'echoue donc pas : ca ecrit 1, un code valide.",
+      "niveau": "direct",
+      "non_verifie": "ce que rend Tunnel_Init : la fonction vit dans un module protege, corps non livre."
+    },
+    "portee_module_donnees": {
+      "_page": "overwrite-pattern.md",
+      "_issues": [
+        "#176",
+        "#178"
+      ],
+      "declarations_record_xz": 1306,
+      "programmes_declarant_xz": 1050,
+      "mode_lecture_impression": "Public function int, definie dans gttmpce, source livree",
+      "piece_imprimer": "definie dans gtpmpce, module PROTEGE (corps non livre)",
+      "sens_de_la_dependance": "gttmpce declare gtpmpce. gtpmpce ne declare PAS gttmpce -- la phrase de la page inversait les deux jusqu'au 2026-08-28.",
+      "gttt545": "programme du standard qui appelle les deux fonctions : declare les DEUX modules (8 au total)",
+      "include_verifie": "gtpmpce INCLUDES gtpc000 (14 includes) ; gtpc000 declare bien un enregistrement xz parmi 18",
+      "corroboration_manuel": "le manuel impose la meme declaration locale pour d'autres enregistrements partages : Zoom (manuel Zoom SQL) et RowInfo (manuel Ywpf)",
+      "niveau": "direct",
+      "observe_non_reproduit": "que la declaration Public d'un enregistrement ne franchisse pas la frontiere du module est OBSERVE en production (Erreur 99 au compile, releve partenaire). Le workspace n'a pas de compilateur : non reproduit ici."
+    },
+    "log_ano": {
+      "_page": "log-anomalies.md",
+      "_issue": "#197",
+      "_note": "Mesure faite en lisant les XXferr d'un pack standard avec le skill managing-diva-error-messages -- pas au graphe (diva-mcp indisponible le 2026-08-30).",
+      "date": "2026-08-30",
+      "fichiers_xxferr_du_pack": 13,
+      "portant_le_code_9999": 11,
+      "libelle_9999_exactement_dollar1": 10,
+      "exception": "a5ferr : le libelle de 9999 vaut 'Erreur $1' -- A5_Log_Ano(9999, 'texte') ecrit donc 'Erreur texte', pas 'texte'.",
+      "sans_le_code_9999": [
+        "gaferr",
+        "grferr"
+      ],
+      "domaines_des_quatre_fonctions_citees": {
+        "G3_Log_Ano": "gtferr",
+        "A5_Log_Ano": "a5ferr",
+        "C3_Log_Ano": "ccferr",
+        "R3_Log_Ano": "rcferr"
+      },
+      "tous_portent_9999": true,
+      "code_catalogue_temoin": "9000 vaut 'Fichier $2 absent' dans gtferr comme dans rcferr -- ce n'est PAS une seconde valeur reservee. Leve la contre-observation tiree d'un appel R3_Log_Ano(9000,' ',...) releve chez un partenaire.",
+      "mecanisme": "Le libelle stocke pour 9999 est '$1' : un pur passe-plat. Le message affiche EST le parametre. C'est pour cela que 9999 est la valeur du texte libre -- convention EXPLIQUEE, pas seulement observee.",
+      "niveau": "mesure",
+      "non_verifie": "le nom du parametre nomme applic et la liste complete des parametres de *_Log_Ano : viennent du retour partenaire seul, a interroger au graphe."
+    },
+    "booleen_diva": {
+      "_page": "syntaxe-de-base.md",
+      "_issue": "#252",
+      "_note": "Mesure faite en SQL sur la base X.13 -- pas au graphe (diva-mcp indisponible le 2026-08-30). Distribution reelle des valeurs des colonnes de drapeau.",
+      "date": "2026-08-30",
+      "colonnes_drapeau_numeriques": 905,
+      "colonnes_avec_0_1_et_2_ensemble": 40,
+      "colonnes_du_motif_1_2": 143,
+      "colonnes_drapeau_alphanumeriques_1c": 29,
+      "valeurs_alphanumeriques_observees": [
+        "1",
+        "2",
+        "espace"
+      ],
+      "zero_en_alphanumerique": 0,
+      "correspondance": {
+        "non_renseigne": "0 (numerique) ou espace (alphanumerique)",
+        "non": "1",
+        "oui": "2"
+      },
+      "verdict": "Le RETEX #252 avait raison : NON = 1. Le devkit affirmait NON = 0 et 'etat intermediaire = 1' -- deux erreurs dans la meme ligne, et la regle ne vivait que dans SKILL.md et une eval, sans page de reference pour la confronter.",
+      "niveau": "mesure",
+      "non_verifie": "la DECLARATION des constantes Oui/Non. La correspondance est deduite de donnees stockees, coherente sur deux typages independants. A confirmer au graphe des son retour.",
+      "reserve": "heuristique de nom (colonnes *Fl) : les jeux de valeurs a queue ({1,3}, {1,5,3,4,2}...) montrent que tous les *Fl ne sont pas booleens. Ils sont exclus du verdict, pas ignores."
+    },
+    "champs_tableau": {
+      "_page": "syntaxe-de-base.md",
+      "_issue": "#256",
+      "_note": "Mesure faite en SQL sur la base X.13 -- pas au graphe (diva-mcp indisponible le 2026-08-30). Un champ multi-occurrence apparait en colonnes <CHAMP>_0001..<CHAMP>_000N.",
+      "date": "2026-08-30",
+      "colonnes_totales": 49735,
+      "colonnes_indicees": 10827,
+      "champs_tableau_distincts": 1029,
+      "noms_de_champ_tableau": 615,
+      "noms_tableau_ici_scalaire_ailleurs": 148,
+      "arites_les_plus_frequentes": [
+        3,
+        2,
+        10,
+        4,
+        20,
+        5,
+        6
+      ],
+      "arite_max_observee": 40,
+      "usages_lus_dans_le_standard": [
+        "Choix(1)",
+        "TXT(3)",
+        "REGLIB(1)",
+        "TabTyp(101)",
+        "ActionCod(<variable>)"
+      ],
+      "niveau": "mesure",
+      "deduit": "la correspondance « colonne _000N <-> champ multi-occurrence DIVA » est deduite de la forme des noms de colonnes ; elle n'a pas ete lue dans un dictionnaire .dhsd.",
+      "non_verifie": "la semantique de chaque indice (par exemple ce que vaut la 4e position d'un bloc d'adresses) : elle depend du champ et se lit dans un usage existant, pas dans une convention generale."
+    },
+    "concatenation": {
+      "_page": "syntaxe-de-base.md",
+      "_issue": "#256",
+      "operateur": "&",
+      "formes_fautives": [
+        "+",
+        "crochets"
+      ],
+      "message_compilateur": "Parenthese attendue apres un nom de fonction -- trompeur : il ne nomme pas la concatenation.",
+      "observe_dans_le_standard": "Version_ERP_UX & ' ' & Indice_ERP_UX, lu dans la procedure d'entree d'un module de domaine (LOT E).",
+      "confiance": "observe",
+      "_defaut_corrige": "la regle existait dans le SKILL.md (« + pour concatener -> utiliser & ») mais dans AUCUNE page de reference, donc aucun test ne la confrontait -- meme defaut structurel que #252. Et elle ne couvrait que la forme +, pas les crochets."
+    }
+  },
+  "_dernier_rejeu": "2026-08-31 -- retour de diva-mcp. Trois dettes soldees (mid, oui, non) et les 4 inexistences de #96 sans variantes testees (splitcount, splititem, pos, len) rejouees en enumerant les DEUX familles entieres : 19 fonctions de traitement de chaines, 42 de gestion de listes. Restent 2 entrees dans non_verifie, dont aucune ne se tranche au graphe."
+}

@@ -15,12 +15,12 @@
 ---
 
 
-Detail de chaque section du rapport genere par `build_report.py`. Reference croisee avec le gabarit d'analyse pré-action (interne).
+Detail de chaque section du rapport genere par `build_report.py`.
 
 ## Section 1 -- Comprehension de la demande
 
 Source : `request.json`.
-Contenu genere deterministe. Le LLM au CP5 peut ajouter une note "reformulation finale apres clarifications CP1".
+Contenu genere deterministe. Le LLM, a l'etape de redaction finale, peut ajouter une note "reformulation finale apres clarifications".
 
 ## Section 2 -- Exemples de code DIVA similaires
 
@@ -40,7 +40,7 @@ Section "Non retrouves en X.13" separee en fin de section 2 pour les `disappeare
 
 Source : fonctions englobantes extraites des `context_sample` des confirmed.
 
-Le template remplit automatiquement les fonctions detectees. Le LLM au CP5 **doit** :
+Le template remplit automatiquement les fonctions detectees. A la redaction finale, le LLM **doit** :
 - Categoriser chaque fonction en famille (`Framework`, `RecordSql`, `ISAM`, etc.)
 - Ajouter des fonctions du catalogue DIVA (référence langage avancé interne) pertinentes a la demande
 - Borner a 12 fonctions maximum
@@ -54,26 +54,26 @@ Format : `fichier:ligne -- appelle fonction [STATUT]` + citation de la ligne.
 
 ### 4.2 Propagation des changements
 
-**Pas deterministe**. Le LLM au CP5 redige selon le type de modification envisagee :
+**Pas deterministe**. A la redaction finale, le LLM redige selon le type de modification envisagee :
 - Ajout de champ -> impact sur les masques, dictionnaire, RecordSql
 - Modification de signature -> impact sur tous les callers de 4.1
 - Suppression -> verifier qu'aucun appelant n'existe
 
 ### 4.3 Surcharges existantes
 
-Le LLM au CP5 :
+A la redaction finale, le LLM :
 - Cherche les patterns `OverWrittenBy` dans les snippets de la section 2
 - Liste chaque surcharge detectee avec son domaine
 - Explique l'impact : "le projet X surcharge cette fonction, toute modification devra etre portee la-bas"
 
 ## Section 5 -- Endroit ou agir
 
-**Totalement redigee par le LLM au CP5**. Le template fournit un squelette avec une proposition placeholder.
+**Totalement redigee par le LLM a l'etape de redaction finale**. Le template fournit un squelette avec une proposition placeholder.
 
 Regles :
 - 1 a 3 propositions (pas plus)
 - Chacune justifiee par un exemple de la section 2 (lien `section 2.N`)
-- Indiquer le UC generation suggere (UC-001 pour creer, UC-002 pour modifier, etc.)
+- Indiquer le skill de generation suggere (`creating-diva-entity` pour creer, `modifying-diva-entity` pour modifier)
 - Impact estime `faible/moyen/fort`
 
 ## Section 6 -- Pistes de recherche complementaires
@@ -94,7 +94,7 @@ Deterministe depuis les metriques :
 - Nombre de candidats disparus
 - Clarification requise oui/non
 
-Le LLM au CP5 peut ajouter des points contextuels (effets de bord, conventions domaine).
+A la redaction finale, le LLM peut ajouter des points contextuels (effets de bord, conventions domaine).
 
 ## Annexe -- Sources consultees
 

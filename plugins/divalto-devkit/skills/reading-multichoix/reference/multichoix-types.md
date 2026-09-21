@@ -86,7 +86,7 @@ Le libelle affiche n'est pas stocke dans `gtfdmc.dhfi`. L'entree porte une confi
 
 ### Resolution
 
-La resolution effective (lecture de la table cible) est prevue par le mode `--resolve` du script (BACKLOG MC-03, pas encore implemente).
+La resolution effective (lecture de la table cible) est prevue par le mode `--resolve` du script.
 
 En attendant, utiliser `reading-isam-files` avec la structure adequate du dictionnaire cible pour lire `axelibtb.dhfi`.
 
@@ -110,7 +110,7 @@ Le framework DIVA / IHM resout ces identifiants au runtime.
 | `CHOIX_STYLE` | 1 | `LstStyleWpf` |
 | `CHOIX_STYLEIMP` | 1 | `LstStyleImp` |
 
-### Semantique complete -- `[A VERIFIER]` BACKLOG MC-02
+### Semantique complete -- `[A VERIFIER]`
 
 La liste exhaustive des identifiants Type=4 valides et leur interpretation ne sont pas entierement documentees a partir du RETEX initial. Les 55 Nc de Type=4 de l'Achat-Vente X.13 devront etre scannes pour etablir un catalogue complet.
 

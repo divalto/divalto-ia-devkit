@@ -78,7 +78,7 @@ Server (script de dump interrogeant `information_schema.columns` et
 |------------------------------------------------|---------------------------------|-----------------------|
 | Graphe Neo4j diva-mcp (advisory X.12)          | FK, liens programmes-entites    | extract_relations.py  |
 | Code source `.dhsp`/`.dhsq` (X.13)             | Zooms f8, Record OverWrittenBy  | extract_relations.py  |
-| Masques `.dhsf` (X.13)                         | f8=, table_associee, onglets    | Claude (lecture CP3)  |
+| Masques `.dhsf` (X.13)                         | f8=, table_associee, onglets    | Claude (lecture)      |
 | Heuristique sur noms de champs (DOS, ETB, CPT) | Relations probables a confirmer | extract_relations.py  |
 
 ### Narratif et metier
@@ -89,7 +89,7 @@ Server (script de dump interrogeant `information_schema.columns` et
 | Procedures Module Check (mchk)                 | Regles metier appliquees        | Claude (extraction)|
 | Menu et navigation ERP                         | Place dans l'arborescence       | Claude (extraction)|
 | Fragment `reference/modules-erp-summary.md`    | Mapping modules/prefixes/dicos  | Claude (lecture)   |
-| Connaissance metier du collaborateur           | role, rules, examples concrets  | Collaborateur (CP3)|
+| Connaissance metier du collaborateur           | role, rules, examples concrets  | Collaborateur      |
 
 **Sources interdites** : `archive/*`, `raw/*`, ou toute matiere digeree non
 canonique. Un skill reste autonome chez tout collaborateur
@@ -113,7 +113,7 @@ Sortie : YAML partiel avec `technical.primary_table`, `technical.fields[]`
 (nom, sql_type, nullable, layer heuristique), `technical.indexes[]`,
 `technical.audit_fields`, `technical.field_count`.
 
-Note : `business.*` n'est PAS rempli par ce script (role de l'enrichissement CP3).
+Note : `business.*` n'est PAS rempli par ce script -- c'est le role de l'enrichissement narratif par le collaborateur.
 
 ### extract_relations.py
 
@@ -124,7 +124,7 @@ Sortie : YAML partiel de relations : liste de `{source_entity, target_entity, ty
 - `neo4j` : graphe advisory X.12 via MCP diva-mcp (si dispo)
 - `code` : scan des .dhsf/.dhsp X.13 pour `f8=` et `Record ... OverWrittenBy`
 
-## Enrichissement narratif (CP3)
+## Enrichissement narratif
 
 Etape manuelle assistee par Claude. Pattern :
 

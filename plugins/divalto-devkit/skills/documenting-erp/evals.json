@@ -105,11 +105,11 @@
     },
     {
       "id": "anti-regression-reportlab-adhoc",
-      "query": "Garde-fou anti-regression : aucun PDF UC-200 ne doit etre produit par un renderer externe au skill.",
+      "query": "Garde-fou anti-regression : aucun PDF de documentation ne doit etre produit par un renderer externe au skill.",
       "expected_behavior": [
         "Aucun script `output/_md_to_pdf*.py` ou `output/*md_to_pdf*.py` n'existe (RETEX 2026-04-23 : un script reportlab ad-hoc avait produit des PDFs 40x plus petits que la reference Chrome headless)",
         "Tous les PDFs `out/doc-erp/*.pdf` font au moins 1 MB (seuil defensif vs reportlab ad-hoc qui produit ~100 KB)",
-        "Les PDFs UC-200 sont systematiquement produits via `.claude/skills/documenting-erp/scripts/render_pdf.py`"
+        "Les PDFs de documentation sont systematiquement produits via `.claude/skills/documenting-erp/scripts/render_pdf.py`"
       ]
     }
   ]

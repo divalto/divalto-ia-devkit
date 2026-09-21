@@ -33,7 +33,8 @@ description: >
 - Workflow -- protocole de session
 - Workflow -- trouver la version canonique d'un fichier
 - Workflow -- capture/relecture des conventions du poste (memoire de session)
-- Table de synthese des regles (R-1 a R-16)
+- Workflow -- detection de la version ERP pour diva-mcp (R-17)
+- Table de synthese des regles (R-1 a R-17)
 - References documentaires
 
 ## Vocation
@@ -160,6 +161,26 @@ Garde-fous : P-B (jamais d'ecriture sans confirmation explicite), memoire locale
 
 → Detail complet, template a 5 sections, procedure pas a pas, limites : [reference/poste-memory-template.md](reference/poste-memory-template.md).
 
+## Workflow -- detection de la version ERP pour diva-mcp (R-17)
+
+Les outils `mcp__...diva-mcp__*` prennent un parametre `version` (majeure marketing ERP, ex. `X.13` / `X.12`). Cette version est **deterministe** : ne **jamais** la demander a l'utilisateur sans l'avoir cherchee (friction inutile).
+
+**Source** : le chemin du **standard** resolu pour le workspace -- `.dhpt [profil] repobjet` (objets compiles standard) et/ou l'implicite `[cheminStd]` (sources standard). Le **segment versionne** de ce chemin porte la version.
+
+> **La version passee a diva-mcp = la majeure marketing ERP** (`X.13`, `X.12`...). Elle est **distincte** de `versioncible` du `.dhpt` (runtime Divalto, ex. `413`), qui ne doit **jamais** etre passee a diva-mcp.
+
+> **⚠️ Le NOMMAGE du segment versionne est une convention de POSTE, pas une norme universelle.** `v2026_erpX13_p223a` n'est qu'un **exemple observe** chez un partenaire ; un autre poste peut nommer autrement. Deriver la majeure ERP **selon la convention du poste** (capturee en R-16 `poste-conventions.md`, confirmee avec le collaborateur), **jamais** en presumant un pattern fige.
+
+**Protocole (P-B -- detecter, valider une fois via AskUserQuestion, reutiliser)** :
+
+1. **Detecter** la version depuis le standard resolu (repobjet / `[cheminStd]`).
+2. **La 1re fois de la session** (ou si non encore validee) : faire **valider** la version via **`AskUserQuestion`**, en **pre-remplissant la version deduite comme option recommandee** (la preuve dans l'intitule, ex. « `X.13` -- deduite de `repobjet = ...` »). En **migration**, proposer **source ET cible** (l'implicite pointe souvent la source, pas la cible). Ne **pas** se contenter d'un « correct ? » en texte libre.
+3. Une fois choisie : l'utiliser **sans re-demander** pour le reste de la session, et (optionnel) la consigner dans `poste-conventions.md` (R-16) pour **pre-remplir** la question aux sessions suivantes.
+
+> **Pourquoi `AskUserQuestion` et pas une question libre.** Le hook `check_mcp_version` ne debloque les appels diva-mcp que si la version cible a ete **enoncee par l'utilisateur** dans la session. Une reponse `AskUserQuestion` est **captee comme voix utilisateur** par le hook (elle contient la version choisie) -> la validation vaut pour **toute la session**, les appels suivants passent **sans friction**. Un simple « oui » en texte libre ne contient pas la version et **ne debloque pas** le hook.
+
+Ne **jamais** passer une version a diva-mcp **silencieusement** : une mauvaise detection (poste multi-versions, convention mal lue) ferait interroger le **mauvais snapshot ERP** sans que personne ne le voie. Le hook `check_mcp_version` normalise desormais les variantes de mention (`X.12`, `X12`, « majeure 12 »...) et consomme la reponse `AskUserQuestion` -> plus de blocage sur une version pourtant deduite et validee, tout en gardant l'ancrage humain.
+
 ## Table de synthese des regles
 
 | R | Sujet | Reference |
@@ -180,6 +201,7 @@ Garde-fous : P-B (jamais d'ecriture sans confirmation explicite), memoire locale
 | R-14 | Classification standard/specifique avec validation utilisateur obligatoire | [classification.md](reference/classification.md) |
 | R-15 | Lire le profil du `.dhpt` pour comprendre l'architecture typee | [profile.md](reference/profile.md) |
 | R-16 | Capturer/relire les conventions du poste integrateur en memoire de session | [poste-memory-template.md](reference/poste-memory-template.md) |
+| R-17 | Detecter la version ERP pour diva-mcp (valider via AskUserQuestion 1x -> consommee par le hook check_mcp_version) | (workflow ci-dessus) + [poste-memory-template.md](reference/poste-memory-template.md) |
 
 ## References documentaires
 
@@ -200,6 +222,26 @@ Garde-fous : P-B (jamais d'ecriture sans confirmation explicite), memoire locale
 | `scripts/_resolver.py` | Module helper interne (import) : R-3 parse `divaltopath.cfg`, R-4 lecture brute `fconfig.dhfd`, R-5 lookup registre Windows, R-7 parse `divaltoserver.cfg`, R-8 stub (non implemente). Aussi appelable en CLI avec `--harmony-path` ou `--discover` (debug) | (import) | (import) |
 
 **Convention** : tous les scripts utilisent `py` comme lanceur, sortie JSON sur stdout, erreurs sur stderr. Exit code 0 = succes, 1 = no result / findings detected, 2 = erreur, **3 = `--confirmed-by-user` absent (R-1/P-B viole)**.
+
+> **Convention de nommage : l'en-tete fait foi, le suffixe `u` est un indice.** L'audit
+> compare le nom d'un `.dhpt` a son en-tete et signale une divergence -- mais en
+> `warning`, et sans rien prescrire. Le suffixe `u` est une convention, pas un
+> marqueur : un nom peut finir par la lettre `u` pour une raison purement lexicale
+> (mesure sur workspace reel : `addon mercure ieu.dhpt` porte un en-tete
+> `xwin-projet` parfaitement correct). C'etait auparavant une `error` qui conseillait
+> de passer l'en-tete en `xwin-s-projet 2.0` -- suivre ce conseil transformait un
+> projet standard en surcharge declaree.
+
+---
+
+## Tests
+
+```
+py .claude/skills/understanding-integrator-workspace/tests/run_all.py
+```
+
+A lancer apres toute modification de `scripts/`. Detail :
+[tests/README.md](tests/README.md).
 
 ### Garde-fou `--confirmed-by-user` (R-1/P-B)
 

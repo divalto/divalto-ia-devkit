@@ -7,7 +7,7 @@ deja declare. Or changer une Nature decale toutes les positions des champs
 suivants dans chaque [TABLE]/[CHAMPS] et chaque [INDEX]/[CHAMPS] qui l'utilisent.
 
 Cas reel : alignement d'un dictionnaire lors d'une migration de version ERP
-(reprise du specifique d'une version a une autre, R-040).
+(reprise du specifique d'une version a une autre).
 
 Ce script :
   1. lit la Nature actuelle du champ dans son bloc [CHAMP] global ;
@@ -29,7 +29,7 @@ Exit codes: 0 = succes, 1 = erreur utilisateur, 2 = erreur interne
 
 Limites v1 (signalees, non traitees) :
   - couche relationnelle [CHAMPL] (records logiques RecordSQL) NON re-propagee
-    -> warning si le champ y figure (cf R-027 : angle mort de l'arbitrage) ;
+    -> warning si le champ y figure (: angle mort de l'arbitrage) ;
   - champs tableau (Nature avec '*', repetition != 0) et multi-table composite
     -> refuses (rediger a la main, cf reference/dhsd-surcharge-pattern.md).
 """
@@ -137,7 +137,7 @@ def find_field_nature(lines, field):
 
 
 def count_champl_usage(lines, field):
-    """Compte les records relationnels [CHAMPL] referencant le champ (R-027)."""
+    """Compte les records relationnels [CHAMPL] referencant le champ."""
     count = 0
     in_champl = False
     for line in lines:
@@ -319,12 +319,12 @@ def main():
     if delta == 0:
         warnings.append(f"delta=0 (taille inchangee {old_size}o) : seule la Nature est mise a jour")
 
-    # 2. detecter usage [CHAMPL] (R-027, non re-propage)
+    # 2. detecter usage [CHAMPL] (non re-propage)
     champl_n = count_champl_usage(lines, args.field)
     if champl_n:
         warnings.append(
             f"[CHAMPL] : champ present dans {champl_n} record(s) relationnel(s) -- "
-            f"positions NON re-propagees (limite v1, cf R-027). Verifier manuellement.")
+            f"positions NON re-propagees (limite connue de cette version). Verifier manuellement.")
 
     # 3. mettre a jour la Nature du [CHAMP] global
     m = _NATURE_RE.match(lines[nat_idx])
@@ -397,8 +397,8 @@ def main():
     with open(args.path, "wb") as f:
         f.write(output.encode(ENCODING))
 
-    # validate_dhsd sur chaque table modifiee (filet R-040), en mode migration
-    # (R-041) : le D03 preexistant ne doit pas masquer le signal D01/D02.
+    # validate_dhsd sur chaque table modifiee (filet de securite), en mode migration
+    # : le DICT03 preexistant ne doit pas masquer le signal DICT01/DICT02.
     validation = []
     for t in tables_report:
         v = validate_dhsd_file(args.path, t["table"], migration=True)

@@ -1,9 +1,23 @@
 """
-verify_x13.py -- Verifie les candidats X.12 dans les sources X.13 et produit
-evidence_x13.json.
+verify_x13.py -- Verifie les candidats du graphe dans les sources SUR DISQUE et
+produit evidence_x13.json.
 
-Source de verite : le filesystem ERP (`--erp-root`). Toute info Neo4j [X.12] passe en
-[CONFIRME X.13], [DISPARU X.13] ou est completee par [NOUVEAU X.13].
+Source de verite : le filesystem ERP (`--erp-root`). Toute info du graphe passe en
+[CONFIRME], [DISPARU] ou est completee par [NOUVEAU].
+
+**Les statuts ne portent PAS de numero de version, et c'est delibere.** Le script est
+generique : il lit la racine qu'on lui donne, sans aucun moyen de savoir quelle version
+d'ERP elle contient. Il annoncait pourtant "X.13" en dur, alors qu'un partenaire peut
+parfaitement travailler contre une autre version -- le checkpoint CP1 du skill
+`analyzing-diva-request` le dit lui-meme : « le defaut X.13 n'est PAS forcement la
+cible (un projet peut compiler contre X.12) ». La version reellement lue est desormais
+rapportee dans `scope` (`version_verifiee`, alimentee par `--version`), jamais dans le
+statut.
+
+Ne PAS remettre la version dans le statut : le consommateur aval (`build_facts.py`)
+teste "X.12" AVANT "CONFIRME" dans sa normalisation, donc un statut "CONFIRME X.12"
+serait retrograde en simple piste advisory "X.12" -- la confirmation sur disque serait
+PERDUE. Verifie par execution.
 
 Bornes : --max-matches, --max-files, --timeout pour gerer la volumetrie (~7000 fichiers).
 """
@@ -24,17 +38,9 @@ from _structural_parser import (  # noqa: E402
     parse_blocks, find_enclosing_block, extract_snippet, read_diva_file,
 )
 
-# Vendored SVN wrapper (import optionnel -- si absent, enrichment SVN desactive)
-try:
-    from svn_consult import svn_log as _svn_log  # noqa: E402
-    _SVN_AVAILABLE_MODULE = True
-except ImportError:
-    _svn_log = None
-    _SVN_AVAILABLE_MODULE = False
-
 # --- Mapping prefix module -> sous-repertoires ERP ----------------------
 
-# Aligne sur docs/MODULES-ERP.md section 1 + 2 (sous-modules Achat-Vente)
+# Cette table EST la reference du mapping prefixe -> sous-repertoires ERP.
 MODULE_DIRS = {
     "GT_": ["Achat-Vente/source/Dav", "Achat-Vente/source"],
     "RT_": ["Achat-Vente/source/Retail"],
@@ -97,39 +103,94 @@ class Deadline:
 
 
 def domain_scope_dirs(erp_root: Path, domain: str | None, mode: str,
-                       candidate_domain_names: list[str] | None = None) -> list[Path]:
-    """Retourne les sous-repertoires a explorer selon le scope demande.
+                       candidate_domain_names: list[str] | None = None
+                       ) -> tuple[list[Path], dict]:
+    """Retourne (sous-repertoires a explorer, diagnostic du cadrage).
 
     Mode "auto" : union des sous-repertoires de **tous** les domaines presents parmi
     les candidats Neo4j (via `candidate_domain_names`) + le domaine pressenti. Evite
-    les faux "DISPARU X.13" quand les candidats sont repartis sur plusieurs domaines
+    les faux "DISPARU" quand les candidats sont repartis sur plusieurs domaines
     alors que `domaine_pressenti` ne couvre que l'un d'eux (RETEX 2026-04-23).
+
+    **Le diagnostic dit si le cadrage a echoue.** `MODULE_DIRS` decrit l'arborescence
+    du standard livre (`Achat-Vente/source/Dav`, ...). Une arborescence PLATE -- typique
+    d'un specifique partenaire : des `alg_*.dhs*` et des surcharges `gt*u.dhs*` a la
+    racine -- ne contient aucun de ces sous-repertoires. On retombait alors
+    silencieusement sur `[erp_root]`, soit le comportement de `--domain-scope all`, sur
+    ~7000 fichiers. Avec un budget bas, la recherche peut ne RIEN trouver tout en
+    paraissant cadree (#329). Le diagnostic remonte desormais dans `scope`.
     """
+    diag = {"mode_demande": mode, "cadrage_effectif": mode, "repli_sur_erp_root": False,
+            "raison_repli": None, "sous_repertoires_absents": []}
     if mode == "all":
-        return [erp_root]
+        return [erp_root], diag
     if mode == "auto":
         seen: set[str] = set()
         result: list[Path] = []
+        absents: list[str] = []
         # 1. Domaine pressenti (compatibilite ascendante : garde le comportement historique)
         if domain and domain in MODULE_DIRS:
             for d in MODULE_DIRS[domain]:
                 p = erp_root / d
-                if d not in seen and p.exists():
+                if d in seen:
+                    continue
+                if p.exists():
                     seen.add(d)
                     result.append(p)
+                else:
+                    absents.append(d)
         # 2. Tous les domaines extraits des candidats (correctif bug faux DISPARU)
         for name in candidate_domain_names or []:
             for d in DOMAIN_NAME_DIRS.get(name, []):
                 p = erp_root / d
-                if d not in seen and p.exists():
+                if d in seen:
+                    continue
+                if p.exists():
                     seen.add(d)
                     result.append(p)
-        return result if result else [erp_root]
-    # Mode custom : un sous-repertoire nomme explicitement
+                else:
+                    absents.append(d)
+        diag["sous_repertoires_absents"] = sorted(set(absents))
+        if result:
+            return result, diag
+        diag.update(
+            cadrage_effectif="all (repli)", repli_sur_erp_root=True,
+            raison_repli=("aucun sous-repertoire de domaine trouve sous erp_root -- "
+                          "arborescence plate (specifique partenaire) ou racine "
+                          "inattendue. La recherche a porte sur TOUT erp_root, "
+                          "comme --domain-scope all."))
+        return [erp_root], diag
+    # Mode custom. L'aide CLI annonce `auto|all|<prefix>` -- or un PREFIXE de module
+    # (`GT_`, `CC_`, ...) n'est pas un nom de repertoire : traite litteralement, il ne
+    # correspond a rien et le cadrage retombait TOUJOURS sur tout l'ERP, y compris sur
+    # l'arborescence du standard ou `GT_` est une cle valide de MODULE_DIRS. C'est la
+    # forme que l'auteur de #329 utilisait. On resout donc d'abord le prefixe, puis on
+    # retombe sur l'interpretation "nom de sous-repertoire".
+    if mode in MODULE_DIRS:
+        result = [erp_root / d for d in MODULE_DIRS[mode] if (erp_root / d).exists()]
+        absents = [d for d in MODULE_DIRS[mode] if not (erp_root / d).exists()]
+        diag["sous_repertoires_absents"] = absents
+        if result:
+            diag["cadrage_effectif"] = f"prefixe {mode}"
+            return result, diag
+        diag.update(
+            cadrage_effectif="all (repli)", repli_sur_erp_root=True,
+            raison_repli=(f"le prefixe de module '{mode}' est connu, mais aucun de ses "
+                          f"sous-repertoires n'existe sous erp_root ({', '.join(absents)}) "
+                          f"-- arborescence plate (specifique partenaire) ou racine "
+                          f"inattendue. La recherche a porte sur TOUT erp_root."))
+        return [erp_root], diag
     custom = erp_root / mode
     if custom.exists():
-        return [custom]
-    return [erp_root]
+        diag["cadrage_effectif"] = f"sous-repertoire {mode}"
+        return [custom], diag
+    diag.update(
+        cadrage_effectif="all (repli)", repli_sur_erp_root=True,
+        sous_repertoires_absents=[mode],
+        raison_repli=(f"le sous-repertoire demande '{mode}' n'existe pas sous erp_root. "
+                      f"La recherche a porte sur TOUT erp_root, comme "
+                      f"--domain-scope all."))
+    return [erp_root], diag
 
 
 def find_program_file(dirs: list[Path], program_name: str,
@@ -249,7 +310,7 @@ def find_candidate_anchor_line(file_path: Path, candidate_name: str,
     """Cherche une ligne d'ancrage significative dans un fichier DIVA.
 
     Utilise quand aucun --symbols explicite n'est cible : evite que le snippet
-    tombe sur l'en-tete du fichier ou au milieu aleatoire (RETEX UC-100 :
+    tombe sur l'en-tete du fichier ou au milieu aleatoire (constate en analyse pre-action :
     snippets hors-sujet a L1-16 parce que le nom du programme apparait dans
     `SetModuleInfo('$Id: ...')` et les commentaires).
 
@@ -290,46 +351,10 @@ def find_candidate_anchor_line(file_path: Path, candidate_name: str,
 # --- Coeur du workflow ---------------------------------------------------
 
 
-# --- Enrichissement SVN (S-14) ------------------------------------------
-# Rate-limit applicatif : max 10 appels svn_log total par run (memory
-# feedback_svn_rate_limit.md). Jamais parallelise. Pas de svn blame
-# (trop couteux meme sur petits fichiers, cf S-12 : 39s / 1 KB).
-
-
-def _enrich_confirmed_with_svn_log(confirmed: list[dict],
-                                     max_calls: int = 10,
-                                     limit_per_call: int = 5) -> dict:
-    """Enrichit chaque entry de `confirmed` avec `svn_log_recent` : 5 derniers commits
-    du fichier. Rate-limite, sequentiel, degradation gracieuse.
-
-    Retourne un dict `svn_stats` : {calls, successes, available}.
-    """
-    stats = {"calls": 0, "successes": 0, "available": True, "skipped_rate_limit": 0}
-    if not _SVN_AVAILABLE_MODULE or _svn_log is None:
-        stats["available"] = False
-        return stats
-    for entry in confirmed:
-        if stats["calls"] >= max_calls:
-            stats["skipped_rate_limit"] += 1
-            continue
-        fp = entry.get("file_path")
-        if not fp:
-            continue
-        r = _svn_log(fp, limit=limit_per_call)
-        stats["calls"] += 1
-        if not r.get("available", False):
-            stats["available"] = False
-            break  # SVN indisponible : arret propre, pas de retry
-        if r.get("ok"):
-            entry["svn_log_recent"] = r.get("data", [])
-            stats["successes"] += 1
-    return stats
-
-
 def verify(candidates: dict, request: dict, erp_root: Path, domain_scope: str,
             max_matches: int, max_files: int, timeout: int,
             target_symbols: list[str] | None = None,
-            svn_enrich: bool = False) -> dict:
+            version: str | None = None) -> dict:
     deadline = Deadline(time.time() + timeout)
     start_wall = time.time()
 
@@ -342,14 +367,15 @@ def verify(candidates: dict, request: dict, erp_root: Path, domain_scope: str,
         p.get("domain") for p in candidates.get("programs", [])
         if p.get("domain") and p.get("domain") != "unknown"
     })
-    dirs = domain_scope_dirs(erp_root, domain, domain_scope, candidate_domain_names)
+    dirs, scope_diag = domain_scope_dirs(erp_root, domain, domain_scope, candidate_domain_names)
 
     confirmed: list[dict] = []
     disappeared: list[dict] = []
     new_findings: list[dict] = []
     impact_callers: list[dict] = []
 
-    files_examined_total = 0
+    files_examined_total = 0      # fichiers programmes sondes (recherche par glob)
+    matches_total = 0             # correspondances de mots-cles ramenees
 
     # 1. Verifier l'existence des programs candidats
     for program in candidates.get("programs", []):
@@ -378,7 +404,7 @@ def verify(candidates: dict, request: dict, erp_root: Path, domain_scope: str,
                 "file_path": str(path),
                 "line_range": [context.get("snippet_start", 1),
                                 context.get("snippet_end", 0)],
-                "status": "CONFIRME X.13",
+                "status": "CONFIRME",
                 "context_sample": context,
                 "domain": program.get("domain"),
             }
@@ -388,7 +414,7 @@ def verify(candidates: dict, request: dict, erp_root: Path, domain_scope: str,
         else:
             disappeared.append({
                 "from_x12": name,
-                "status": "DISPARU X.13",
+                "status": "DISPARU",
                 "reason_hypothesis": "non_trouve_via_glob",
                 "domain": program.get("domain"),
             })
@@ -398,14 +424,32 @@ def verify(candidates: dict, request: dict, erp_root: Path, domain_scope: str,
     if neo4j_status == "unavailable":
         keywords = keywords + request.get("keywords_metier", [])[:5]
 
+    # Budget : seuls les LIMITE_KEYWORDS premiers mots sont cherches. Auparavant la
+    # troncature etait muette : un 6e mot n'etait jamais cherche et RIEN ne le disait,
+    # ce qui laissait croire a une recherche exhaustive (#327). Les ecartes sont
+    # desormais remontes dans `scope`.
+    LIMITE_KEYWORDS = 5
+    kw_cherches = keywords[:LIMITE_KEYWORDS]
+    kw_ecartes = keywords[LIMITE_KEYWORDS:]
+    kw_non_atteints: list[str] = []
+
     confirmed_files = {c["file_path"] for c in confirmed}
-    for kw in keywords[:5]:
+    for i_kw, kw in enumerate(kw_cherches):
         if deadline.expired():
+            # Le temps imparti est ecoule : les mots restants ne seront pas cherches.
+            kw_non_atteints = kw_cherches[i_kw:]
             break
-        pattern = re.compile(re.escape(kw), re.IGNORECASE)
+        # `_build_term_pattern` entoure un terme purement alphanumerique de
+        # word-boundaries. La boucle utilisait `re.escape` NU, donc un mot court comme
+        # "AB" matchait a l'interieur d'autres mots (MABSENT, TABLE, $Join.AbstCod) et
+        # saturait son quota de 50 correspondances sur un seul fichier de dictionnaire,
+        # gaspillant 1 des 5 emplacements de recherche pour ne ramener que du bruit
+        # (#328). Mesure sur le standard : "AB" nu = 50 resultats dont AUCUN ne contient
+        # "AB" comme mot ; en mot entier = 0 resultat.
+        pattern = _build_term_pattern(kw)
         matches = grep_text(dirs, pattern, max_files=max_files,
                             max_matches=max_matches, deadline=deadline)
-        files_examined_total += len(matches)
+        matches_total += len(matches)
         for m in matches:
             if m["file_path"] in confirmed_files:
                 continue
@@ -428,7 +472,7 @@ def verify(candidates: dict, request: dict, erp_root: Path, domain_scope: str,
                 "line_range": [context.get("snippet_start", m["line"]),
                                 context.get("snippet_end", m["line"])],
                 "pattern": kw,
-                "status": "NOUVEAU X.13",
+                "status": "NOUVEAU",
                 "relevance_score": rel,
                 "context_sample": context,
             })
@@ -458,26 +502,34 @@ def verify(candidates: dict, request: dict, erp_root: Path, domain_scope: str,
                 "line": m["line"],
                 "text": m["text"],
                 "callee": fn_name,
-                "status": "CONFIRME X.13",
+                "status": "CONFIRME",
             })
 
-    # 4. Enrichissement SVN (opt-in, S-14) : svn_log 5 derniers commits par confirme
-    svn_stats = None
-    if svn_enrich and confirmed:
-        svn_stats = _enrich_confirmed_with_svn_log(confirmed, max_calls=10, limit_per_call=5)
-
     duration = time.time() - start_wall
+    # Le bloc `scope` doit dire ce que la recherche a REELLEMENT fait, pas ce
+    # qu'on lui a demande. Trois defauts corriges ici partageaient la meme cause --
+    # la sortie affirmait plus que le travail accompli : mots-cles tronques en
+    # silence (#327), cadrage retombe sur tout l'ERP sans le dire (#329), version
+    # "X.13" annoncee quelle que soit la racine reellement lue.
     scope_dict = {
         "erp_root": str(erp_root),
+        "version_verifiee": version,          # None = non precisee : NE RIEN AFFIRMER
         "domains_searched": [str(d) for d in dirs],
         "domain_scope_mode": domain_scope,
+        "cadrage": scope_diag,                # dont repli_sur_erp_root + raison
+        "keywords_recherches": kw_cherches,
+        "keywords_ecartes": kw_ecartes,       # au-dela du budget : JAMAIS cherches
+        "keywords_non_atteints": kw_non_atteints,  # temps ecoule avant de les traiter
+        "couverture_keywords_complete": not kw_ecartes and not kw_non_atteints,
+        # Deux compteurs DISTINCTS : l'unique champ d'avant additionnait des fichiers
+        # sondes ET des correspondances, donc il ne comptait ni l'un ni l'autre -- il
+        # affichait 0 alors que 20 fichiers avaient ete lus.
         "files_examined": files_examined_total,
+        "matches_total": matches_total,
         "matches_truncated": deadline.expired(),
         "duration_seconds": round(duration, 2),
         "neo4j_status_upstream": neo4j_status,
     }
-    if svn_stats is not None:
-        scope_dict["svn_enrichment"] = svn_stats
     return {
         "scope": scope_dict,
         "confirmed": confirmed,
@@ -500,7 +552,15 @@ def _cli() -> int:
         description="Verifie les candidats X.12 dans l'ERP X.13 et extrait le contexte.")
     ap.add_argument("--candidates", required=True, help="Chemin candidates_x12.json.")
     ap.add_argument("--request", required=True, help="Chemin request.json.")
-    ap.add_argument("--erp-root", required=True, help="Racine ERP X.13 (placeholder CHEMIN_ERP_STANDARD).")
+    ap.add_argument("--erp-root", required=True,
+                    help="Racine des sources a verifier. PAS forcement X.13 : le projet"
+                         " peut compiler contre une autre version -- a confirmer"
+                         " avec le collaborateur avant de lancer la verification.")
+    ap.add_argument("--version", default=None,
+                    help="Version ERP de --erp-root (ex: X.13, X.12). Purement"
+                         " declaratif : rapportee dans scope.version_verifiee pour que"
+                         " le rapport sache sur quoi la verification a porte. Omise ="
+                         " non precisee, et rien ne sera affirme.")
     ap.add_argument("--domain-scope", default="auto", help="auto|all|<prefix>")
     ap.add_argument("--max-matches", type=int, default=50)
     ap.add_argument("--max-files", type=int, default=20)
@@ -509,10 +569,6 @@ def _cli() -> int:
                     help="Liste CSV de symboles (Function/Procedure/DObj) a cibler pour le snippet. "
                          "Si fourni, le context_sample d'un program confirme est extrait autour "
                          "de la declaration du premier symbole trouve plutot qu'au milieu du fichier.")
-    ap.add_argument("--svn-enrich", action="store_true",
-                    help="Enrichit chaque confirme avec les 5 derniers commits SVN (svn log). "
-                         "Opt-in, rate-limite a 10 appels max. Degradation gracieuse si SVN indispo. "
-                         "Pas de svn blame (trop couteux meme petit fichier, cf docs/SVN-CONSULTATION.md 7.5).")
     args = ap.parse_args()
 
     erp_root = Path(args.erp_root)
@@ -530,7 +586,7 @@ def _cli() -> int:
         domain_scope=args.domain_scope,
         max_matches=args.max_matches, max_files=args.max_files, timeout=args.timeout,
         target_symbols=target_symbols,
-        svn_enrich=args.svn_enrich,
+        version=args.version,
     )
     json.dump(out, sys.stdout, ensure_ascii=False, indent=2)
     sys.stdout.write("\n")

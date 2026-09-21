@@ -619,7 +619,7 @@ def _enrich_ce_results_with_signals(results: list,
                     mchk_consts.append(entry)
         f["mchk_constants"] = mchk_consts
 
-        # 3. Signature des signaux (idempotence CA13 : si inchange, le LLM conserve sa redaction)
+        # 3. Signature des signaux (idempotence : si inchange, le LLM conserve sa redaction)
         sig_parts = [
             ce_name,
             f.get("status", ""),

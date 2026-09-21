@@ -3,14 +3,14 @@
 > Lors d'une migration de pack (rebase sur un nouveau Service Pack ou une nouvelle
 > version X.N), l'**ordre de compilation** n'est pas neutre : un mauvais ordre peut
 > effacer silencieusement des surcharges ou casser la reconstruction. Ce fragment
-> couvre les deux pieges terrain (R-035, R-010).
+> couvre les deux pieges terrain.
 
 ## Contenu
 
 - Regle d'or : bases standard d'abord, surcharges ensuite
-- Piege overWrite : recompiler une base apres sa surcharge efface la fusion (R-035)
+- Piege overWrite : recompiler une base apres sa surcharge efface la fusion
 - Verifier l'integrite des surcharges (`check_overwrite_order.py`)
-- Dependances inter-projets non declarees : le contournement deux passes (R-010)
+- Dependances inter-projets non declarees : le contournement deux passes
 
 ---
 
@@ -22,7 +22,7 @@ qui evite le piege ci-dessous.
 
 ---
 
-## Piege overWrite -- recompiler une base apres sa surcharge efface la fusion (R-035)
+## Piege overWrite -- recompiler une base apres sa surcharge efface la fusion
 
 Un module `OverWrite <base>.dhop` ne produit **pas** un objet separe : a la
 compilation, ses procedures sont **fusionnees DANS l'objet `<base>.dhop`**.
@@ -81,7 +81,7 @@ positifs possibles). En cas de doute sur le couplage, confirmer cote source (dec
 
 ---
 
-## Dependances inter-projets non declarees -- contournement deux passes (R-010)
+## Dependances inter-projets non declarees -- contournement deux passes
 
 En reconstruction (`buildall`), certains projets echouent avec
 « **Erreur dictionnaire : Erreur lors de la lecture d'un dictionnaire de RecordSql.

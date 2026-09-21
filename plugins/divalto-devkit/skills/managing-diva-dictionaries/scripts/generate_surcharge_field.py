@@ -6,9 +6,9 @@ Ajoute un champ a une table standard DIVA via surcharge dictionnaire.
 Operation deterministe : a partir de (dictionnaire standard, nom de table,
 nom de champ, Nature, libelle, user, prefixe poste), le script :
   1. Parse le .dhsd standard pour extraire les metadonnees [TABLE] et [BASE]
-     correspondantes (Version, DateM, libelle) -- garantit D14.
+     correspondantes (Version, DateM, libelle) -- garantit DICT14.
   2. Verifie que le U-container `U<NomTable>` existe et lit sa Nature
-     (capacite octets) -- garantit D15.
+     (capacite octets) -- garantit DICT15.
   3. Si mode --append-to : parse le .dhsd surcharge existant, identifie les
      champs deja ancres sur le U-container cible, calcule l'offset cumule
      atteint.
@@ -19,7 +19,7 @@ nom de champ, Nature, libelle, user, prefixe poste), le script :
   7. Ecrit en ISO-8859-1 + CRLF.
   8. Retourne un JSON detaillant l'operation, l'offset retenu, la capacite
      residuelle, et un pointeur vers les lignes source du standard utilisees
-     (tracabilite D14).
+     (tracabilite DICT14).
 
 Usage :
     py generate_surcharge_field.py \
@@ -657,7 +657,7 @@ def main():
         if not u_anchor:
             raise ValueError(
                 f"Container '{container_name}' absent du [CHAMPS] de la table '{args.table}'. "
-                f"La table N'EST PAS surchargeable. Demander a Divalto un agrandissement (anti-pattern D15)."
+                f"La table N'EST PAS surchargeable. Demander a Divalto un agrandissement (anti-pattern DICT15)."
             )
         u_champ_global = std.global_champs.get(container_name.lower())
         if not u_champ_global or 'nature' not in u_champ_global:

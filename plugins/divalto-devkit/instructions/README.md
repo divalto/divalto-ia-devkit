@@ -82,7 +82,7 @@ votre-workspace/
     └── skills/                (skills du devkit -- catalogue complet : skill discovering-skills)
 ```
 
-> **Creer vos propres skills locaux.** Les skills ci-dessus sont distribues en **lecture seule** (le hook `protect_skills.py` bloque tout `Edit`/`Write` sous `.claude/skills/`). Pour ajouter **vos propres** skills, editables et non geres par le devkit, **prefixez leur nom par `workspace-`** (ex. `workspace-mon-outil`) : le hook les laisse passer. *(Astuce : restez a la racine de votre workspace -- un `cd` dans un sous-dossier peut perturber la resolution de chemins relatifs d'une config de hook locale.)*
+> **Creer vos propres skills locaux.** Les skills ci-dessus sont distribues en **lecture seule** (le hook `protect_skills.py` bloque tout `Edit`/`Write` sous `.claude/skills/`). Pour ajouter **vos propres** skills, editables et non geres par le devkit, **prefixez leur nom par `workspace-`** (ex. `workspace-mon-outil`) : le hook les laisse passer.
 
 ---
 
@@ -94,7 +94,7 @@ test-doc / reference), detail d'un skill, recherche par mot-cle. Invoquez-le sim
 par ex. « quels skills DIVA ? », « quel skill pour faire Y ? », « explique-moi <skill> ».
 Reference statique equivalente : `CATALOG.md` (depose a la racine du workspace a l'installation).
 
-### Analyse pre-action (UC-100)
+### Analyse pre-action
 
 Quand vous recevez une user story ou un ticket myService et ne savez pas par ou commencer, invoquez `analyzing-diva-request` en collant le texte de la demande.
 
@@ -157,7 +157,7 @@ Le fichier `RETEX-skills.md` est installe automatiquement a la racine de votre w
 sont definis dans votre `CLAUDE.md` (bloc `diva-skills:rules`). En pratique, vous devez
 voir une nouvelle entree apparaitre dans `RETEX-skills.md` :
 
-- a la fin de chaque invocation de skill (entree "OK" si tout s'est bien passe, "KO" sinon) ;
+- a la fin de chaque invocation d'un skill **`divalto-devkit`** (entree "OK" si tout s'est bien passe, "KO" sinon) -- **pas** les skills d'autres plugins ;
 - des qu'une friction est rencontree (script qui echoue, doc ambigue, comportement inattendu) ;
 - a chaque checkpoint ou vous avez pris une decision metier non triviale ;
 - a chaque fois qu'une idee d'amelioration emerge.
@@ -167,12 +167,55 @@ Chaque entree porte un identifiant unique (R-001, R-002...), une categorie
 Si Claude oublie, rappelez-lui : "ajoute l'entree RETEX". Il ne doit pas demander
 l'autorisation pour ecrire dans `RETEX-skills.md`.
 
-Periodiquement, **envoyez ce fichier a Stephane Castelain** pour enrichir les skills.
+**Vous n'avez rien a envoyer.** Les entrees sont poussees automatiquement en issues sur
+le depot du devkit par le skill `pushing-retex-to-github` : c'est le canal de remontee,
+et il ne demande aucun geste manuel.
+
 Votre retour d'experience permet d'identifier les frictions, corriger les bugs,
 et ameliorer les templates de generation.
 
 La version des skills installes est indiquee dans le champ `Version skills` du RETEX.
 Cela permet de savoir rapidement si un probleme signale a deja ete corrige.
+
+---
+
+## Mettre a jour le plugin
+
+Les skills evoluent : corrections, nouvelles pages, nouveaux skills. La mise a jour se fait
+normalement par l'interface marketplace de Claude Code.
+
+> **Pourquoi cette section existe** : l'interface marketplace n'est pas toujours accessible
+> depuis une session conversationnelle. La procedure manuelle ci-dessous est le **repli**.
+
+### Procedure manuelle
+
+```
+# 1. Recuperer la derniere version du marketplace
+cd <votre-clone-du-marketplace>
+git pull
+
+# 2. Reinstaller les skills et les regles
+py plugins/divalto-devkit/instructions/install.py
+```
+
+`install.py` reecrit le bloc `diva-skills:rules` de votre `CLAUDE.md` **entre ses marqueurs**
+(`<!-- diva-skills:rules -->` ... `<!-- /diva-skills:rules -->`) : ce que vous avez ecrit
+ailleurs dans le fichier n'est pas touche.
+
+### Verifier ce qu'on a reellement
+
+```
+py plugins/divalto-devkit/skills/discovering-skills/scripts/query_catalog.py overview
+```
+
+La premiere ligne annonce le nombre de skills installes -- « Panorama des skills DIVA
+(N skills, M workflows) » -- et la suite les liste par workflow. Comparez ce compte a ce que
+la version annonce : **un ecart signifie que la mise a jour n'a pas ete complete.**
+
+> **Les corrections de regles n'arrivent que par la mise a jour.** Le bloc
+> `diva-skills:rules` de votre `CLAUDE.md` est ecrit **a l'installation** : tant que vous ne
+> relancez pas `install.py`, vous travaillez avec les regles de la version que vous aviez.
+> C'est la raison la plus frequente d'un comportement corrige "qui persiste".
 
 ---
 

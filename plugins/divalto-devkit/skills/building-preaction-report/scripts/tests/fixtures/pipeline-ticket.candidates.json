@@ -1,0 +1,23 @@
+{
+  "functions": [
+    {
+      "name": "soc_valider",
+      "program": "gtpmcde",
+      "score": 12,
+      "reason": "contremarque citee dans le corps"
+    }
+  ],
+  "programs": [
+    {
+      "name": "gtpmcde",
+      "score": 8
+    }
+  ],
+  "relations": {
+    "callers_of": []
+  },
+  "neo4j_status": "ok",
+  "scope": {
+    "module": "DAV"
+  }
+}

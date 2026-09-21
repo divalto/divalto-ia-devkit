@@ -1,0 +1,42 @@
+[
+  {
+    "skills": ["querying-client-sql"],
+    "query": "Ecris-moi une requete pour lister les articles de la base client (table Article).",
+    "expected_behavior": [
+      "Ecrit le nom de table et les colonnes en MAJUSCULES (ARTICLE), = nom du dictionnaire, PAS le libelle 'Article' ni un NomOdbc local",
+      "Si le nom exact n'est pas certain, propose d'abord une decouverte via INFORMATION_SCHEMA.TABLES (LIKE '%ART%') avant de figer la requete",
+      "Rappelle que la base est generalement en collation binaire (sensible casse/accents) -> ne pas ecrire 'article' en minuscules",
+      "Ne resout PAS la connexion lui-meme : suppose la connexion deja resolue par understanding-integrator-workspace"
+    ]
+  },
+  {
+    "skills": ["querying-client-sql"],
+    "query": "Ma requete SELECT * FROM T021 WHERE RTRIM(DOS)='998' ne renvoie aucune ligne. Il n'y a donc pas de taux de change pour ce dossier ?",
+    "expected_behavior": [
+      "NE conclut PAS a l'absence de donnee sur la seule requete filtree par dossier",
+      "Explique le mecanisme commune/par-dossier : verifier TABTYP dans T000 avant de conclure",
+      "Propose le helper : py scripts/check_table_scope.py --table T021 (delegation R-12) ou --execute avec les params de connexion",
+      "Si TABTYP=2 (commune), oriente la requete vers le dossier 999, pas 998",
+      "Renvoie a understanding-integrator-workspace/sql-resolution.md pour le detail du mecanisme T000/TABTYP"
+    ]
+  },
+  {
+    "skills": ["querying-client-sql", "understanding-integrator-workspace"],
+    "query": "Sur quel serveur et quelle base je dois me connecter pour requeter ce client, et avec quels identifiants ?",
+    "expected_behavior": [
+      "Reconnait que la RESOLUTION DE CONNEXION est hors perimetre de querying-client-sql",
+      "Redirige vers understanding-integrator-workspace (sql-resolution.md, R-7 a R-12 : portes Harmony/ADO.NET, DSN/registre, connexions.xml)",
+      "Rappelle la posture de delegation R-12 : ne pas attaquer une base client a l'aveugle"
+    ]
+  },
+  {
+    "skills": ["querying-client-sql"],
+    "query": "SELECT * FROM ARTICLE WHERE lib LIKE '%mvt%' me renvoie 0 ligne alors que je sais qu'il y a des mouvements.",
+    "expected_behavior": [
+      "Identifie un piege de casse (collation binaire sensible) : 'lib' et '%mvt%' en minuscules",
+      "Propose de decouvrir la casse reelle des colonnes via INFORMATION_SCHEMA.COLUMNS avant de reecrire",
+      "Corrige en MAJUSCULES (LIB, '%MVT%') une fois le nom de colonne confirme",
+      "Ne conclut PAS a une absence de donnee sans avoir ecarte le piege de casse"
+    ]
+  }
+]

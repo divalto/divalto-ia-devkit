@@ -13,8 +13,6 @@
 ---
 
 
-> Reference complete : la référence navigation ERP (interne) section 2
-
 ## Modele reel -- graphe de regroupements
 
 Le menu ERP n'est **pas une arborescence imbriquee**. C'est un **graphe de regroupements plats**.

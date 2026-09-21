@@ -36,7 +36,7 @@ La cle du code erreur est `'A'` + `Errnum` **cadre a droite sur 5 positions, pad
 d'espaces** a gauche. Exemple : code `9129` -> cle octets `41 20 39 31 32 39` =
 `"A 9129"` (`A` + espace + `9129`).
 
-> **Lecon RETEX (R-033 / #106)** : un extracteur **texte naif** `A[0-9]{5}` (5 chiffres
+> **Lecon RETEX (#106)** : un extracteur **texte naif** `A[0-9]{5}` (5 chiffres
 > colles) **rate tous les codes < 5 chiffres** -> sous-comptage massif. Cas reel sur un
 > `gtferr.dhfi` : extraction naive = **2182** codes ; reelle = **~4700**. Pire, des codes
 > **custom** etaient invisibles -> conclusion erronee « pas de custom, adopter le

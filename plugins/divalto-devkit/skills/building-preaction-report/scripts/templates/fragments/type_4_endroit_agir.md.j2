@@ -39,12 +39,6 @@ rg -n "\b{{ seeds.chain_of_blame.action_const }}\b" "<ERP>"
 {% endfor %}
 {% endif %}
 
-{% if seeds.type_4.related_tickets %}
-**Tickets lies** (extraits des commits SVN recents sur les fichiers consultes) :
-{% for t in seeds.type_4.related_tickets %}
-- `{{ t.type }} #{{ t.number }}` (r{{ t.rev }} sur `{{ t.file }}`)
-{% endfor %}
-{% endif %}
 
 ---
 {% endif %}

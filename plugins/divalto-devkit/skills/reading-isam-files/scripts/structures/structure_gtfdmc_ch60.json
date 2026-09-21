@@ -9,9 +9,9 @@
         "Index_A": {
             "Letter": "A",
             "Fields": [
-                "Ce",
                 "Nc"
-            ]
+            ],
+            "Commentaire": "Cle physique = Nc SEUL. Le champ Ce est le code enregistrement (1 = definition du multichoix, 2 = un choix) : il discrimine les enregistrements mais ne fait PAS partie de la cle de cet index. Verifie par sonde (validate_structure.py --probe-key) : avec Ce en tete le positionnement est inefficace. #291."
         }
     },
     "Structure": [

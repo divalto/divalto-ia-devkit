@@ -1,7 +1,6 @@
 # Champs du zoom des zooms
 
-> Reference : la référence navigation ERP (interne) section 5.3
-> Cross-reference : la référence d'intégration zoom (interne) section 2.3 (structure ISAM M4)
+> Structure ISAM M4 de ce meme enregistrement : skill `reading-isam-files`, page `reference/a5f-zoom-record.md`.
 
 ## Champs principaux (mode fiche)
 

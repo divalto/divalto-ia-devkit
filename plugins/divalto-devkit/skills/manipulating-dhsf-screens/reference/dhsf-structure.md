@@ -8,6 +8,10 @@
 - Section `[masque]` -- proprietes globales
 - Section `[diva]` -- code DIVA executable
 - Sections visuelles (`[onglet]`, `[page]`, ...)
+- **Section `[ressources]`** -- portee MASQUE, et le piege de l'adjacence
+- **La chaine des pages** -- `suiv=` / `prec=`
+- **Ou vont les sous-sections** -- `[param_case]`, `[param_saisie]`, `esp_si_zero`
+- **`col_depl`** -- le tableau qui se fige sans un mot
 - Anti-patterns courants
 
 ---
@@ -42,7 +46,7 @@ Le script `is_dhsf_filename.py` automatise la verification de cette regle.
 
 Encodage du fichier : **ISO-8859-1 + CRLF**, y compris la section `[diva]` (different d'un `.dhsp` standalone qui peut etre en LF en theorie -- nuance importante).
 
-**Ne jamais** editer un `.dhsf` via Edit/Write de Claude Code -- la conversion silencieuse UTF-8 corrompt les accents (cf. anti-pattern P03 du skill `managing-diva-projects` et hook `protect_encoding.py`). Utiliser le skill `writing-diva-files` ou un script Python explicite avec `encoding="iso-8859-1"`.
+**Ne jamais** editer un `.dhsf` via Edit/Write de Claude Code -- la conversion silencieuse UTF-8 corrompt les accents (cf. anti-pattern PROJ03 du skill `managing-diva-projects` et hook `protect_encoding.py`). Utiliser le skill `writing-diva-files` ou un script Python explicite avec `encoding="iso-8859-1"`.
 
 ---
 
@@ -213,6 +217,147 @@ dictionnaire=gtfdd.dhsd
 
 ---
 
+## Section `[ressources]` -- portee MASQUE, et le piege de l'adjacence
+
+Le bloc `[ressources]` porte les **menus** et les **toolbars**. Sa portee est le **masque
+entier**, jamais une page.
+
+> **Il se place APRES la derniere `[page]`.** Mesure : sur les **2 340** masques du corpus qui
+> en portent un, **2 340** le placent la. **Aucune exception.**
+
+C'est precisement ce qui rend le piege efficace : le bloc **touche** la derniere page, sans lui
+appartenir. Une lecture lineaire conclut a l'inverse.
+
+> **Le cas vecu.** En transformant la derniere page d'un masque en pop-up, le `[ressources]` qui
+> la suivait a ete pris pour un menu/toolbar propre a cette page et **absorbe dans la zone
+> remplacee**. Menu principal, cinq toolbars et un bouton custom : disparus a l'execution.
+> **Rien ne l'a signale** -- ni le compilateur, ni l'ouverture. Seul un backup a sauve la mise.
+
+**Regle** : une edition qui remplace la derniere page d'un masque **s'arrete a la fin de cette
+page**. Le `[ressources]` qui suit n'en fait pas partie.
+
+### Le garde-fou : compter avant, compter apres
+
+`dhsf_parser.py --summary` rend un bloc `metrics` avec les compteurs structurants. La recette,
+avant toute edition qui **supprime ou remplace** du contenu :
+
+```bash
+py scripts/dhsf_parser.py --path <masque>.dhsf --summary   # avant  -> garder metrics
+# ... edition ...
+py scripts/dhsf_parser.py --path <masque>.dhsf --summary   # apres  -> comparer
+```
+
+Les compteurs a surveiller :
+
+| Compteur | Ce qu'il attrape |
+|---|---|
+| `pages_count` | une page perdue |
+| `widgets_total` | des champs, tableaux, groupbox perdus |
+| `toolbars_count`, `menus_count` | un toolbar ou un menu entier perdu |
+| **`ressources_items_count`** | **un bouton perdu DANS un toolbar conserve** |
+| `enregistrements_count` | un enregistrement perdu |
+
+> **Le dernier est celui qui manquait.** Perdre un bouton custom dans un toolbar qui existe
+> toujours laisse `toolbars_count` inchange : seul le compte des **items** le voit. Il a ete
+> ajoute pour cette raison.
+
+**Toute baisse non voulue est un signal d'arret**, pas un detail a expliquer apres coup.
+
+---
+
+## La chaine des pages -- `suiv=` / `prec=`
+
+Les pages se chainent par `suiv=` (page suivante) et `prec=` (page precedente). C'est ce qui
+lie les onglets entre eux.
+
+**Une page sans successeur n'a PAS de ligne `suiv=`** : l'omission est la fin de chaine, il n'y
+a pas de valeur « aucune ».
+
+> **Le piege : un lien orphelin ne se voit pas a la compilation.** Un `suiv=` ou un `prec=`
+> qui designe une page absente du masque compile **a 0 erreur**. L'ecran meurt a
+> l'**OUVERTURE**, avec « page N du masque inexistante ». Rien avant.
+
+**Cas typique, et il vient du template de ce skill.** `template_zoom_sql.dhsf` porte une page
+12 « Identifiants » (`usercr`, `usercrdh`, `usermo`, `usermodh`) et la paire `suiv=12` /
+`prec=11` qui la chaine a la page 11. Ces champs n'existent **que si la table a ete creee avec
+le socle audit standard**. Sur une table sans ce socle, il faut supprimer la page 12 -- et
+alors **les deux liens doivent partir avec elle**. Page et liens sont indissociables.
+
+`dhsf_modify.py --action validate` croise desormais les `suiv=`/`prec=` avec la liste des pages
+reellement presentes et signale les liens orphelins.
+
+---
+
+## Ou vont les sous-sections -- `[param_case]`, `[param_saisie]`, `esp_si_zero`
+
+Les sous-sections d'un composant ne sont pas interchangeables. Deux regles mesurees sur le
+corpus des masques du standard, consignees dans [mesures-corpus.json](mesures-corpus.json).
+
+### `[param_case]` : deux composants, et il y est systematique
+
+| | |
+|---|---|
+| Occurrences | **7 729** dans **1 217** masques |
+| Parents observes | `case_a_cocher` (**6 854**), `case_a_cocher_tableau` (**875**) |
+| Ailleurs | **0** |
+
+Le compte est **un pour un** avec le nombre de ces blocs : `[param_case]` n'est pas seulement
+*autorise* dans ces deux composants, il y est **systematique**.
+
+Dans un `[champ]` ordinaire, `[param_case]` fait echouer la compilation. Un `[champ]` avec
+`saisie=non` affiche la valeur numerique brute.
+
+> Pour la **valeur** d'une case a cocher, voir la regle du booleen DIVA : **non coche = `1`,
+> coche = `2`, jamais `0`** -- `0` (ou l'espace) veut dire « non renseigne ». Detail et mesure
+> dans le skill `coding-diva-advanced`, `reference/syntaxe-de-base.md`.
+
+### `esp_si_zero` : une regle de PLACEMENT, pas de validite
+
+| | |
+|---|---|
+| Occurrences | **33 576** dans **2 014** masques sur 2 438 |
+| Sous-section | **`[param_saisie]`** -- **0 occurrence ailleurs** |
+| Composants porteurs | `champ_tableau`, `champ`, `multi_choix_tableau`, `multi_choix`, `case_a_cocher_tableau` |
+| Avec `saisie=non` | **22 451, soit 67 %** |
+
+**`esp_si_zero` est parfaitement valide**, et massivement employe. Ce qui ne l'est pas, c'est
+de le placer **hors de `[param_saisie]`** -- en particulier dans `[description]`, forme que le
+corpus ne montre jamais.
+
+> **Correction d'un retour terrain.** Un partenaire, apres des erreurs de compilation, avait
+> conclu que « `esp_si_zero=oui` n'est pas un attribut valide dans cette version : ne pas
+> l'inclure ». La mesure dit l'inverse. Appliquer cette conclusion reviendrait a retirer un
+> attribut d'affichage legitime de dizaines de milliers d'endroits. Et `saisie=non` n'y est
+> pour rien : c'est **le cas dominant**, pas une exception.
+
+---
+
+## `col_depl` -- le tableau qui se fige sans un mot
+
+`col_depl` se declare dans le `[param_tableau]` d'un `[tableau]`, juste apres `fl_trait_lig`.
+
+> **Symptome de son absence** : le tableau charge et affiche ses lignes normalement, mais
+> **ni les fleches du clavier ni le clic ne changent la ligne selectionnee**. Aucune erreur de
+> compilation, aucun message au runtime. Le tableau semble simplement fige.
+
+| | |
+|---|---|
+| Occurrences | **1 704** dans **1 309** masques |
+| Valeurs observees | de **1 a 17** ; dominantes `3` (569) et `2` (555) |
+| `[param_tableau]` **sans** `col_depl` | **1 113 sur 2 817**, soit **40 %** |
+
+**Ce n'est donc pas une propriete obligatoire** -- 40 % des tableaux du standard s'en passent.
+C'est pourquoi ce skill **n'emet pas** d'avertissement quand elle manque : la regle produirait
+1 113 faux positifs sur du code livre.
+
+> **Ce qui n'est pas etabli** : la semantique du nombre. La distribution de 1 a 17 est
+> coherente avec un **indice de colonne**, mais rien ne le demontre -- la documentation n'en
+> porte aucune occurrence, et le corpus ne l'explique pas. Ne pas le deviner : le reprendre
+> d'un tableau comparable du meme domaine, comme on le fait pour la semantique d'un indice de
+> champ tableau.
+
+---
+
 ## Anti-patterns courants
 
 1. **Traiter `.dhsf` comme du pur INI** -- la section `[diva]` contient du DIVA executable, soumis aux regles du langage (cf. `coding-diva-advanced`).
@@ -220,3 +365,6 @@ dictionnaire=gtfdd.dhsd
 3. **Editer `.dhsf` via Edit/Write** -- conversion UTF-8 silencieuse, accents corrompus. Toujours via `writing-diva-files`.
 4. **Oublier d'incrementer `dernier_id`** apres un ajout de widget -- collision d'IDs au prochain ajout. Le script `dhsf_modify.py` le gere automatiquement.
 5. **Lister un masque de surcharge dans `[fichiers]` standard** au lieu de la convention surcharge -- cf. [dhsf-overwrite-pattern.md](dhsf-overwrite-pattern.md).
+6. **Supprimer une page sans retirer les `suiv=`/`prec=` qui la designent** -- compile a 0 erreur, casse a l'ouverture.
+7. **Retirer `esp_si_zero` en croyant l'attribut invalide** -- il l'est seulement hors de `[param_saisie]`.
+8. **Utiliser un `[champ]` haut pour du texte multiligne** -- c'est `rich_edit` qu'il faut, cf. [composant-rich-edit.md](composant-rich-edit.md).

@@ -4,7 +4,7 @@ description: >
   Trouve un EnrNo libre dans le fichier menu `g3f.dhfi` d'un domaine ERP, selon
   la plage demandee (`standard` < 100000 reserve ERP, `custom` >= 100000
   recommande pour creations utilisateur). Scan des enregistrements M2 (Ce=2)
-  avec filtre obligatoire (piege multi-structure M0/M2, cf RETEX R-006), puis
+  avec filtre obligatoire (piege multi-structure M0/M2), puis
   calcul max+1 dans la plage. Previent les collisions d'EnrNo lors de l'ecriture
   d'un nouveau choix de menu.
   A utiliser avant d'ecrire un enreg M2 dans `g3f.dhfi` (ou un enreg M1 de
@@ -17,9 +17,10 @@ description: >
 
 - Probleme resolu
 - Usage rapide
+- **Overlay g3fu -- le used-set est une UNION**
 - Plages semantiques
 - Format de sortie JSON
-- Piege "multi-structure G3F" (R-006)
+- Piege "multi-structure G3F"
 - Scripts disponibles
 - References
 
@@ -29,7 +30,7 @@ description: >
 
 Le fichier menu `g3f.dhfi` (base Xmenuf) stocke les choix de menu en table M2 (Ce=2) avec un champ `EnrNo` qui doit etre **unique**. Lors de l'ecriture d'un nouveau choix (ajout d'une entree menu pour un zoom custom), il faut trouver un EnrNo libre pour eviter la collision et preserver la coherence de l'index C (Ce, EnrNo).
 
-Observation empirique (RETEX R-005, 2026-04-23) :
+Observation empirique (2026-04-23) :
 
 - Les ~1367 choix M2 existants dans `g3f.dhfi` Achat-Vente X.13 ont tous un EnrNo **< 100000** (ex : Race de chien = 1564).
 - Hypothese documentee : la zone `>= 100000` est **reservee aux customisations utilisateur** pour eviter les collisions avec les numeros alloues par l'IHM standard. `[A VERIFIER]`
@@ -70,6 +71,39 @@ A n'utiliser **que** si on installe des choix "ERP-standard" (cas exceptionnel p
 
 ---
 
+## Overlay `g3fu` -- le used-set est une UNION
+
+`g3f.dhfi` est le fichier menu **livre par Divalto**. Les choix de menu **specifiques** du
+partenaire vivent dans **`g3fu.dhfi`**, son overlay, dans l'arborescence specifique -- meme
+structure M2, meme cle. Une entree de l'overlay est **prioritaire** sur celle du standard,
+et `g3f` n'est **jamais** modifie. Meme mecanisme que `a5f`/`a5fu` pour les zooms.
+
+**Consequence sur l'allocation** : le used-set doit etre l'**UNION** des deux fichiers.
+
+```
+py .claude/skills/allocating-menu-enrno/scripts/find_free_enrno.py \
+    --file "{CHEMIN_ERP_STANDARD}/<module>/fichier/g3f.dhfi" \
+    --g3fu "<arborescence specifique>/g3fu.dhfi" \
+    --range custom
+```
+
+> **Ne pas fournir `--g3fu` rend le resultat incomplet.** Le script ne scannait que `g3f`
+> et pouvait donc proposer comme libre un EnrNo **deja pris dans l'overlay du partenaire**
+> -- exactement la collision qu'il existe pour prevenir. Il **signale desormais**
+> l'absence de l'overlay dans `avertissements[]`, et un overlay **illisible** n'est jamais
+> traite comme un overlay vide.
+
+> **Doublons `g3f` / `g3fu` = normaux.** Surcharger une entree de menu standard cree une
+> entree de meme EnrNo dans l'overlay : c'est la signature d'une surcharge, pas une
+> anomalie. Le used-set etant une union d'ensembles, le doublon se fond en une seule
+> valeur et n'est pas signale comme collision.
+
+**Ou ecrire ensuite** : dans `g3fu.dhfi`, jamais dans `g3f.dhfi`. Une ecriture dans le
+standard s'expose a etre **ecrasee** a la prochaine montee de version ou au prochain patch
+ERP. `writing-isam-files` emet un avertissement explicite si la cible est `g3f.dhfi`.
+
+---
+
 ## Plages semantiques
 
 | Plage | Bornes | Usage | Recommandation |
@@ -95,7 +129,7 @@ Detail + hypothese `[A VERIFIER]` : [reference/plages-enrno.md](reference/plages
     "used_in_range": 0,
     "max_used_in_range": null
   },
-  "note": "Hypothese plages standard < 100000 / custom >= 100000 [A VERIFIER] RETEX R-005 2026-04-23"
+  "note": "Hypothese plages standard < 100000 / custom >= 100000 [A VERIFIER] RETEX 2026-04-23"
 }
 ```
 
@@ -112,7 +146,7 @@ Champs :
 
 ---
 
-## Piege "multi-structure G3F" (R-006)
+## Piege "multi-structure G3F"
 
 `g3f.dhfi` contient 2 tables distinctes :
 - **M0** (`Ce=0`, 508 octets) : parametres generaux du domaine (1 enreg par fichier, header)
@@ -128,7 +162,7 @@ Structure M0 disponible dans `reading-isam-files/scripts/structures/structure_xm
 
 | Script | Role | Entree | Sortie JSON |
 |--------|------|--------|-------------|
-| `scripts/find_free_enrno.py` | Scan M2 + calcul EnrNo libre | `--file <g3f.dhfi>` + `--range {standard, custom}` + [`--count N`] + [`--read-isam-script PATH`] | `{free[], sources, range_bounds}` |
+| `scripts/find_free_enrno.py` | Scan M2 + calcul EnrNo libre sur l'**union** g3f + g3fu | `--file <g3f.dhfi>` [+ `--g3fu <g3fu.dhfi>`] + `--range {standard, custom}` + [`--count N`] + [`--read-isam-script PATH`] | `{free[], sources, range_bounds}` |
 
 Le script **vendored** `scripts/structure_xmenuf_m2.json` rend ce skill autonome : pas de dependance au skill `reading-isam-files` au niveau structure (mais appel subprocess a son `read_isam.py` pour l'ISAM).
 
@@ -144,6 +178,6 @@ Le script **vendored** `scripts/structure_xmenuf_m2.json` rend ce skill autonome
 
 ## References
 
-- [reference/plages-enrno.md](reference/plages-enrno.md) : semantique des plages + hypothese RETEX R-005
+- [reference/plages-enrno.md](reference/plages-enrno.md) : semantique des plages + hypothese RETEX
 - `reading-isam-files/scripts/structures/structure_xmenuf_m2.json` : structure canonique M2 (source du vendored)
-- RETEX R-005 (2026-04-23) : documentation initiale du probleme
+- RETEX (2026-04-23) : documentation initiale du probleme

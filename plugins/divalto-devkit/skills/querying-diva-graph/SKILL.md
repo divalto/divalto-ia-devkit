@@ -21,6 +21,7 @@ description: >
 - Templates Cypher
 - Disclaimers X.12 obligatoires
 - Degradation gracieuse (MCP indispo)
+- Pièges d'interrogation MCP
 - Scripts disponibles
 - References
 
@@ -37,7 +38,7 @@ py .claude/skills/querying-diva-graph/scripts/query_neo4j.py \
     --mode generate --request request.json
 ```
 
-Sortie : liste de requetes Cypher parametrees (stdout JSON). L'orchestrateur LLM les execute via `mcp__diva-mcp__read_neo4j_cypher`.
+Sortie : liste de requetes Cypher parametrees (stdout JSON). L'orchestrateur LLM les execute via `mcp__plugin_divalto-devkit_diva-mcp__query_cypher` (nom d'outil stable -- PAS `read_neo4j_cypher` ni un prefixe UUID).
 
 ### Etape 2 -- consolider les resultats
 
@@ -149,6 +150,16 @@ L'orchestrateur continue avec `searching-erp-sources` en mode "recherche X.13 di
 
 ---
 
+## Pièges d'interrogation MCP (à connaître)
+
+Les outils diva-mcp ont des comportements qui induisent en erreur -- détail et contournements dans [reference/mcp-query-pitfalls.md](reference/mcp-query-pitfalls.md) (vérifiés sur le snapshot X.12) :
+
+- **`get_schema` sous-déclare** : `props: []` sur `Function`/`Procedure`/`Const`/`Variable`/`Record` alors qu'ils portent 17 props (dont **`body`**, le code source). Faire une requête de découverte `MATCH (n:Function) WITH n LIMIT 1 RETURN keys(n)`.
+- **`body` protégé** : sur les programmes `xxpm*`/`xxpp*`, `body` = « Programme protégé, non livré. ». Analyser via les **ouvertures `xxtt*`/`xxtm*`** (livrées), pas via les `xxpp*`/`xxpm*`.
+- **`get_table_schema` sans NomOdbc** : un champ générique `CEx` n'a que le libellé « Code enregistrement N ». Pour le sens réel, croiser le `[PROPLOC]` du dico (« Nom ODBC local » dans l'IDE) ou le module check `cctmchk*`.
+
+---
+
 ## Scripts disponibles
 
 ```
@@ -169,3 +180,4 @@ Les `.cypher` sont des templates texte avec `$variable`. Le script les formate e
 
 - `reference/cypher-recipes.md` -- recettes detaillees par cas d'usage (copier-coller vers le MCP)
 - `reference/x12-advisory-rules.md` -- regles d'usage advisory-only et format des disclaimers
+- `reference/mcp-query-pitfalls.md` -- pièges des outils diva-mcp (get_schema / get_table_schema / body protégé) et contournements

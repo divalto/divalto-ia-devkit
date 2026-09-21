@@ -1,0 +1,3 @@
+[INFO]---------------Compilation. Construction du sous-projet gt_piece nouvellepiece.dhps
+[ERROR]/specifs/monworkspace/sources/gt_piece nouvellepiece.dhps (7) Erreur 99 : Mot inattendu
+[TOTAL_ERRORS]1

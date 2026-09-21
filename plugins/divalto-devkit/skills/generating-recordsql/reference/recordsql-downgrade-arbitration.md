@@ -2,7 +2,7 @@
 
 > Lors de la reprise d'un projet **downgrade** au passage d'un Service Pack, decider de
 > **conserver, collapser ou supprimer** un RecordSQL overlay (`XXrsYYYu.dhsq`) est piegeux :
-> le **texte source ne suffit pas** a trancher (R-025, R-029, R-030). Cette page traite le
+> le **texte source ne suffit pas** a trancher. Cette page traite le
 > cas specifique des RecordSQL ; pour l'arbitrage des sources en general et l'ordre de build,
 > voir le skill `migrating-erp-downgrade`.
 
@@ -15,7 +15,7 @@
 
 ---
 
-## Regle 1 -- le diff texte est trompeur (R-025)
+## Regle 1 -- le diff texte est trompeur
 
 Comparer le **texte** d'un RecordSQL overlay au standard pour decider de le supprimer est
 **FAUX**, pour deux raisons :
@@ -37,7 +37,7 @@ standard du nouveau SP. **Ne supprimer que si structure identique ET delta absor
 
 ---
 
-## Regle 2 -- collapse : resolution de la chaine OverWrite (R-029)
+## Regle 2 -- collapse : resolution de la chaine OverWrite
 
 Dans une chaine de surcharge a plusieurs niveaux (standard -> downgrade `u` -> surcharge
 `uu` -> ...), un niveau intermediaire (le downgrade) peut etre **entierement redondant** si
@@ -54,7 +54,7 @@ Si les deux sont vraies, le niveau downgrade est **candidat au collapse** (3 niv
 
 ---
 
-## Regle 3 -- verifier les consommateurs DANS le perimetre downgrade (R-030)
+## Regle 3 -- verifier les consommateurs DANS le perimetre downgrade
 
 Le collapse de la regle 2 est **FAUX si on oublie que le projet downgrade est une UNITE DE
 COMPILATION SEPAREE**. La surcharge `uu` vit dans le **projet principal**, PAS dans le projet

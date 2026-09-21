@@ -14,7 +14,7 @@
 
 > Reference pour le script `scripts/suggest_nature.py` et pour l'orchestrateur
 > `creating-diva-entity`. Sources : corpus X.13 (24 196 champs, 21 dicos), mesure
-> 2026-04-17 (batch 16).
+> 2026-04-17.
 
 ---
 
@@ -70,6 +70,12 @@ doit donc :
 |---|---|---|
 | `Tb` | `X*N` ou `X,Y*N` | **PAS** cle vers table externe. Tableau repete : `AdresseTb=16*10` = 10 adresses de 16 car. Pour referencer une table, utiliser `Cod`. |
 
+> **Cote CODE, un champ repete s'accede avec un indice ENTRE PARENTHESES** -- `MonChamp(4)`,
+> jamais des crochets, jamais sans indice (sinon `Tableau sans parenthese` a la compilation).
+> Et attention : **le meme nom de champ peut etre un tableau dans un enregistrement et un
+> scalaire dans un autre** -- verifier l'enregistrement qu'on utilise, pas un autre programme.
+> Detail et mesure : skill `coding-diva-advanced`, `reference/syntaxe-de-base.md`.
+
 ## Prefixes particuliers
 
 | Prefixe | Nature | Exemple | Regle |
@@ -110,7 +116,7 @@ Ces noms ont une Nature deterministe et ne doivent JAMAIS etre redeclares
   5. Si confiance < 85 % OU suffixe non reconnu -> demande confirmation
      avec les Natures alternatives.
 
-## Taxonomie FK (complement 2026-04-20, batch 18 bis)
+## Taxonomie FK (complement 2026-04-20)
 
 Au-dela de la Nature, le suffixe peut aussi annoncer la **cible de foreign key**
 (le champ est une cle etrangere vers une entite cible via un zoom standard).
@@ -135,7 +141,7 @@ champs `nature` + `confidence` + `rule` (Nature) et `fk_target` + `fk_note` (FK)
 ## Sources
 
 - Conventions DIVA locales (sections "Suffixes typés sur les noms de champ" et "Suffixes foreign key")
-- Pattern FK complet : reference/fk-pattern.md (si disponible)
-- Tables A/B/C des zooms standards : reference/zooms-standards.md (si disponible)
+- Pattern FK complet, et table suffixe -> cible -> numero de zoom : skill
+  `binding-zoom-to-field`, `reference/fk-pattern.md`
 - Dataset empirique dhsd_suffix_nature (mesure d'occurrence par nature suffixe) maintenu hors skill
 - Script : `scripts/suggest_nature.py`

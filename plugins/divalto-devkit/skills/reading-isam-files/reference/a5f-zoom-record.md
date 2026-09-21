@@ -13,8 +13,9 @@
 
 
 Reference pratique pour ecrire un enregistrement zoom (table M4) dans le fichier
-A5F.dhfi (zoom des zooms). Voir la référence d'intégration zoom (interne) pour la documentation
-complete (structure, plages moulinette 58, menu domaine).
+A5F.dhfi (zoom des zooms). La structure et les plages moulinette 58 sont decrites
+ci-dessous ; le menu domaine est traite par le skill `creating-diva-entity`, page
+`reference/menu-domain.md`.
 
 ---
 
@@ -66,7 +67,7 @@ Les champs non renseignes restent paddes avec des espaces (0x20).
 - `MsqEcran` et `ModTrait` referent les fichiers **compiles** (.dhof/.dhop)
 - Les champs numeriques dans les cles d'index (ZoomNum, Ordre) doivent etre **cadres a droite**
 
-### Piege `ZoomEnr` : nom du RecordSql public, pas nom de table (R-007, 2026-04-22)
+### Piege `ZoomEnr` : nom du RecordSql public, pas nom de table (2026-04-22)
 
 `ZoomEnr` **doit contenir le nom du RecordSql public** declare dans le module zoom
 (`gttz<entite>_sql.dhsp`), et **pas** le nom de la table dans le dictionnaire.
@@ -94,7 +95,7 @@ module gttz<entite>_sql.dhop"` au premier clic sur l'entree menu.
 | Gestion Ressources | DGRM | 45000-45999 |
 | Reglement | DREG | 49000-49999 |
 
-Certains domaines ont des plages secondaires (voir la référence d'intégration zoom (interne) section 4.2).
+Certains domaines ont des plages secondaires. Elles ne sont pas couvertes ici : releverez-les sur le fichier A5F du client avant d'allouer un numero.
 
 ---
 
@@ -104,7 +105,7 @@ Certains domaines ont des plages secondaires (voir la référence d'intégration
 
 ```json
 {
-    "Fichier": "C:\\Developpements harmony\\Bases sql\\a5f.dhfi",
+    "Fichier": "{CHEMIN_FICHIERS}/a5f.dhfi",
     "Structure": "structure_a5f_m4.json",
     "Donnees": {
         "Ce": "4",
@@ -149,7 +150,7 @@ py .claude/skills/writing-isam-files/scripts/write_isam.py \
 
 ## Apres l'ecriture
 
-1. **Declarer la constante** dans `a5tczoom.dhsp` (voir la référence d'intégration zoom (interne) section 3)
+1. **Declarer la constante** dans `a5tczoom.dhsp`
 2. **Recompiler** (a5tczoom.dhsp modifie)
 3. **Ajouter au menu du domaine** -- ecrire un M2 dans le .dhfi du domaine (voir ci-dessous)
 4. **Tester dans l'ERP**
@@ -164,7 +165,7 @@ Structure pre-construite : `scripts/structures/structure_xmenuf_m2.json` (table 
 
 ```json
 {
-    "Fichier": "C:\\Developpements harmony\\Bases sql\\g3f.dhfi",
+    "Fichier": "{CHEMIN_FICHIERS}/g3f.dhfi",
     "Structure": "structure_xmenuf_m2.json",
     "Donnees": {
         "Ce": "2",
@@ -197,4 +198,4 @@ py .claude/skills/writing-isam-files/scripts/write_isam.py \
     --structure-dir ".claude/skills/writing-isam-files/scripts/structures"
 ```
 
-Voir la référence d'intégration zoom (interne) section 5 pour la reference complete (TypeChain, regroupements, index).
+Reference complete des champs (TypeChain, regroupements, index) : skill `creating-diva-entity`, page `reference/isam-fields.md`.

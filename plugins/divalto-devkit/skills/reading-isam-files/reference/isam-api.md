@@ -13,7 +13,7 @@
 - 9. Codes d'erreur
 - 10. Pieges critiques
 
-Revision 2026-04-22 (R-014) : la semantique du parametre `mode` a ete corrigee --
+Revision 2026-04-22 : la semantique du parametre `mode` a ete corrigee --
 c'est un code de reservation (F/P/R) et non un code de direction/positionnement.
 
 ---
@@ -139,6 +139,15 @@ dll.xisam_tcloselong(TACHE, tdf)
 dll.xisam_end(TACHE)
 ```
 
+### Valeur de retour de `xisam_begin` (piege)
+
+`xisam_begin(tache)` retourne **le numero de tache acquis (un entier > 0)** en cas de
+succes -- **PAS `0`**. Un test naif `if ret == 0: succes` conclut donc systematiquement a
+un echec. Le succes se verifie par `ret == tache` (le numero demande a bien ete acquis) ;
+une valeur **negative** (ex. `-1`, `-4`) signale un slot deja alloue / indisponible
+(cf. « Task slot peut rester bloque »). C'est pourquoi le code d'acquisition essaie une
+liste de numeros de tache et retient celui pour lequel `ret == candidate`.
+
 ---
 
 ## 5. Mode = code de reservation (F / P / R)
@@ -219,7 +228,7 @@ lecture en mode `R` (ou alias invalide) consomme un slot, libere uniquement par
 
 **Depassement** : `ret=46` observe empiriquement (voir aussi `0x2F=47` E_SHARE).
 Symptome : parcours forward qui s'arrete prematurement a ~1003 records sans changement
-de cle apparent (cas R-014 sur `a5f.dhfi` 7480 records).
+de cle apparent (cas observe sur `a5f.dhfi` 7480 records).
 
 **Regle** :
 - Parcours lecture seule -> mode `P` (pas de consommation). Pas de plafond.
@@ -234,10 +243,18 @@ de cle apparent (cas R-014 sur `a5f.dhfi` 7480 records).
 | 0 | -- | Succes |
 | 2 | E_EOF / E_RECABS | Fin de fichier / enregistrement absent |
 | 3 | E_OVF | Fichier plein |
-| 9 | E_EXIST | L'enregistrement existe deja (doublon de cle) |
+| 9 | E_EXIST | L'enregistrement existe deja (doublon de cle) -- **PAS un garde-fou d'unicite** : sur un index non unique la DLL accepte le doublon sans emettre ce code (mesure, cf. section 9) |
 | 12 | -- | Erreur d'acces (tache non initialisee, TDF invalide) |
 | 20 | E_ABSENT | Fichier introuvable |
 | 47 | E_SHARE | Erreur de partage |
+| 100 | -- | Fichier index / compagnon `.dhfd` absent a cote du `.dhfi` (observe) |
+
+> **Le `.dhfi` exige son compagnon `.dhfd`.** Un fichier ISAM Divalto `.dhfi` (donnees)
+> va de pair avec son fichier d'index `.dhfd`. Ouvrir un `.dhfi` **sans** son `.dhfd` a
+> cote (typiquement apres une copie ou un backup partiel qui n'a repris que le `.dhfi`)
+> fait echouer `xisam_topenlong` avec le **code 100**. Regle : **toute copie, backup ou
+> deplacement d'un `.dhfi` doit embarquer le `.dhfd` de meme nom**. (Code 100 =
+> observation terrain reproductible, pas une constante officielle documentee de la DLL.)
 
 ---
 
@@ -298,7 +315,7 @@ dll.xisam_tcloselong(TACHE, tdf)
 ### Ne pas confondre mode et direction
 
 L'ancienne documentation presentait D/S/P/G/F comme des codes de direction
-("Debut/Suivant/Precedent/..."). **C'etait faux** (R-014). Le parametre `mode` est
+("Debut/Suivant/Precedent/..."). **C'etait faux**. Le parametre `mode` est
 un code de reservation uniquement (F/P/R). La direction est portee par la cle dans
 TDF (0xFF en fin = iterer depuis la fin).
 

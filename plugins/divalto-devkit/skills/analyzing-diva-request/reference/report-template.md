@@ -1,6 +1,6 @@
 # report-template.md -- Rappel de la structure du rapport final
 
-Le rapport markdown produit a la phase 4 suit la structure canonique definie dans le gabarit d'analyse pré-action (interne). Ce fichier est un rappel rapide pour l'enrichissement LLM au CP5.
+Le rapport markdown produit a la phase 4 suit la structure decrite dans le skill `building-preaction-report`, page `reference/report-sections.md`. Ce fichier est un rappel rapide pour l'enrichissement LLM qui precede le CP5b.
 
 ## 7 sections + annexe
 
@@ -18,7 +18,7 @@ Le rapport markdown produit a la phase 4 suit la structure canonique definie dan
 | 7 | Points d'attention | Metriques | Mineur : conventions domaine |
 | Annexe | Sources consultees | evidence.scope | Aucun (deterministe) |
 
-## Enrichissements a faire au CP5
+## Enrichissements a faire avant le CP5b
 
 ### Section 3 -- Fonctions du langage DIVA utiles
 
@@ -26,11 +26,11 @@ Familles standard :
 - `Framework` : `Get_CheckObject_Data`, `Check_*_Field_*`, `Init_Zoom`, `Init_Module`
 - `RecordSql` : `Select`, `AddCondition`, `Orderby.Par_*`, `PreInsert`, `PostInsert`
 - `ISAM` : `HFileVersion`, `Load_*`, `Check_*`, `Exists_*`
-- `HTTP/REST` : `RestCall`, `JsonParse`, `XmlParse` -- voir la référence langage avancé (interne)
+- `HTTP/REST` : `RestCall`, `JsonParse`, `XmlParse`
 - `UI/Masque` : methodes Zoom, callbacks cycle de vie
 - `Utilitaires` : `Translate`, `Formater_*`, `Trace_SOX_*`
 
-Sources : la référence langage avancé (interne), la référence architecture d'entité (interne), les squelettes (interne).
+Sources : les skills `coding-diva-advanced` (patterns de langage) et `creating-diva-entity` (architecture d'entite).
 
 ### Section 4.2 -- Propagation des changements
 
@@ -61,16 +61,16 @@ Format par proposition (1-3 max) :
 - **Fonction(s)** a creer/modifier : <noms>
 - **Pattern de reference** : section 2.M (lien interne)
 - **Impact estime** : faible | moyen | fort -- <justification 1 ligne>
-- **UC generation suggere** : UC-001 | UC-002 | UC-003 | aucun
+- **Skill de generation suggere** : `creating-diva-entity` | `modifying-diva-entity` | `binding-zoom-to-field` | aucun
 ```
 
 Regle absolue : chaque proposition doit citer un exemple concret de la section 2.
 
 UC recommandations courantes :
-- Creer une entite -> UC-001
-- Modifier une entite existante -> UC-002
-- Surcharger un zoom -> UC-003 (si cree)
-- Debugger une anomalie -> UC-005
+- Creer une entite -> `creating-diva-entity`
+- Modifier une entite existante -> `modifying-diva-entity`
+- Surcharger un zoom -> `binding-zoom-to-field`
+- Debugger une anomalie -> aucun (l'analyse suffit)
 
 ### Section 6 -- Pistes complementaires
 
@@ -78,7 +78,7 @@ UC recommandations courantes :
 - Requete Cypher supplementaire (advisory) avec code copier-coller
 - Grep X.13 cible avec commande complete
 - Fichier X.13 a lire en entier
-- Document de référence interne à consulter
+- Page de reference d'un skill du devkit a consulter
 - Skill existant a invoquer (ex : `testing-erp` pour valider visuellement)
 
 ### Section 7 -- Points d'attention

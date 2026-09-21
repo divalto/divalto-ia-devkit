@@ -9,7 +9,10 @@ Couvre :
 from __future__ import annotations
 
 import json
+import os
+import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -248,6 +251,132 @@ class TestValidatorUnitaires(unittest.TestCase):
         })
         errors = validate_facts_structure(doc)
         self.assertTrue(any("call_chain must have 'nodes'" in e for e in errors))
+
+
+class TestSelectionTitle(unittest.TestCase):
+    """Le libelle humain des types voyage dans le facts.json.
+
+    Un retour terrain a signale que le livrable affichait les slugs bruts
+    (`endroit_agir`) dans une couche destinee a un chef de projet. Le libelle existe
+    depuis toujours dans `content_types.py` ; il ne traversait simplement pas le
+    facts.json. Il est emis ICI plutot que reconstitue par le renderer -- deux tables
+    de libelles finiraient par diverger.
+    """
+
+    def test_le_catalogue_donne_un_libelle_a_chaque_type(self):
+        from content_types import CATALOG
+        for ct in CATALOG:
+            self.assertTrue(ct.title.strip(),
+                            "le type %s (%s) n'a pas de libelle humain" % (ct.id, ct.slug))
+            self.assertNotEqual(ct.title, ct.slug,
+                                "le libelle du type %s est le slug lui-meme" % ct.id)
+
+    def test_selection_entry_transporte_et_serialise_le_libelle(self):
+        from dataclasses import asdict
+        from facts_schema import SelectionEntry
+        e = SelectionEntry(id=4, slug="endroit_agir", score=1.0, included=True,
+                           layer="tactical", reason="x", title="Endroit ou agir")
+        self.assertEqual(asdict(e)["title"], "Endroit ou agir")
+
+    def test_le_libelle_est_optionnel_et_vaut_chaine_vide(self):
+        """Retrocompatibilite : un facts.json anterieur n'a pas ce champ.
+
+        La valeur par defaut doit etre une chaine vide -- pas `None`, que le nettoyage
+        de `to_dict` retirerait, et pas une absence, qui ferait echouer la construction.
+        """
+        from dataclasses import asdict
+        from facts_schema import SelectionEntry
+        e = SelectionEntry(id=1, slug="s", score=0.0, included=False,
+                           layer="technical", reason="r")
+        self.assertEqual(asdict(e)["title"], "")
+
+    def test_un_facts_sans_libelle_reste_valide(self):
+        doc = _load_fixture("ticket-contremarque.facts.json")
+        for s in doc["selection"]:
+            s.pop("title", None)
+        self.assertEqual(validate_facts_structure(doc), [],
+                         "retirer un champ optionnel ne doit pas invalider le document")
+
+    def test_un_facts_avec_libelle_reste_valide(self):
+        doc = _load_fixture("ticket-contremarque.facts.json")
+        for s in doc["selection"]:
+            s["title"] = "Un libelle"
+        self.assertEqual(validate_facts_structure(doc), [])
+
+    def test_le_producteur_transmet_le_libelle(self):
+        """Le maillon du milieu : le catalogue le produit, le schema le porte -- encore
+        faut-il que la construction le RECOPIE.
+
+        Controle sur la SOURCE et non par execution : cette recopie vit au milieu d'une
+        fonction de pipeline qui demande les trois JSON d'entree.
+
+        AVERTISSEMENT. Ce docstring disait aussi qu'un test fabriquant les trois
+        JSON « mesurerait surtout sa propre fixture ». C'est ce raisonnement qui a
+        laisse passer un `TypeError` a chaque execution : `build_seeds` etait
+        appelee avec quatre arguments pour cinq parametres obligatoires. Trois
+        fichiers d'entree construits depuis les exigences de `preflight_check`
+        parcourent tout le pipeline -- voir `TestPipelineComplet`. Un harnais de mutation a montre
+        que sans ce cas, retirer la recopie ne faisait tomber AUCUNE suite -- les deux
+        extremites etaient gardees, le milieu ne l'etait pas.
+        """
+        source = (SCRIPTS_DIR / "build_facts.py").read_text(encoding="utf-8")
+        debut = source.index("selection.append(SelectionEntry(")
+        bloc = source[debut:source.index("))", debut)]
+        self.assertIn("title=", bloc,
+                      "la construction de SelectionEntry ne transmet plus le libelle")
+        self.assertIn('s.get("title"', bloc,
+                      "le libelle n'est plus repris de l'entree du catalogue")
+
+
+class TestPipelineComplet(unittest.TestCase):
+    """Le pipeline complet, execute -- pas lu.
+
+    `build_facts.py` appelait `build_seeds` avec quatre arguments pour cinq
+    parametres obligatoires : `TypeError` a chaque execution, dans un script livre.
+    Rien ne l'avait vu, parce que les deux fixtures du skill sont des SORTIES et que
+    la seule verification qui touchait ce fichier le lisait en texte.
+
+    Les trois entrees sont construites depuis les exigences que `preflight_check`
+    enonce dans son propre docstring : `type`, `resume`, `domaine_pressenti`,
+    deux `keywords_techniques`, des `functions` non vides, un `confirmed` avec son
+    `targeted_symbol` et son `enclosing_block`. Rien d'invente.
+    """
+
+    def _lancer(self, sortie):
+        fx = Path(__file__).resolve().parent / "fixtures"
+        return subprocess.run(
+            [sys.executable, str(SCRIPTS_DIR / "build_facts.py"),
+             "--request", str(fx / "pipeline-ticket.request.json"),
+             "--candidates", str(fx / "pipeline-ticket.candidates.json"),
+             "--evidence", str(fx / "pipeline-ticket.evidence.json"),
+             "--output-dir", sortie, "--slug", "pipeline", "--date", "20260911",
+             "--erp-root", "/erp-de-test"],
+            capture_output=True, text=True, encoding="utf-8", errors="replace")
+
+    def test_le_pipeline_va_au_bout(self):
+        with tempfile.TemporaryDirectory() as d:
+            r = self._lancer(d)
+            self.assertEqual(
+                r.returncode, 0,
+                "build_facts.py ne va pas au bout : rc=%d%s%s"
+                % (r.returncode, os.linesep, (r.stderr or "")[:600]))
+            produits = sorted(p.name for p in Path(d).glob("preaction-*"))
+            self.assertEqual(
+                produits,
+                ["preaction-pipeline-20260911.facts.json",
+                 "preaction-pipeline-20260911.metrics.json"],
+                "les deux fichiers attendus ne sont pas produits : %s" % produits)
+
+    def test_le_facts_produit_est_valide(self):
+        with tempfile.TemporaryDirectory() as d:
+            r = self._lancer(d)
+            self.assertEqual(r.returncode, 0, (r.stderr or "")[:400])
+            p = Path(d) / "preaction-pipeline-20260911.facts.json"
+            doc = json.loads(p.read_text(encoding="utf-8"))
+            self.assertEqual(validate_facts_structure(doc), [],
+                             "le facts.json produit ne valide pas son schema")
+            self.assertTrue(doc.get("claims"),
+                            "le facts.json produit ne porte aucun claim")
 
 
 if __name__ == "__main__":

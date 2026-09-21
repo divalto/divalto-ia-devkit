@@ -3,7 +3,7 @@
   "_description": "Zoom reglement : pattern X.12 a 19 tables, 146 RSQL partagent la signature. Tables canoniques : CLI, FOU, TIA, C3/C4/C8, SOC, H8, RGLTJNLDET.",
   "_source_x13": "Representatif -- pour une copie exhaustive, extraire depuis gtrsdtrfa.dhsq, gtrsdtr.dhsq ou src equivalents (cf. corpus-patterns.md section 3).",
   "_signature_nb_tables": 19,
-  "_note": "Squelette pilote (G-022). Contient les 5 jointures les plus frequentes du pattern. Les 14 autres (C4, RGLTJNLDET, etc.) sont a ajouter selon le besoin metier.",
+  "_note": "Squelette pilote. Contient les 5 jointures les plus frequentes du pattern. Les 14 autres (C4, RGLTJNLDET, etc.) sont a ajouter selon le besoin metier.",
   "joined_tables": [
     {
       "table_sql": "CLI",

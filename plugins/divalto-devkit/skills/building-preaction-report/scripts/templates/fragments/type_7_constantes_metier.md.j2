@@ -5,8 +5,8 @@
 {% for lit in lits %}
 ### {{ lit.name }}
 
-{% if lit.canonical_source_doc %}
-Source : [{{ lit.canonical_source_doc }}]({{ lit.canonical_source_doc }}) (voir aussi `{{ lit.canonical_source_code }}`).
+{% if lit.canonical_source_code %}
+Source : `{{ lit.canonical_source_code }}` (source standard livree).
 {% endif %}
 
 | Valeur | Libelle |

@@ -1,0 +1,9 @@
+[TOTAL_ERRORS]0
+[INFO]---------------Compilation. Construction du projet c:/specifs/monworkspace/projets/monprojet.dhpt (25/08/2026 12:00:00). Profil courant : monprofil---------------
+[INFO]Construction du plan de compilation
+[INFO]Calcul de la liste de compilation des sources
+[INFO]Compilations des sources
+[INFO]Vérification des fonctions
+[INFO]Mise à jour des includes
+[INFO]
+Le projet est à jour, aucune compilation à effectuer

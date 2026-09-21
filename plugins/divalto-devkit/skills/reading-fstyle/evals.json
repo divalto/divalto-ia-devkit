@@ -26,8 +26,8 @@
       "expected_behavior": [
         "Execute read_fstyle.py avec --variant wpf --detail TBLART",
         "Sortie JSON : found=true, type=3, nom=TBLART",
-        "Champ cle_i18n = #tblart (reference i18n non resolue, cf FS-01 BACKLOG)",
-        "Champ flags = 001 (semantique a formaliser en FS-04 BACKLOG)"
+        "Champ cle_i18n = #tblart (reference i18n non resolue)",
+        "Champ flags = 001 (semantique a formaliser)"
       ]
     },
     {
@@ -63,13 +63,37 @@
       "skills": [
         "reading-fstyle"
       ],
-      "query": "Tente de resoudre TBLAFF (cas orphelin DAV d'apres FSTYLE.md). Le resultat doit indiquer clairement l'absence.",
+      "query": "Tente de resoudre TBLAFF (cas orphelin DAV decrit dans reference/fstyle-types.md). Le resultat doit indiquer clairement l'absence.",
       "files": [],
       "expected_behavior": [
         "Execute read_fstyle.py avec --resolve TBLAFF",
         "Sortie JSON : resolved=false, orphan=true, nom=TBLAFF",
         "Le tableau variants_tried contient [wpf, legacy, imp] (les 3 variantes testees)",
         "Exit code 1 (resultat vide sur cas orphelin -- le script n'est pas en erreur)"
+      ]
+    },
+    {
+      "skills": [
+        "reading-fstyle"
+      ],
+      "query": "De quelle couleur est le marquage applique par le style DATA_10 ?",
+      "expected_behavior": [
+        "Execute read_fstyle.py --variant wpf --detail DATA_10",
+        "Lit `couleur_texte` : r=255 g=0 b=0 -- rouge",
+        "Ne repond PAS que le decodage se limite a taille/poids/famille",
+        "Si `attributs_non_decodes` est present, le mentionne : la sortie dit ce qu'elle ignore, et la 4e composante n'est pas nommee alpha faute de preuve"
+      ]
+    },
+    {
+      "skills": [
+        "reading-fstyle"
+      ],
+      "query": "Le couleur_ref de ENTETE_COLONNE_T pointe sur une police, la reference est-elle cassee ?",
+      "expected_behavior": [
+        "Repond NON : aucune reference de Type 7 n'est pendante, la cible existe",
+        "Explique que les trois slots sont POSITIONNELS et que leurs noms ne tiennent pas toujours : mesure 235/235 pour police_ref, mais 222/235 seulement pour couleur_ref",
+        "Renvoie a `refs_types_reels` et `refs_hors_type_attendu` de la sortie --detail",
+        "Ne conclut PAS a une anomalie du standard"
       ]
     }
   ]

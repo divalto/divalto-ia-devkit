@@ -11,7 +11,7 @@ Usage (tokens JSON, peut etre mono ou multi-table) :
     py .claude/skills/generating-recordsql/scripts/generate_rsql.py \
         --file tokens.json --output "chemin/fichier.dhsq"
 
-Multi-table (G-021) : les tokens JSON peuvent inclure deux cles optionnelles :
+Multi-table : les tokens JSON peuvent inclure deux cles optionnelles :
     "joined_tables": [
         {
             "table_sql": "TIA", "alias": "TIA",
@@ -48,7 +48,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 TEMPLATES_DIR = os.path.join(SCRIPT_DIR, "templates")
 TEMPLATE_NAME = "recordsql.dhsq.j2"
 
-# Repertoire des squelettes G-022 (reference/skeletons/ au niveau du skill)
+# Repertoire des squelettes (reference/skeletons/ au niveau du skill)
 SKELETONS_DIR = os.path.join(
     os.path.dirname(SCRIPT_DIR), "reference", "skeletons"
 )
@@ -113,7 +113,7 @@ def fks_to_joined_tables(fks, main_table):
 
 
 def load_skeleton(name, main_table):
-    """Charge un squelette G-022 et substitue le placeholder {MAIN} par main_table.
+    """Charge un squelette et substitue le placeholder {MAIN} par main_table.
 
     Retourne un dict {joined_tables, additional_cases} pret a merger dans les tokens.
     """
@@ -212,7 +212,7 @@ def main():
                              "(defaut: Libelle ; utiliser Lib si Nature=40)")
 
     parser.add_argument("--skeleton", default=None,
-                        help="Nom d'un squelette G-022 (ex: zoom-reglement-19). "
+                        help="Nom d'un squelette (ex: zoom-reglement-19). "
                              "Le squelette ajoute des jointures pre-configurees.")
 
     parser.add_argument(
@@ -274,7 +274,7 @@ def main():
         print(f"Erreur: tokens manquants: {', '.join(missing)}", file=sys.stderr)
         sys.exit(1)
 
-    # Squelette G-022 : fusionne dans les tokens (ecrase joined_tables + additional_cases)
+    # Squelette : fusionne dans les tokens (ecrase joined_tables + additional_cases)
     if args.skeleton:
         skel_data = load_skeleton(args.skeleton, tokens["TableSQL"])
         if skel_data is None:

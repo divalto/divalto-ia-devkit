@@ -1,16 +1,17 @@
 # Pattern FK / controle d'existence -- Fragment de reference
 
-> Source : référentiel interne -- binding FK/zoom + catalogue des zooms standards (tables B et C). Ce fragment donne le strict minimum pour appliquer le pattern.
+> Pattern FK / zoom : le digest livré avec ce skill -- le strict minimum pour l'appliquer. Le mapping des cibles et la taxonomie des suffixes y sont résumés, pas exhaustifs.
 
 ## Sommaire
 
 - Variantes A et B (quand utiliser quoi)
 1. Pattern A -- 3 couches (FK structurelle dans l'objet metier)
 2. Cardinalite 1:1 (la seule supportee en V1)
-3. Mapping cible -> module (table B resumee)
-4. Taxonomie suffixes predicteurs (table C resumee)
+3. Mapping cible -> module (les cibles les plus courantes)
+4. Taxonomie des suffixes predicteurs
 5. Naming des callbacks
 6. Liens anti-patterns et regles linter
+7. Repartition entre skills (`FK-01` a `FK-05`)
 - Pattern B -- Controle d'existence en surcharge de masque
 
 ## Variantes A et B -- quand utiliser quoi
@@ -50,7 +51,7 @@ Cardinalites **non supportees en V1** (chantiers futurs) :
 - **Filtre borne** : 2 champs d/f -> meme cible (plage). 982 paires X.13.
 - **Polymorphique** : 1 champ -> N cibles via `Zoom_Call(C_ZOOM_*)` dynamique. 610 cas X.13.
 
-## 3. Mapping cible -> module (table B resumee)
+## 3. Mapping cible -> module (les cibles les plus courantes)
 
 349 cibles FK distinctes en X.13. Les plus courantes :
 
@@ -64,9 +65,9 @@ Cardinalites **non supportees en V1** (chantiers futurs) :
 
 Pattern general : `Gttmchk<cible-en-minuscules>.dhop` (~280 / 349 cibles suivent ce pattern).
 
-Les fonctions exposees par le module cible : `Find_<CIBLE>(cle)`, `Find_<CIBLE>_Lib(cle)`, `Check_<CIBLE>_Exists(cle)`. Voir le catalogue des zooms standards (interne) table B pour le catalogue complet (utilisation build-time uniquement).
+Les fonctions exposees par le module cible : `Find_<CIBLE>(cle)`, `Find_<CIBLE>_Lib(cle)`, `Check_<CIBLE>_Exists(cle)`. Le mapping complet des 349 cibles n'est pas livre ; les plus courantes sont en section 3.
 
-## 4. Taxonomie des suffixes predicteurs (table C resumee)
+## 4. Taxonomie des suffixes predicteurs
 
 40+ suffixes de champ sont predictifs a >= 90 % du type de cible FK. Les plus fiables :
 
@@ -106,7 +107,7 @@ EndP
 | **Z14** | Champ avec suffixe FK predicteur mais aucune procedure `Check_<SRC>_Field_<Champ>` | Partiellement (suffixes catalogues) |
 | **Z15** | Procedure `Check_<SRC>_Field_<Champ>` sans import `Module "Gttmchk<cible>.dhop"` (orpheline) | Oui (regex + cross-file) |
 
-Le skill `linting-diva-code` implemente ces regles (FK-06). Voir la description des anti-patterns dans son `reference/rules-architecture.md`.
+Le skill `linting-diva-code` implemente ces regles (FK-05). Voir la description des anti-patterns dans son `reference/rules-architecture.md`.
 
 ## Pattern B -- Controle d'existence en surcharge de masque
 
@@ -150,8 +151,20 @@ filtre), `a5em000.dhsf` (formulaire saisie).
 Ce fragment documente le **pattern**. La **manipulation** de la surcharge de masque
 (`[diva]`, `diva_apres`) releve du skill **`manipulating-dhsf-screens`**.
 
-## 7. Voir aussi (dans ce skill)
+## 7. Repartition entre skills (`FK-01` a `FK-05`)
 
-- `scripts/dhsp_add_fk.py` : application de la couche 1 (Module Check)
-- Le skill `manipulating-dhsf-screens` fournit `dhsf_add_fk.py` pour les couches 2 + 3 (masque structurel + callback).
-- Le skill `generating-objet-metier` integre ce pattern via son flag `--fk` (mode creation).
+Les 3 couches ne sont pas ecrites par un seul outil. Cinq skills se partagent la chaine,
+et les renvois `FK-0n` du plugin designent ces cinq roles :
+
+| Code | Skill / script | Ce qu'il fait des couches |
+|------|----------------|---------------------------|
+| **FK-01** | `generating-objet-metier --fk` | genere la couche 1 a la creation : import `Module "Gttmchk<cible>.dhop"` + procedures `Check_<SRC>_Field_<CHAMP>(+_Lib)` |
+| **FK-02** | `manipulating-dhsf-screens/scripts/dhsf_add_fk.py` | ecrit les couches 2 et 3 (masque structurel + callback `[diva]`) |
+| **FK-03** | `creating-diva-entity` | orchestre les deux precedents : validation des FK detectees, puis `--fk` aux etapes 3 et 5ter |
+| **FK-04** | `binding-zoom-to-field` (**ce skill**) | ajoute les 3 couches a une entite **deja existante** ; `scripts/dhsp_add_fk.py` pour la couche 1 |
+| **FK-05** | `linting-diva-code` | verifie qu'aucune couche n'est orpheline (regles Z14 et Z15, section 6 ci-dessus) |
+
+## 8. Voir aussi (dans ce skill)
+
+- Les variantes de cardinalite non couvertes en V1 : section 2 ci-dessus.
+- Le pattern B (controle d'existence sans FK structurelle) : fin de ce fragment.

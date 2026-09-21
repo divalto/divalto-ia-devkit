@@ -22,7 +22,7 @@ Source canonique de la structure M2 : `reading-isam-files/scripts/structures/str
 
 ## Plages observees (empirique X.13 Achat-Vente, 2026-04-23)
 
-Scan sur 1367 choix M2 (apres filtre `Ce=2` -- piege R-006) :
+Scan sur 1367 choix M2 (apres filtre `Ce=2`) :
 
 | Plage | Count | Exemples | Source d'allocation |
 |-------|-------|----------|---------------------|
@@ -40,7 +40,7 @@ Pour eviter les collisions avec les numeros alloues par l'IHM standard (et par c
 - **Zone standard ERP** : `EnrNo < 100000` -- reservee a l'allocation automatique par l'IHM native lors de la creation de choix standard. A ne **pas** utiliser pour une customisation utilisateur.
 - **Zone customisation** : `EnrNo >= 100000` -- reservee aux creations custom (zooms metier, choix menu d'entites ajoutees par developpement).
 
-Ceci constitue une **hypothese documentee dans le RETEX R-005** mais **non-officiellement confirmee** par la documentation Divalto. A valider avec :
+Ceci constitue une **hypothese documentee dans le RETEX** mais **non-officiellement confirmee** par la documentation Divalto. A valider avec :
 
 1. Scan empirique sur **plusieurs modules** (Achat-Vente, Compta, Paie, GC...) pour verifier l'absence systematique d'EnrNo >= 100000 dans le standard.
 2. Demande a Divalto (ou lecture de la doc officielle si existante) pour confirmer la convention.
@@ -75,13 +75,13 @@ Certains M2 pourraient avoir un EnrNo a 0 ou vide (cas degrades). Le parser igno
 
 ### Coherence M1 <-> M2
 
-Le RETEX R-002 mentionne une visibilite F7 via M1 (Ce=5 dans `a5f.dhfi`). Certains patterns applicatifs peuvent aligner le `Ordre` du M1 sur l'EnrNo correspondant M2 -- **a verifier**. Ce skill n'impose pas cet alignement ; il retourne juste un EnrNo libre pour M2.
+Le RETEX mentionne une visibilite F7 via M1 (Ce=5 dans `a5f.dhfi`). Certains patterns applicatifs peuvent aligner le `Ordre` du M1 sur l'EnrNo correspondant M2 -- **a verifier**. Ce skill n'impose pas cet alignement ; il retourne juste un EnrNo libre pour M2.
 
 ---
 
 ## Items A-VERIFIER
 
-Suivis en interne (MULTICHOIX / batch 30) :
+Suivis en interne (MULTICHOIX) :
 
 - Confirmation empirique multi-modules (Compta, Paie, GC, Retail, autres) du pattern `< 100000` standard
 - Comportement du framework IHM si un EnrNo >= 100000 est rencontre (acceptation normale ou message d'avertissement ?)

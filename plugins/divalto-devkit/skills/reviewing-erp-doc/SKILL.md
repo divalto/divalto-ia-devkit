@@ -7,7 +7,7 @@ description: Relit la documentation technique produite par documenting-erp et la
 
 ## Role
 
-Seconde voix independante qui relit la documentation technique produite par `documenting-erp` (UC-200) et challenge son contenu contre la connaissance produit vivante : sources X.13 + referentiel DIVA du workspace. Detecte les erreurs d'interpretation LLM que le producteur n'a pas su identifier comme incertaines (au-dela des items `[A VERIFIER]` deja presents dans le livrable).
+Seconde voix independante qui relit la documentation technique produite par `documenting-erp` et challenge son contenu contre la connaissance produit vivante : sources X.13 + referentiel DIVA du workspace. Detecte les erreurs d'interpretation LLM que le producteur n'a pas su identifier comme incertaines (au-dela des items `[A VERIFIER]` deja presents dans le livrable).
 
 Le relecteur signale, il ne corrige pas. Le collaborateur arbitre en aval.
 
@@ -20,10 +20,10 @@ Ce skill est cable pour etre **independant par conception** du producteur :
 - Re-consulte les memes sources (X.13, schema SQL, referentiel) depuis zero
 - Aucune modification du livrable ni du referentiel : lecture seule stricte
 
-Ce qui legitimement peut apparaitre dans un livrable UC-200 mais meriter d'etre challenge :
+Ce qui legitimement peut apparaitre dans un livrable de documentation mais meriter d'etre challenge :
 
 - Citation correcte mais paraphrase derivant du code cite (contresens sur Mchk, inversion d'une contrainte)
-- Affirmation qui echappe a la regle de citation CA4 de UC-200
+- Affirmation qui echappe a la regle de citation stricte
 - Champ, index ou FK present dans la source mais absent du livrable
 - Formulation qui contredit le referentiel DIVA (Nature, prefixe, pattern 3 fichiers, anti-patterns)
 
@@ -40,21 +40,22 @@ Definitions detaillees + exemples : voir [reference/categories-erreurs.md](refer
 
 Strategie de cross-check par categorie : voir [reference/cross-check-strategy.md](reference/cross-check-strategy.md).
 
+Un cas d exemple est livre avec le skill -- une entite conforme, une entite volontairement infondee, et les sources ERP pour rejouer la detection : voir [reference/exemple-de-cas.md](reference/exemple-de-cas.md).
+
 ## Prerequis
 
-- Un livrable UC-200 existe sous `{REPERTOIRE_SORTIE}/doc-erp/{MODULE}/` (produit par `documenting-erp`)
+- **PyYAML** installé (`py -m pip install pyyaml`) -- `ingest_deliverable.py` s'arrête à l'import sans elle
+- Un livrable de documentation existe sous `{REPERTOIRE_SORTIE}/doc-erp/{MODULE}/` (produit par `documenting-erp`)
 - Acces en lecture aux sources X.13 (`{CHEMIN_ERP_STANDARD}`)
 - Acces en lecture a l'export JSON du schema SQL (`{CHEMIN_SCHEMA_SQL}`)
-- Acces en lecture a la racine du referentiel DIVA du workspace (`{RACINE_DOCS}`) -- optionnel (skip E4 si absent)
 
 ## Pipeline
 
 > **CHECKPOINT CP-Entree -- Cadrage des inputs**
 > Presenter au collaborateur :
-> - Chemin du livrable UC-200 : `{REPERTOIRE_SORTIE}/doc-erp/{MODULE}/`
+> - Chemin du livrable de documentation : `{REPERTOIRE_SORTIE}/doc-erp/{MODULE}/`
 > - Chemin `{CHEMIN_ERP_STANDARD}`
 > - Chemin `{CHEMIN_SCHEMA_SQL}`
-> - Racine `{RACINE_DOCS}` (ou `skip` pour desactiver E4)
 > - Entites a relire : `all` par defaut, ou liste explicite (ex: `CLI,FOU,ART`)
 > Attendre validation avant execution.
 
@@ -107,11 +108,10 @@ Deterministe.
 ```
 py scripts/detect_doc_contradictions.py \
   --ir {REPERTOIRE_SORTIE}/doc-erp/{MODULE}/.review_ir.json \
-  --docs-root {RACINE_DOCS} \
   --out {REPERTOIRE_SORTIE}/doc-erp/{MODULE}/.detect_e4.json
 ```
 
-Corpus cible et regles d'extraction : voir [reference/docs-corpus.md](reference/docs-corpus.md). Si `{RACINE_DOCS}` vaut `skip`, l'etape est sautee et un warning global `E4 non verifie (docs-root skip)` est pose dans le rapport final.
+Les deux heuristiques et leurs sources -- toutes deux livrees avec le devkit -- sont decrites dans [reference/referentiel-e4.md](reference/referentiel-e4.md). E4 n'a plus d'option : elle tourne toujours.
 
 Deterministe (regex + heuristiques).
 
@@ -159,7 +159,7 @@ Ecrire le resultat dans `.detect_e2.json` (un objet par paire du batch). Severit
 Regles strictes de cette etape :
 - Ne pas inventer un extrait source -- si ce n'est pas dans `context_source`, ne pas le mentionner
 - Ne pas deborder sur d'autres categories (E1, E3, E4 sont traitees par les detecteurs deterministes)
-- En cas de batch vide (aucune citation detectee a l'etape 1) : ecrire un `.detect_e2.json` vide avec statut `no_citations_in_deliverable` (cas cible dans le scenario 3 de UC-201)
+- En cas de batch vide (aucune citation detectee a l'etape 1) : ecrire un `.detect_e2.json` vide avec statut `no_citations_in_deliverable` (cas cible dans le scenario 3 de la recette)
 
 ### Etape 7 : Synthese editoriale (LLM)
 
@@ -201,7 +201,7 @@ Agrege les 4 detections. Tri deterministe :
 - Par severite (erreur -> warning -> info)
 - Par ligne source (pour stabilite du diff)
 
-Timestamps exclus du diff pour garantir l'idempotence (CA13 de UC-201).
+Timestamps exclus du diff pour garantir l'idempotence.
 
 Calcule egalement le **ratio de couverture du producteur** = `nb items [A VERIFIER] deja presents dans meta.a_verifier / (nb items [A VERIFIER] + nb items detectes par le relecteur)`. 100% = producteur a tout signale. < 50% = le producteur rate plus de la moitie des points incertains.
 
@@ -212,7 +212,7 @@ Calcule egalement le **ratio de couverture du producteur** = `nb items [A VERIFI
 > - Fichiers produits : `review.md`, `review.json`, `review.stats.json`
 > - Resume executif : nb erreurs / warnings / infos par categorie (tableau E1/E2/E3/E4), nb entites touchees
 > - Ratio de couverture du producteur
-> - Verdict : `publiable en l'etat` (0 erreur, warnings acceptables) | `corrections necessaires avant publication` (>=1 erreur) | `regression CA4 UC-200` (E1 massif)
+> - Verdict : `publiable en l'etat` (0 erreur, warnings acceptables) | `corrections necessaires avant publication` (>=1 erreur) | `regression citation stricte` (E1 massif)
 > - Entites les plus critiques (top 3 par nb d'erreurs)
 > Attendre validation.
 
@@ -220,7 +220,7 @@ Calcule egalement le **ratio de couverture du producteur** = `nb items [A VERIFI
 
 ## Invariants
 
-1. **Lecture seule stricte sur le livrable** -- aucun YAML, aucun MD, aucun JSON du livrable UC-200 n'est modifie
+1. **Lecture seule stricte sur le livrable** -- aucun YAML, aucun MD, aucun JSON du livrable de documentation n'est modifie
 2. **Lecture seule stricte sur le referentiel DIVA** -- signalement uniquement ; jamais de proposition de modification du referentiel
 3. **Independance producteur** -- aucun import vers `documenting-erp/scripts/` ; connait uniquement la structure YAML stable
 4. **Pas d'invention** -- chaque item du rapport est trace au livrable (chemin YAML + champ) ou a la source X.13 (fichier:ligne). Jamais d'affirmation sans ancre.
@@ -231,7 +231,7 @@ Calcule egalement le **ratio de couverture du producteur** = `nb items [A VERIFI
 
 | Severite | Sens | Action attendue |
 |----------|------|-----------------|
-| `erreur` | Viole un CA de UC-200 ou omet une structure declaree en source | Corriger avant publication |
+| `erreur` | Viole la regle de citation stricte, ou omet une structure declaree en source | Corriger avant publication |
 | `warning` | Desalignement ou contradiction a verifier | Recommande de corriger avant publication |
 | `info` | Observation, point d'attention, cas `douteux` | Laisse au jugement du collaborateur |
 

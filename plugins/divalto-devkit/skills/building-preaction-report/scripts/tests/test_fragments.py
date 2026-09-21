@@ -408,7 +408,6 @@ class TestFragmentsContentSpecific(unittest.TestCase):
                 "type_7": {
                     "literals": [{
                         "name": "Ce4 (etat piece)",
-                        "canonical_source_doc": "../docs/ETATS-PIECE.md",
                         "canonical_source_code": "Dav/dav_sd.dhsq:453",
                         "table": [
                             {"code": "1", "label": "active"},
@@ -423,6 +422,113 @@ class TestFragmentsContentSpecific(unittest.TestCase):
         # Table metier Ce4
         self.assertIn("Ce4", rendered)
         self.assertIn("provisoire", rendered)
+        self.assertEqual([], validate_report(rendered))
+        # La provenance citee est la source du standard, que le partenaire a.
+        self.assertIn("`Dav/dav_sd.dhsq:453`", rendered)
+
+    def test_type_7_aucun_renvoi_vers_un_document_absent(self):
+        """type_7 : la provenance ne renvoie a AUCUN document hors du livrable.
+
+        Le fragment rendait `[../docs/ETATS-PIECE.md](...)` en lien cliquable, vers
+        un document Divalto interne que le partenaire n'a pas. Ce cas tombe sur le
+        code d'avant.
+        """
+        ctx = {
+            "seeds": {
+                "type_7": {
+                    "literals": [{
+                        "name": "Ce4 (etat piece)",
+                        "canonical_source_doc": "../docs/ETATS-PIECE.md",
+                        "canonical_source_code": "Dav/dav_sd.dhsq:453",
+                        "table": [{"code": "1", "label": "active"}],
+                    }],
+                }
+            }
+        }
+        rendered = render_fragment("type_7_constantes_metier.md.j2", ctx)
+        self.assertNotIn("docs/", rendered)
+        self.assertNotIn("ETATS-PIECE", rendered)
+        # meme si la donnee porte encore le champ, il ne doit plus etre rendu
+        self.assertIn("dav_sd.dhsq:453", rendered)
+
+    def test_detecteur_voit_la_forme_case_when(self):
+        """Le detecteur doit voir la forme qui DEFINIT les valeurs, pas seulement
+        celles qui les consomment.
+
+        `CASE ENT.Ce4 WHEN '1' THEN ...` est la ligne de dav_sd.dhsq que le rapport
+        cite comme source canonique. L'ancien motif exigeait un operateur de
+        comparaison : ce cas tombe sur le code d'avant.
+        """
+        import build_report as BR
+        ligne = ("CASE ENT.Ce4 WHEN '1' THEN 'active' WHEN '2' THEN 'suspendue' "
+                 "WHEN 'A' THEN 'archivee' END")
+        self.assertIsNotNone(BR._LITERAL_SCAN.search(ligne))
+
+    def test_detecteur_garde_les_formes_deja_reconnues(self):
+        """Elargir un motif ne doit rien lui faire perdre : les 3 formes d'avant
+        continuent de matcher, et un Ce4 sans litteral continue de ne pas matcher."""
+        import build_report as BR
+        for ligne in ("if ENT.Ce4 = '1'", "if ENT.Ce4 <> '7'",
+                      "PceAchIEnt.Ce4 = 'A'", "Ce4 in ('1','2')"):
+            self.assertIsNotNone(BR._LITERAL_SCAN.search(ligne), ligne)
+        for ligne in ("MVTL.Ce4 in (C_ETATP_MODELE,C_ETATP_ATTENTE)",
+                      "1 C_Etat_CE4 S", "EntetePiece.Ce4"):
+            self.assertIsNone(BR._LITERAL_SCAN.search(ligne), ligne)
+
+    def test_libelles_etat_piece_gardent_leurs_accents(self):
+        """Les libelles sont ceux de l'ERP, cites dans un rapport lu par un humain :
+        « modele » pour « modèle » est une citation fausse. Le rapport s'ecrit en
+        UTF-8, rien ne s'y opposait. Ce cas tombe sur le code d'avant.
+        """
+        import build_report as BR
+        attendus = {"1": "active", "2": "suspendue", "4": "mod\u00e8le",
+                    "7": "provisoire", "8": "p\u00e9rim\u00e9e",
+                    "9": "transf\u00e9r\u00e9e", "A": "archiv\u00e9e"}
+        self.assertEqual(attendus, {v["code"]: v["label"] for v in BR.CE4_TABLE})
+
+    def test_type_7_source_code_seule_rend_quand_meme_la_provenance(self):
+        """type_7 : le pointeur UTILE survit a la suppression du pointeur mort.
+
+        La ligne Source entiere etait conditionnee au document interne. Supprimer le
+        champ sans deplacer la condition aurait fait disparaitre `dav_sd.dhsq:453` --
+        la seule source que le partenaire possede. Ce cas tombe sur le code d'avant.
+        """
+        ctx = {
+            "seeds": {
+                "type_7": {
+                    "literals": [{
+                        "name": "Ce4 (etat piece)",
+                        "canonical_source_code": "Dav/dav_sd.dhsq:453",
+                        "table": [{"code": "A", "label": "archivee"}],
+                    }],
+                }
+            }
+        }
+        rendered = render_fragment("type_7_constantes_metier.md.j2", ctx)
+        self.assertIn("Source :", rendered)
+        self.assertIn("dav_sd.dhsq:453", rendered)
+        self.assertEqual([], validate_report(rendered))
+
+    def test_type_7_sans_source_code_omet_la_ligne_provenance(self):
+        """type_7 : pas de source connue -> pas de ligne Source, mais la table reste.
+
+        La ligne entiere etait conditionnee au DOCUMENT. En deplacant la condition sur
+        le code, il faut verifier que l'absence degrade proprement au lieu de rendre
+        une ligne `Source : ``` vide.
+        """
+        ctx = {
+            "seeds": {
+                "type_7": {
+                    "literals": [{
+                        "name": "TiCod",
+                        "table": [{"code": "1", "label": "client"}],
+                    }],
+                }
+            }
+        }
+        rendered = render_fragment("type_7_constantes_metier.md.j2", ctx)
+        self.assertNotIn("Source :", rendered)
+        self.assertIn("client", rendered)
         self.assertEqual([], validate_report(rendered))
 
     def test_type_8_avec_trigger_affiche_grep(self):

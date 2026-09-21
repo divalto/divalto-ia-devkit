@@ -4,7 +4,7 @@
   "scenarios": [
     {
       "id": "cas-retex-r003-racechien-pays",
-      "description": "Cas du RETEX R-003 : binding simple d'un champ RacPays vers la table T013 (Pays) via le zoom 9053, sur l'entite RacEChien existante.",
+      "description": "Cas du RETEX : binding simple d'un champ RacPays vers la table T013 (Pays) via le zoom 9053, sur l'entite RacEChien existante.",
       "input": {
         "src_table": "RACECHIEN",
         "dhsp_path": "gttmchkracechien.dhsp",
@@ -62,7 +62,7 @@
     },
     {
       "id": "pattern-b-controle-existence-surcharge",
-      "description": "Pattern B (R-014 / #109) : je veux juste valider qu'un code pays saisi existe sur un champ d'un masque, sans creer de FK dans l'objet metier ni de zoom de saisie.",
+      "description": "Pattern B (#109) : je veux juste valider qu'un code pays saisi existe sur un champ d'un masque, sans creer de FK dans l'objet metier ni de zoom de saisie.",
       "input": {
         "intent": "controle d'existence seul en surcharge de masque",
         "champ": "PayD (code pays)",

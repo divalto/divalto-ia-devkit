@@ -25,13 +25,13 @@ La source de verite du code est `scripts/find_free_zoom.py` -> liste
 | `faible` | Contexte possible mais ambigu : a juger (peut etre un prix, un ID...). |
 | `inconnu` (`non_reconnu`) | Aucun pattern connu ne matche : signal d'apprentissage. |
 
-## Patterns connus (seed initial -- R-012 / #29)
+## Patterns connus (seed initial -- #29)
 
 | id | Extensions | Confiance | Ce qui est detecte | Exemple | RETEX |
 |----|-----------|-----------|--------------------|---------|-------|
-| `zoom_call` | `.dhsp` | fort | Appel `Zoom_Call(` / `Tnt_Zoom_Call(` contenant le numero | `Tnt_Zoom_Call(9022)` | R-012 (#29) |
-| `touche_masque` | `.dhsf` | fort | Binding de touche de masque `[touches]` : `fN=<num>`, `ctrl_fN=<num>`, `shift_fN=<num>` | `f8=9022` | R-012 (#29) |
-| `affectation` | `.dhsp`, `.dhsf` | faible | Affectation `= <num>` (constante `C_ZOOM_...` ou autre) | `C_ZOOM_FOO_9022 = 9022` | R-012 (#29) |
+| `zoom_call` | `.dhsp` | fort | Appel `Zoom_Call(` / `Tnt_Zoom_Call(` contenant le numero | `Tnt_Zoom_Call(9022)` | #29 |
+| `touche_masque` | `.dhsf` | fort | Binding de touche de masque `[touches]` : `fN=<num>`, `ctrl_fN=<num>`, `shift_fN=<num>` | `f8=9022` | #29 |
+| `affectation` | `.dhsp`, `.dhsf` | faible | Affectation `= <num>` (constante `C_ZOOM_...` ou autre) | `C_ZOOM_FOO_9022 = 9022` | #29 |
 
 > Limite connue du seed : un appel via **constante** (`Zoom_Call(C_ZOOM_FOO_9022)`)
 > n'expose pas le numero litteral sur la ligne d'appel ; c'est la **declaration**
@@ -41,7 +41,7 @@ La source de verite du code est `scripts/find_free_zoom.py` -> liste
 ## Contextes a ignorer (faux positifs connus)
 
 Decouverts lors de la verification live sur sources reelles (`Specifs\sss`,
-2026-06-18, R-012 / #29). Ces contextes font apparaitre un numero qui coincide
+2026-06-18 / #29). Ces contextes font apparaitre un numero qui coincide
 avec une plage de zoom mais **ne sont pas une allocation d'un numero precis** :
 
 | Contexte | Exemple | Pourquoi l'ignorer |

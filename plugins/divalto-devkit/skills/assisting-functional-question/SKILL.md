@@ -1,12 +1,12 @@
 ---
 name: assisting-functional-question
-description: Assiste un collaborateur qui pose une question fonctionnelle conversationnelle sur le standard ERP Divalto (formulations du type "ne comprends pas pourquoi X ne marche pas", "il manque une info pour que Y fonctionne", "quand l'option Z est activee, W n'apparait plus"). Produit une reponse **chat-ready** courte (< 40 lignes) identifiant 3 a 5 causes probables classees par probabilite, chacune avec une reference fichier:ligne dans X.13 et une action de verification concrete. Cycle court (< 5 min). Ne genere aucun fichier disque. A utiliser quand un collegue colle un message de chat, une capture d'ecran Teams/Slack, ou reformule a l'oral une question sur un parametrage ou un comportement du standard -- pas quand le collaborateur s'apprete a coder (UC-100).
+description: Assiste un collaborateur qui pose une question fonctionnelle conversationnelle sur le standard ERP Divalto (formulations du type "ne comprends pas pourquoi X ne marche pas", "il manque une info pour que Y fonctionne", "quand l'option Z est activee, W n'apparait plus"). Produit une reponse **chat-ready** courte (< 40 lignes) identifiant 3 a 5 causes probables classees par probabilite, chacune avec une reference fichier:ligne dans X.13 et une action de verification concrete. Cycle court (< 5 min). Ne genere aucun fichier disque. A utiliser quand un collegue colle un message de chat, une capture d'ecran Teams/Slack, ou reformule a l'oral une question sur un parametrage ou un comportement du standard -- pas quand le collaborateur s'apprete a coder (voir `analyzing-diva-request`).
 ---
 
 # Assisting Functional Question
 
-Cas d'usage UC-110. Reponse a une question conversationnelle sur le fonctionnement
-du standard ERP Divalto. Contrairement a `analyzing-diva-request` (UC-100) qui prepare
+Reponse a une question conversationnelle sur le fonctionnement
+du standard ERP Divalto. Contrairement a `analyzing-diva-request`, qui prepare
 un developpeur a **coder**, ce skill aide un collaborateur a **comprendre** un
 comportement standard ou debloquer un parametrage.
 
@@ -21,14 +21,14 @@ Signaux declencheurs (au moins un doit matcher) :
 | Chat paste (Teams / Slack / mail) | "je suis bloque sur X, j'ai active Y et maintenant Z ne fonctionne plus" |
 | Capture d'ecran de chat | Image d'une conversation Teams avec une question |
 | Question orale transcrite | "quelqu'un sait pourquoi le zoom client ne montre rien quand on active les etablissements ?" |
-| Question directe de Stephane | "Nicolas m'a demande X, tu peux l'aider ?" |
+| Question relayee par un collegue | "Un utilisateur m'a demande X, tu peux l'aider ?" |
 
 Signaux anti-declencheurs (**ne PAS utiliser** ce skill) :
 
-- User story formelle avec "En tant que / je veux / afin de" -> utiliser `analyzing-diva-request` (UC-100)
-- Ticket myService avec numero -> UC-100
-- Demande de generation de code ("cree une entite X") -> `creating-diva-entity` (UC-001)
-- Demande de documentation -> `documenting-erp` (UC-200)
+- User story formelle avec "En tant que / je veux / afin de" -> utiliser `analyzing-diva-request`
+- Ticket myService avec numero -> `analyzing-diva-request`
+- Demande de generation de code ("cree une entite X") -> `creating-diva-entity`
+- Demande de documentation -> `documenting-erp`
 
 ---
 
@@ -145,8 +145,8 @@ compatibles avec les symptomes.
 
 ## Exemple de reference
 
-Voir `reference/golden-example-nicolas.md` pour un cas complet (chat de Nicolas SINGER
-2026-04-23 sur "tiers par etablissement"), avec le scoring des 7 CA.
+Voir `reference/golden-example.md` pour un cas complet (chat interne sur
+"tiers par etablissement"), avec le scoring des 7 CA.
 
 ---
 
@@ -166,8 +166,7 @@ Pas de script d'orchestration : le SKILL.md guide directement Claude.
 - `reference/chat-ready-format.md` -- spec du format de sortie
 - `reference/lexique-metier-technique.md` -- traduction concept conversationnel -> symboles DIVA
 - `reference/patterns-causes.md` -- catalogue des 10 patterns de causes recurrentes
-- `reference/golden-example-nicolas.md` -- exemple de reference, cas Nicolas 2026-04-23
-- Use case associe : `usecases/UC-110-ASSISTER-QUESTION-FONCTIONNELLE.md`
+- `reference/golden-example.md` -- exemple de reference (cas "tiers par etablissement")
 
 ---
 

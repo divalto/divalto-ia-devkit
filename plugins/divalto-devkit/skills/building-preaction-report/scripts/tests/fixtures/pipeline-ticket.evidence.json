@@ -1,0 +1,16 @@
+{
+  "confirmed": [
+    {
+      "symbol": "soc_valider",
+      "targeted_symbol": "soc_valider",
+      "file": "Achat-Vente/source/gtpmcde.dhsp",
+      "line": 1240,
+      "enclosing_block": "Fonction soc_valider",
+      "status": "CONFIRME"
+    }
+  ],
+  "new_findings": [],
+  "scope": {
+    "version_verifiee": "X.13"
+  }
+}

@@ -10,7 +10,8 @@ from datetime import date
 
 # -- Registre des domaines ----------------------------------------------------------------
 # Cle = nom canonique du domaine (tel qu'utilise dans les sources ERP)
-# Valeurs = prefixes derives selon CONVENTIONS.md et MODULES-ERP.md
+# Valeurs = prefixes derives ; table de reference :
+# naming-diva-entities/reference/domain-prefixes.md
 DOMAIN_REGISTRY = {
     "DAV": {
         "prefix_code": "GT_",
@@ -225,7 +226,7 @@ def compute_prefix_res(prefix_module):
     return (prefix_module + "B").upper()[:4]
 
 
-# -- Validation multi-table (G-021) -----------------------------------------------
+# -- Validation multi-table --------- -----------------------------------------------
 # Types de jointures supportes : implicite (FROM+WHERE, dominant X.13) et LEFT JOIN.
 # Les keywords Divalto Join/LeftJoin et INNER/RIGHT/CROSS sont hors scope.
 VALID_JOIN_TYPES = {"implicit", "left_join"}
@@ -288,18 +289,18 @@ def compute_names(domaine, entite, table_sql, champ_cle, description,
 
     champ_libelle : nom du champ libelle dans le RecordSQL/dictionnaire.
     Defaut : "Libelle". A preciser (ex: "Lib") si l'entite utilise un champ
-    global de nature differente (R-001).
+    global de nature differente.
 
-    joined_tables : liste de dicts decrivant les tables jointes (G-021).
+    joined_tables : liste de dicts decrivant les tables jointes.
     Format : [{"table_sql", "alias", "join_type" (implicit|left_join),
                "join_condition", "columns_selected": [list]}, ...].
     Absent ou [] -> mode mono-table (backcompat).
 
-    additional_cases : liste de dicts decrivant les Cases WHERE supplementaires (G-021).
+    additional_cases : liste de dicts decrivant les Cases WHERE supplementaires.
     Format : [{"name", "field", "type" (equal|like|between), "param" (char|int|date|num)}, ...].
     """
 
-    # Normalisation des parametres multi-table (G-021)
+    # Normalisation des parametres multi-table
     joined_tables = joined_tables or []
     additional_cases = additional_cases or []
 
@@ -450,7 +451,7 @@ def compute_names(domaine, entite, table_sql, champ_cle, description,
         "ChampLibelle": champ_libelle,
         "ChampLibelleMaj": champ_libelle.upper(),
 
-        # Multi-table (G-021) : jointures parametriques et Cases WHERE additionnels
+        # Multi-table : jointures parametriques et Cases WHERE additionnels
         "joined_tables": joined_tables,
         "additional_cases": additional_cases,
         "has_joins": len(joined_tables) > 0,

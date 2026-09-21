@@ -28,6 +28,7 @@ Exit codes: 0 = succes, 1 = erreur utilisateur, 2 = erreur interne
 import argparse
 import json
 import os
+import shutil
 import sys
 
 ENCODING = "iso-8859-1"
@@ -44,6 +45,13 @@ def build_constant_line(instance, num, comment):
 
 
 def main():
+    # Sortie en UTF-8 (stdout + stderr) : sinon print() encode avec la console (cp1252 sur
+    # Windows) et les caracteres non-ASCII cassent un json.loads(utf-8) cote appelant.
+    # Meme garde-fou que read_isam.py.
+    for _stream in (sys.stdout, sys.stderr):
+        if hasattr(_stream, "reconfigure") and (_stream.encoding or "").lower() != "utf-8":
+            _stream.reconfigure(encoding="utf-8")
+
     parser = argparse.ArgumentParser(
         description="Ajoute une constante de zoom dans a5tczoom.dhsp"
     )
@@ -81,6 +89,17 @@ def main():
     result["constant_line"] = constant_line
 
     if args.dry_run:
+        # Le dry-run doit VALIDER ce que l'ecriture reelle fera, sinon il donne une fausse
+        # confiance : un caractere hors Latin-1 dans --comment (apostrophe typographique,
+        # tiret cadratin...) passait le dry-run puis faisait echouer l'ecriture.
+        try:
+            constant_line.encode(ENCODING)
+        except UnicodeEncodeError as e:
+            result["error"] = (f"Caractere non encodable en {ENCODING} : {e}. "
+                               f"Corriger --comment (apostrophe typographique, tiret cadratin ?) "
+                               f"avant l'ecriture reelle.")
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+            sys.exit(1)
         result["success"] = True
         result["error"] = "dry-run: fichier non modifie"
         print(json.dumps(result, ensure_ascii=False, indent=2))
@@ -137,11 +156,42 @@ def main():
     lines.insert(insert_index, constant_line)
     result["line_number"] = insert_index + 1  # 1-indexed
 
-    # Reecrire le fichier en ISO-8859-1 + CRLF
+    # Reecrire le fichier en ISO-8859-1 + CRLF.
+    #
+    # ORDRE CRITIQUE : encoder AVANT d'ouvrir la cible. `open(..., "w")` TRONQUE le fichier
+    # a l'ouverture ; si l'encodage ISO-8859-1 echoue ensuite (un seul caractere hors Latin-1
+    # dans --comment suffit : apostrophe typographique, tiret cadratin, emoji), la cible reste
+    # a 0 octet et le travail est perdu. C'est la meme classe de data-loss que celle corrigee
+    # dans patch_file.py -- ce script y avait echappe.
+    output = LINE_END.join(lines)
+    if not output.endswith(LINE_END):
+        # CRLF final obligatoire : sans lui, la compilation echoue (Erreur 135). Le cas
+        # arrivait quand le marqueur d'insertion etait absent (insertion en fin de fichier).
+        output += LINE_END
     try:
-        output = LINE_END.join(lines)
-        with open(args.file, "w", encoding=ENCODING, newline="") as f:
-            f.write(output)
+        encoded = output.encode(ENCODING)
+    except UnicodeEncodeError as e:
+        result["error"] = (f"Caractere non encodable en {ENCODING} : {e}. "
+                           f"RIEN n'a ete ecrit, le fichier est intact. "
+                           f"Corriger --comment (apostrophe typographique, tiret cadratin ?).")
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        sys.exit(1)
+
+    # Backup avant ecriture (comme write_file/patch_file/convert_file) : ce script en etait
+    # le seul depourvu, donc le seul ou une ecriture ratee ne laissait rien a restaurer.
+    try:
+        backup = args.file + ".bak"
+        if os.path.exists(backup):
+            os.remove(backup)
+        shutil.copyfile(args.file, backup)
+        result["backup"] = os.path.abspath(backup)
+    except Exception as e:
+        print(f"Avertissement: backup non cree ({e})", file=sys.stderr)
+        result["backup"] = None
+
+    try:
+        with open(args.file, "wb") as f:
+            f.write(encoded)
     except Exception as e:
         result["error"] = f"Erreur ecriture: {e}"
         print(json.dumps(result, ensure_ascii=False, indent=2))

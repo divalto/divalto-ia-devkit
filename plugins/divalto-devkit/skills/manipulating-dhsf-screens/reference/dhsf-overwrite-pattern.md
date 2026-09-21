@@ -14,7 +14,7 @@
 - Fichier compagnon `_base.dhsf`
 - Sous-projet `.dhps` de surcharge
 - Workflow complet
-- Questions ouvertes a Stephane Castelain
+- Questions ouvertes -- a remonter a Divalto
 - Anti-patterns
 - Biais invalides (historique d'apprentissage)
 
@@ -26,7 +26,7 @@ Surcharger un masque permet d'**ajouter ou modifier des champs** (composants, ca
 
 Cas typiques :
 
-- Ajouter un champ custom (issu d'une surcharge dictionnaire R-015/SC-002) dans un zoom existant
+- Ajouter un champ custom (issu d'une surcharge dictionnaire) dans un zoom existant
 - Modifier le comportement d'un masque (validation supplementaire, callback specifique)
 - Ajouter une page custom dans un masque multi-pages
 
@@ -119,6 +119,30 @@ dictionnaire=gtfdd.dhsd
 
 ---
 
+
+### Allouer un id dans un masque de surcharge
+
+La plage est **declaree par le fichier lui-meme** : `surcharge_mask.py` positionne
+`dernier_id=1000000` (et `dernier_id_page=100000`) au moment de creer la surcharge. Tout
+element ajoute ensuite doit prendre son id **au-dessus de ce plancher**, pas au-dessus du plus
+grand id present -- lesquels restent ceux du masque standard.
+
+> **Ce defaut a ete vecu** : `add-column` sur un masque de surcharge a attribue un id
+> **standard** a une colonne ajoutee en surcharge, parce que l'allocation se basait sur le max
+> des id **presents** et ignorait `dernier_id`. Convention cassee, collision possible avec un id
+> du masque de base.
+
+`dhsf_modify.py` applique desormais un **plancher d'allocation** :
+
+```
+id_alloue = max( plus grand id present , dernier_id declare ) + 1
+```
+
+Ni detection de `surcharge=oui`, ni `1000000` code en dur : respecter `dernier_id` est correct
+dans **tous** les cas. Sur un masque standard bien tenu, les deux valeurs coincident -- mesure
+sur un masque du standard : `max_id_found=2623`, `dernier_id=2623`.
+
+
 ## Sections `[diva]` / `[diva_base]` -- asymetrie surcharge code vs composants
 
 Contrairement aux sections INI graphiques (copie complete editee en place), le code DIVA fonctionne par **vrai differentiel** :
@@ -129,6 +153,22 @@ Contrairement aux sections INI graphiques (copie complete editee en place), le c
 | `[diva]` | **Surcharge propre** : redeclarations en lowercase derivees de `[enregistrements]` (cf. ci-dessous) + procedures de surcharge a ajouter. Prime sur `[diva_base]` au runtime. |
 
 Le compilateur DIVA tolere `public procedure` dans `[diva_base]` (pas considere comme surcharge la-bas, donc pas d'erreur 210). Les vraies surcharges vont dans `[diva]`, ou les procedures doivent suivre les regles de [overwrite-pattern.md](../../coding-diva-advanced/reference/overwrite-pattern.md) (pas de modificateur de visibilite sur une procedure surchargee, pattern canonique `Standard.<proc>()` d'abord, etc.).
+
+> **Nuance importante pour un masque, ajoutee le 2026-08-28.** « Pas de modificateur de
+> visibilite » vaut pour une procedure qui **surcharge** une procedure du standard. Ce n'est
+> pas la regle pour une procedure **neuve**, absente du module de base : la documentation
+> Divalto demande alors `Private` -- *« dans les traitements de surcharge des masques, les
+> fonctions doivent etre declarees Private si elles n'existent pas dans le code de base »*.
+> C'est **l'inverse** d'une surcharge de dictionnaire, ou une fonction neuve doit etre
+> `Public`.
+>
+> La raison : dans un module de surcharge, **toute fonction declaree ni `Public` ni
+> `Private` est traitee comme une surcharge** -- donc une fonction neuve sans modificateur
+> ne surcharge rien et devient non conforme. Le compilateur ne le signale toutefois que si
+> l'option de profil « Verifier que les fonctions non private sont des surcharges » est
+> active, d'ou du code qui passe malgre tout. Detail et piege de montee de version :
+> [overwrite-pattern.md](../../coding-diva-advanced/reference/overwrite-pattern.md), section
+> « Declaration des procedures surchargees ».
 
 ### Pattern `[diva]` user -- derivation depuis `[enregistrements]`
 
@@ -160,7 +200,7 @@ Public RecordSql "gtrstab.dhoq" competence competence
 Public RecordSql "gtrstab.dhoq" competence competence_sel
 
 ; <-- Apres les redeclarations, les procedures de surcharge propres
-; (sans modificateur de visibilite, cf. overwrite-pattern.md)
+; (sans modificateur de visibilite -- cf. skill coding-diva-advanced)
 
 [/diva]
 [diva_base]
@@ -183,17 +223,17 @@ EndP
 
 ### Application automatique par `surcharge_mask.py`
 
-Depuis la prise en compte du RETEX R-002, le script `scripts/surcharge_mask.py` applique automatiquement la migration `[diva]` -> `[diva_base]` + la derivation `[diva]` user depuis `[enregistrements]` (extensions `.dhsd` -> `Public Record`, `.dhoq`/`.dhsq` -> `Public RecordSql`, lowercase). Le JSON de sortie inclut un objet `diva_migration` avec `migrated`, `derived_records_count`, `derived_records`, et le tableau `rappels` documente l'etat de la migration ou alerte si elle n'a pas pu etre faite. Verifier ce JSON apres invocation du script avant de compiler -- une migration absente est detectable a ce stade sans recompilation echouee.
+Depuis la prise en compte du RETEX, le script `scripts/surcharge_mask.py` applique automatiquement la migration `[diva]` -> `[diva_base]` + la derivation `[diva]` user depuis `[enregistrements]` (extensions `.dhsd` -> `Public Record`, `.dhoq`/`.dhsq` -> `Public RecordSql`, lowercase). Le JSON de sortie inclut un objet `diva_migration` avec `migrated`, `derived_records_count`, `derived_records`, et le tableau `rappels` documente l'etat de la migration ou alerte si elle n'a pas pu etre faite. Verifier ce JSON apres invocation du script avant de compiler -- une migration absente est detectable a ce stade sans recompilation echouee.
 
-> **Doublon `[diva_base]` -- corrige par l'outil (R-009)** : le `.dhsf` standard contient deja un bloc `[diva_base]` **vide** (placeholder `[diva_base]` suivi immediatement de `[/diva]`). Cette forme est **universelle** dans le standard livre. Lors de la migration `[diva]` -> `[diva_base]`, recopier le code sans retirer ce placeholder produirait **deux** `[diva_base]` -> erreur de link "Procedure non definie". `surcharge_mask.py` supprime donc d'abord le `[diva_base]` vide pre-existant (cle `removed_empty_diva_base` du JSON). Si tu construis une surcharge **a la main**, applique la meme regle : un seul `[diva_base]`, qui contient la copie exacte du code standard.
+> **Doublon `[diva_base]` -- corrige par l'outil** : le `.dhsf` standard contient deja un bloc `[diva_base]` **vide** (placeholder `[diva_base]` suivi immediatement de `[/diva]`). Cette forme est **universelle** dans le standard livre. Lors de la migration `[diva]` -> `[diva_base]`, recopier le code sans retirer ce placeholder produirait **deux** `[diva_base]` -> erreur de link "Procedure non definie". `surcharge_mask.py` supprime donc d'abord le `[diva_base]` vide pre-existant (cle `removed_empty_diva_base` du JSON). Si tu construis une surcharge **a la main**, applique la meme regle : un seul `[diva_base]`, qui contient la copie exacte du code standard.
 
 ---
 
 ## Regles de compilation `[diva]` / `[diva_base]` -- pieges terrain
 
-Ces regles consolident plusieurs RETEX partenaires (R-009, R-012, R-013, R-014, R-015). Elles concernent la phase de **compilation/link** d'une surcharge `_sqlu.dhsf`, distincte des regles de placement graphique.
+Ces regles consolident plusieurs RETEX partenaires. Elles concernent la phase de **compilation/link** d'une surcharge `_sqlu.dhsf`, distincte des regles de placement graphique.
 
-### Toujours ecrire dans `[diva]`, jamais dans `[diva_base]` (R-009)
+### Toujours ecrire dans `[diva]`, jamais dans `[diva_base]`
 
 Dans un fichier de surcharge `*u.dhsf` :
 
@@ -202,7 +242,7 @@ Dans un fichier de surcharge `*u.dhsf` :
 
 Erreur classique : chercher la section `[diva_base]` (souvent plus volumineuse, donc trouvee en premier par un grep naif) et y ajouter la procedure / le `Public Record`. La procedure compile mais n'est pas prise comme surcharge -> comportement standard inchange au runtime. **Inserer toujours dans `[diva]`, avant `[diva_base]`.**
 
-### `[enregistrements]` obligatoire pour tout `Public Record` (R-015)
+### `[enregistrements]` obligatoire pour tout `Public Record`
 
 Pour qu'un `Public Record "<dico>.dhsd" <rec> <alias>` soit reconnu dans un `.dhsf`, le dictionnaire doit etre declare dans la section **`[enregistrements]`** du masque. Les communs du `.dhpt` **ne suffisent pas**.
 
@@ -213,7 +253,7 @@ Pour qu'un `Public Record "<dico>.dhsd" <rec> <alias>` soit reconnu dans un `.dh
 
 Cas typique : piloter un zoom via un champ de jointure suppose ce `Public Record`, donc cette declaration. C'est coherent avec la derivation `[enregistrements]` -> `[diva]` user documentee plus haut : si le record n'est pas dans `[enregistrements]`, il ne sera pas derive et le code le referencant ne linkera pas.
 
-### Includes et appels disponibles par section (R-013)
+### Includes et appels disponibles par section
 
 L'asymetrie `[diva]` (compile independamment) / `[diva_base]` (code standard copie) a deux corollaires sur les dependances de code :
 
@@ -221,13 +261,13 @@ L'asymetrie `[diva]` (compile independamment) / `[diva_base]` (code standard cop
 2. **Procedures d'un module overwrite `.dhop`** : elles ne sont **pas** appelables par nom depuis `[diva]`. Il faut **redefinir la procedure localement** dans `[diva]`.
 3. **`RecordSql` direct** : un `RecordSql` peut etre declare directement dans `[diva]` (en recuperant le nom de type, ex. via grep) plutot que d'inclure un gros `.dhsp` standard.
 
-### `diva_apres` / `diva_avant` exige `id_traitements` (R-014)
+### `diva_apres` / `diva_avant` exige `id_traitements`
 
 Ajouter un `diva_apres` / `diva_avant` (section `[traitements]`) dans un `.dhsf` **sans `id_traitements` dans `[masque]`** compile mais echoue au link : *"Erreur 45 : Procedure non definie dans le source des traitements"*. L'`id_traitements` est assigne par **xwin4obj** lors de la liaison ecran/programme (operation editeur).
 
 > **Sans editeur graphique** : privilegier la validation **cote `.dhsp`** (ex. `defProcSaisie`, `case K_RETURN`) plutot que `diva_apres`/`diva_avant` cote masque. On evite ainsi la dependance a l'`id_traitements`.
 
-### Structure d'une surcharge SQL `_sqlu.dhsf` -- pieges de compilation (R-011, R-012)
+### Structure d'une surcharge SQL `_sqlu.dhsf` -- pieges de compilation
 
 Une surcharge `_sqlu.dhsf` correcte contient le **contenu COMPLET** du formulaire standard (tous les objets + les additions custom), **pas** seulement les ajouts. Pieges recurrents observes a la compilation :
 
@@ -236,7 +276,7 @@ Une surcharge `_sqlu.dhsf` correcte contient le **contenu COMPLET** du formulair
 - **`[/diva]` en double** : un seul `[/diva]` de cloture par bloc (`[diva]` et `[diva_base]`). Un `[/diva]` surnumeraire casse la compilation.
 - **`[boutons]` "zoom" parasites** : ne pas inclure de `[boutons]` "zoom" si le formulaire SQL de base n'en definit pas -> genere un Warning 3 inoffensif mais du bruit inutile.
 
-> **Baseline avant modification (R-008)** : lancer `dhsf_modify.py --action validate` **avant** toute modification pour etablir la liste des violations pre-existantes (souvent des faux positifs sur les tableaux/groupbox du standard, cf. R4/R5). On evite ainsi de confondre une violation pre-existante avec une regression introduite par la modification.
+> **Baseline avant modification** : lancer `dhsf_modify.py --action validate` **avant** toute modification pour etablir la liste des violations pre-existantes (souvent des faux positifs sur les tableaux/groupbox du standard, cf. DHSF04/DHSF05). On evite ainsi de confondre une violation pre-existante avec une regression introduite par la modification.
 
 ---
 
@@ -306,7 +346,7 @@ Comportement reproduit par le script `scripts/surcharge_mask.py` (fonction `deri
 
 **Convention :** ne JAMAIS editer manuellement le `<basename_complet>_base.dhsf` -- il est gere par l'outil (editeur graphique ou script `surcharge_mask.py`).
 
-> **Question ouverte (a Stephane Castelain)** : le compagnon `_base.dhsf` est-il REQUIS par xwin7 ou seulement utile a l'outillage ? Comportement xwin7 si absent ?
+> **Question ouverte (a remonter a Divalto)** : le compagnon `_base.dhsf` est-il REQUIS par xwin7 ou seulement utile a l'outillage ? Comportement xwin7 si absent ?
 
 ---
 
@@ -315,7 +355,7 @@ Comportement reproduit par le script `scripts/surcharge_mask.py` (fonction `deri
 Le masque de surcharge doit etre reference depuis un `.dhps` de surcharge (cf. skill `managing-diva-projects`). Structure type :
 
 ```ini
-xwin-s-sprojet     2.0                   ; en-tete surcharge (cf. SC-003 / R-006)
+xwin-s-sprojet     2.0                   ; en-tete surcharge
 [general]
 date="<timestamp>"
 util="<USER>"
@@ -331,9 +371,9 @@ Conventions cles (cf. skill `managing-diva-projects/reference/dhps-structure.md`
 
 - En-tete `xwin-s-sprojet 2.0` (variante surcharge, **PAS** `xwin-sprojet`)
 - Suffixe `u` final dans le nom du `.dhps` (ex: `gt_table code postal t057u.dhps`)
-- **NE PAS** ajouter ce `.dhps` dans `[sousprojets]` du `.dhpt` parent -- xwin7 fait l'auto-detection via `cheminbases` (anti-pattern P17 du skill `managing-diva-projects`)
+- **NE PAS** ajouter ce `.dhps` dans `[sousprojets]` du `.dhpt` parent -- xwin7 fait l'auto-detection via `cheminbases` (anti-pattern PROJ17 du skill `managing-diva-projects`)
 
-> Voir [managing-diva-projects/reference/dhps-structure.md](../../managing-diva-projects/reference/dhps-structure.md) section "En-tete -- variantes standard vs surcharge" et anti-pattern P17.
+> Voir [managing-diva-projects/reference/dhps-structure.md](../../managing-diva-projects/reference/dhps-structure.md) section "En-tete -- variantes standard vs surcharge" et anti-pattern PROJ17.
 
 ---
 
@@ -358,11 +398,11 @@ Apres `buildall`, le rapport mentionne le nombre de masques compiles (`Masques=N
 
 ---
 
-## Questions ouvertes a Stephane Castelain
+## Questions ouvertes -- a remonter a Divalto
 
 Plusieurs points de comportement restent a confirmer cote auteur du framework :
 
-- **Origine de la convention `<base>_sqlu.dhsf`** vs `gtuz<X>_sql.dhsp` -- pourquoi suffixe final pour les masques mais infixe pour les sources ? Lien avec la regle "e en pos 3 invariant" (R-024) ?
+- **Origine de la convention `<base>_sqlu.dhsf`** vs `gtuz<X>_sql.dhsp` -- pourquoi suffixe final pour les masques mais infixe pour les sources ? Lien avec la regle "e en pos 3 invariant" ?
 - **Comportement `niveau_surcharge=2`** -- multi-niveaux fonctionne-t-il comme le `OverWrite uu` des `.dhsp` ? Cas terrain de multi-niveaux observes ?
 - **Compagnon `_base.dhsf` REQUIS ou optionnel** -- comportement xwin7 si absent ? L'outillage le cree-t-il systematiquement ?
 - **Mecanisme de detection de derive `date_modif_base`** -- xwin7 ou un outil dedie compare-t-il ce timestamp au standard actuel ? Action prevue en cas de divergence ?
@@ -379,15 +419,15 @@ Toute reponse sur ces points peut etre integree dans cette doc via RETEX SUGGEST
 3. **`date_modif_base` invente** -- timestamp arbitraire au lieu de recopier l'en-tete du standard. Casse le mecanisme de detection de derive.
 4. **`dernier_id` < 1000000** dans la surcharge -- collision potentielle avec un ID du standard si le standard evolue (nouveau widget avec un ID que la surcharge utilisait deja).
 5. **Editer manuellement le compagnon `_base.dhsf`** -- gere par l'outillage, modifier manuellement casse le mecanisme de detection de derive.
-6. **Lister le masque de surcharge dans `[sousprojets]` du `.dhpt`** -- doit etre en `[fichiers]` du `.dhps` de surcharge, jamais en `[sousprojets]` (cf. P17 de `managing-diva-projects`).
+6. **Lister le masque de surcharge dans `[sousprojets]` du `.dhpt`** -- doit etre en `[fichiers]` du `.dhps` de surcharge, jamais en `[sousprojets]` (cf. PROJ17 de `managing-diva-projects`).
 7. **Ajouter un nouveau bloc avec `id >= 1000001` pour "remplacer" un composant standard** -- cree un doublon visuel. Pour modifier un composant standard, editer en place le bloc existant (id < 1000001 preserve).
 8. **Mettre les procedures de surcharge dans `[diva_base]`** au lieu de `[diva]` -- `[diva_base]` doit rester la copie EXACTE du standard. Les surcharges propres vont dans `[diva]`.
 9. **Recopier `[diva]` standard dans `[diva]` user** -- l'AGL derive `[diva]` user de `[enregistrements]` (records lowercase), pas de `[diva]` standard.
 10. **Transformer `public procedure` en `private procedure` dans `[diva_base]`** -- contournement historique invalide. `[diva_base]` doit conserver les declarations originales du standard sans modification (cf. section "Biais invalides" ci-dessous).
-11. **`Public Record` utilise sans declaration `[enregistrements]`** -- les communs du `.dhpt` ne suffisent pas ; declarer le dico dans `[enregistrements]` du masque (R-015).
-12. **`diva_apres` / `diva_avant` sans `id_traitements` dans `[masque]`** -- compile mais echoue au link ("Erreur 45"). Sans editeur, valider cote `.dhsp` (R-014).
-13. **Appeler par nom une procedure d'un `.dhop` overwrite depuis `[diva]`** -- non resolu ; redefinir la procedure localement dans `[diva]` (R-013).
-14. **`[onglet]` absent (base a onglets) ou `[/diva]` en double** -- erreurs de compilation classiques d'une surcharge `_sqlu.dhsf` : `[onglet]` entre `[enregistrements]` et `[page]`, un seul `[/diva]` par bloc (R-011, R-012).
+11. **`Public Record` utilise sans declaration `[enregistrements]`** -- les communs du `.dhpt` ne suffisent pas ; declarer le dico dans `[enregistrements]` du masque.
+12. **`diva_apres` / `diva_avant` sans `id_traitements` dans `[masque]`** -- compile mais echoue au link ("Erreur 45"). Sans editeur, valider cote `.dhsp`.
+13. **Appeler par nom une procedure d'un `.dhop` overwrite depuis `[diva]`** -- non resolu ; redefinir la procedure localement dans `[diva]`.
+14. **`[onglet]` absent (base a onglets) ou `[/diva]` en double** -- erreurs de compilation classiques d'une surcharge `_sqlu.dhsf` : `[onglet]` entre `[enregistrements]` et `[page]`, un seul `[/diva]` par bloc.
 
 ---
 
@@ -395,13 +435,13 @@ Toute reponse sur ces points peut etre integree dans cette doc via RETEX SUGGEST
 
 Pour traces historiques uniquement -- ces deux hypotheses initiales sont **invalidees** par la mecanique reelle documentee plus haut :
 
-### Biais 1 -- "Transformer `Public Procedure` en `Private Procedure` dans `[diva]`" (R-031 invalidee par R-033)
+### Biais 1 -- "Transformer `Public Procedure` en `Private Procedure` dans `[diva]`" (invalidee par un constat ulterieur)
 
 **Hypothese erronee** : si la section `[diva]` du masque de surcharge contient des `Public Procedure` du standard, le compilateur leve une erreur 210 ("Elle ne peut etre PUBLIC") car la surcharge est detectee par `surcharge=oui`. Solution proposee : transformer toutes les `Public Procedure` en `Private Procedure`.
 
-**Pourquoi c'est faux** : c'etait un contournement accidentel. La place canonique du DIVA original du standard est `[diva_base]`, **pas `[diva]`**. Dans `[diva_base]`, les `public procedure` ne sont **pas** considerees comme surcharges (donc pas d'erreur 210, sans aucune transformation). La regle correcte : `[diva_base]` = standard inchange / `[diva]` = surcharge propre (cf. R-033/R-034).
+**Pourquoi c'est faux** : c'etait un contournement accidentel. La place canonique du DIVA original du standard est `[diva_base]`, **pas `[diva]`**. Dans `[diva_base]`, les `public procedure` ne sont **pas** considerees comme surcharges (donc pas d'erreur 210, sans aucune transformation). La regle correcte : `[diva_base]` = standard inchange / `[diva]` = surcharge propre.
 
-### Biais 2 -- "Pas de vrai remplacement possible pour un composant graphique" (R-038 invalidee par R-039)
+### Biais 2 -- "Pas de vrai remplacement possible pour un composant graphique" (invalidee par un constat ulterieur)
 
 **Hypothese erronee** : les composants graphiques standards d'un masque (`obj_texte`, `champ`, `groupbox`, ...) ne peuvent pas etre vraiment surcharges. Solution proposee : ajouter des composants `id >= 1000001` en complement (mais le composant standard reste visible -> doublons).
 

@@ -20,7 +20,7 @@ DIVA est resolu a la compilation, pas dynamiquement. L'analyse statique textuell
 - Les tunnels Harmony inter-modules (`Ping`/`Pong`)
 - Les hooks resolus par nom par le framework
 
-Pour le MVP, on se contente des patterns textuels. Les cas avances sont inscrits au BACKLOG.
+Pour le MVP, on se contente des patterns textuels. Les cas avances sont inscrits.
 
 ## Patterns d'appel
 
@@ -105,7 +105,7 @@ Exemple : `OverWrittenBy 'RTUZFAMRGLT_SQL.dhop'`. Indique que ce fichier peut et
 
 ## Ordre de priorite dans le rapport
 
-Pour la section 4 "Etude d'impact" de le gabarit d'analyse pré-action (interne) :
+Pour la section « Etude d'impact » du rapport pre-action :
 
 1. **Appelants directs** (`Call`, `Execute`) -- cascade probable
 2. **Dependances structurelles** (`Module`, `HFileVersion`) -- cascade certaine en cas de modification d'interface

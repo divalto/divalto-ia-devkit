@@ -52,6 +52,18 @@ tracking. Sortie JSON sur stdout : `{"pushed": [...], "skipped": [...], "errors"
 > **Toujours passer `--retex-file` explicitement** vers le RETEX du workspace courant. Sur
 > un poste multi-projets, un glob large risque de selectionner le mauvais `RETEX-skills.md`.
 
+### Pousser seulement certaines entrees (`--ids`)
+
+```powershell
+py plugin/skills/pushing-retex-to-github/scripts/push_new_entries.py `
+    --retex-file "retex/RETEX-skills.md" --ids "R-021,R-022"
+```
+
+Restreint le push aux seuls IDs listes. Utile quand le collaborateur demande « pousse R-021 »
+alors que d'autres entrees non trackees existent : **sans** filtre, elles partiraient toutes.
+Les entrees hors filtre apparaissent en `skipped` (reason `hors-filtre-ids`) et restent **non
+trackees** -- elles partiront a un prochain appel sans `--ids`. (Accepte `R-021,R-022`, `21 22`, etc.)
+
 ### Backfill (pousser TOUTES les entrees existantes)
 
 ```powershell
@@ -78,7 +90,8 @@ py plugin/skills/pushing-retex-to-github/scripts/push_new_entries.py `
 |---------|------|-------------|
 | `retex/.retex-github.json` | Repo cible, options de labels | NON (gitignore) |
 | `retex/.retex-pushed.json` | Tracking des R-NNN deja pousses (R-NNN -> issue#, hash contenu) | NON (gitignore) |
-| `retex/.retex-push.log` | Log d'execution (succes / erreurs) | NON (gitignore) |
+| `retex/.retex-push.log` | Log d'execution (succes / erreurs / renumerotations) | NON (gitignore) |
+| `retex/.retex-push.lock` | Verrou : un seul push a la fois. Cree et supprime par le push ; repris automatiquement au-dela de 5 min (process tue) | NON (gitignore) |
 
 > **Resolution en cascade** (push) : `--config` explicite -> `.retex-github.json` **local**
 > (a cote du RETEX) -> `~/.claude/.retex-github.json` **global** (partage entre workspaces,
@@ -159,6 +172,58 @@ Sur un nouveau push :
 - R-NNN present + hash inchange -> skip
 - R-NNN present + hash modifie -> `gh issue comment` sur l'issue existante avec la nouvelle version
 
+Le hash ne porte que les **8 champs** de l'entree (`Skill(s)`, `Categorie`, `Severite`,
+`Resultat`, `Description`, `Reproduction`, `Contournement`, `Suggestion`). L'**ID, la date
+et le titre en sont exclus** : on peut donc corriger un titre ou une date sans declencher
+un faux commentaire sur l'issue.
+
+### Un seul push a la fois
+
+Le hook lance un push **detache** a chaque ecriture du `RETEX-skills.md`. Ecrire une entree
+en deux editions successives lancait donc deux pushes simultanes, qui lisaient le meme
+tracking vide et creaient **chacun leur issue**.
+
+Le push prend desormais un verrou (`.retex-push.lock`) avant de lire le tracking. Un second
+push concurrent abandonne sans rien faire -- ses entrees partent avec le premier, ou au
+prochain appel. Un verrou plus vieux que 5 minutes est considere abandonne et repris, pour
+qu'un process tue ne bloque pas tous les pushes suivants.
+
+### Unicite des R-NNN, garantie avant l'envoi
+
+La regle « chaque entree porte un identifiant unique » est enoncee dans le `RETEX-skills.md`
+livre, mais rien ne la faisait respecter. Or deux entrees sous un meme numero se partagent
+**une seule case de tracking** : chacune y trouve le hash de l'autre, conclut « modifiee »
+et commente l'issue de l'autre -- a chaque passage, sans jamais converger.
+
+Le push detecte donc les numeros en double **avant tout appel GitHub** et donne un numero
+libre aux entrees en trop, en reecrivant le `RETEX-skills.md` (ecriture atomique, jamais en
+`--dry-run`). Ce qui part vers GitHub a donc toujours un numero unique.
+
+**Ce que la reecriture ne touche pas.** Le fichier est le journal du collaborateur :
+la seule chose qui change est l'identifiant de l'en-tete. L'encodage, les fins de
+ligne et jusqu'a la derniere ligne vide sont rendus a l'identique -- verifie au
+niveau octet par `tests/test_unicite_et_parsing.py`, qui compare le fichier avant et
+apres et n'accepte qu'une seule difference.
+
+**Qui garde le numero**, du plus sur au plus degrade :
+
+1. une entree est deja suivie avec un numero d'issue -> on lit sur GitHub **tous les hash
+   que l'issue connait** : celui de son corps d'abord, puis ceux de ses commentaires de
+   mise a jour, du plus recent au plus ancien. La premiere correspondance garde le numero ;
+2. lecture impossible, ou aucun hash connu ne correspond -> l'entree dont le hash est celui
+   du tracking ;
+3. aucune n'est poussee -> la premiere du fichier ; le choix est alors sans consequence.
+
+> **Pourquoi les commentaires comptent.** Le corps d'une issue est un instantane fige a sa
+> creation : une mise a jour n'ajoute qu'un commentaire, le corps ne bouge jamais. Ne lire
+> que le corps faisait donc echouer l'arbitrage des qu'une entree avait ete modifiee une
+> fois -- il se repliait alors **en silence** sur le tracking, c'est-a-dire sur la seule
+> source que le ping-pong corrompt. Le corps garde la priorite : sur une issue abimee, ses
+> commentaires portent les deux contenus, et c'est le corps qui dit ce que l'issue EST.
+
+Les renumerotations apparaissent dans la sortie JSON (`renumerotations`) **et** dans le log :
+le collaborateur a pu citer l'ancien numero ailleurs.
+
 ---
 
 ## Scripts disponibles
@@ -218,11 +283,13 @@ Le push tourne en arriere-plan via le hook : s'il echoue, **rien ne le signale a
 
 | Symptome | Verifier | Cause / action |
 |----------|----------|----------------|
-| Aucune issue, aucune erreur visible | `.retex-github.json` existe-t-il (local ou `~/.claude/`) ? | **Push non configure** -> lancer `init_config.py`. Les RETEX ne sont **pas perdus** (ils restent dans `RETEX-skills.md`). |
+| RETEX ecrit mais rien sur GitHub | Le hook a-t-il affiche "push non configure" ? Sinon, `.retex-github.json` existe-t-il (local ou `~/.claude/`) ? | Si config absente, le hook **previent desormais** (message non bloquant, pre-check synchrone) -> lancer `init_config.py`. Les RETEX ne sont **pas perdus** (ils restent dans `RETEX-skills.md`). |
 | Configure mais d'anciennes entrees ne partent pas | `.retex-pushed.json` les marque-t-il deja ? | `init_config.py` marque l'existant comme "deja pousse" -> pour les entrees ecrites **avant** la config : `--backfill --yes-i-want-to-push-everything`. |
 | Echec silencieux du hook | `retex/.retex-push.log` | Le log enregistre chaque tentative (succes / abort / erreur gh / `WARN parsing`). Source de verite du hook. |
 | `gh` "label not found" | La note `(...)` de Categorie contenait-elle une virgule ? | Corrige (la note est retiree avant de deriver les labels). Sinon : `gh label create <nom>`. |
 | En-tete `### R-NNN` ignore | `.retex-push.log` ligne `WARN parsing` | Un en-tete sans date `-- AAAA-MM-JJ --` est signale et **non** pousse -> corriger le format. |
+| Entree `Categorie=OK` jamais poussee | La categorie de l'entree est-elle `OK` ? | **Normal, pas une erreur** : une entree `OK` n'est pas poussee (skip `categorie-ok-non-poussable`) -- elle ne doit pas devenir une issue. |
+| Issue creee mais **sans aucun label** | Le compte a-t-il le droit `triage`/`push` sur le repo ? | Un compte en lecture seule voit ses labels **ignores silencieusement** par GitHub. `push_entry.py` le signale (`warning` + champ `labels` reel). Categorie/severite restent lisibles dans le corps de l'issue. |
 
 > Lancer le script **a la main** (`push_new_entries.py --retex-file …`) affiche le diagnostic
 > directement ; le hook, lui, reste silencieux (par conception).

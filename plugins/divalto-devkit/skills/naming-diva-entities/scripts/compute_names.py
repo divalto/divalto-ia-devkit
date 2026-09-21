@@ -10,7 +10,8 @@ Parametres:
     --entite    : nom de l'entite = nom de la table dictionnaire = nom de la table SQL
     --nomrecordsql : nom du RecordSQL (ex: LivreRS, Article, RtlFamRglt)
 
-Sortie JSON: tous les tokens de SQUELETTES.md
+Sortie JSON: les tokens de nommage ; les formules qui les derivent sont dans
+reference/naming-formulas.md (la sortie contient quelques cles de plus)
 Exit codes: 0 = succes, 1 = erreur utilisateur, 2 = erreur interne
 """
 

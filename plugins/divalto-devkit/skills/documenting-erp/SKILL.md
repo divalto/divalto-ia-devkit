@@ -298,7 +298,7 @@ Boucler sur `technical.ce_analysis.fields[]` et, pour chaque CE :
    `description_metier = "Reserve pour extension future..."`).
 2. **Si `status == "actif"` et `description_metier` existe deja et
    `description_metier_signature` est inchange** : conserver tel quel
-   (idempotence CA13).
+   (idempotence).
 3. **Si `status == "actif"` et besoin de rediger** :
    - Lire les signaux disponibles pour le CE :
      - `dhsd_comment` + `dhsd_source` : commentaire du champ Ce<n> dans le .dhsd
@@ -318,7 +318,7 @@ Boucler sur `technical.ce_analysis.fields[]` et, pour chaque CE :
      `description_metier: null` et ajouter un item dans `meta.a_verifier`
      du type `"CE actif <ENT>.Ce<n> : role metier non sourcable depuis X.13"`.
 
-**Regle de citation stricte (CA4)** : toute `description_metier` non vide DOIT
+**Regle de citation stricte** : toute `description_metier` non vide DOIT
 contenir une reference `fichier:ligne` dans `description_metier_source`. Pas
 d'invention. Pas de formulation "probablement/semble/possiblement" sans
 `[A VERIFIER]` explicite. Le script `validate_model.py` (etape 4 ter) refuse

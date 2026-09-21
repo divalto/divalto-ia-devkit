@@ -295,7 +295,7 @@ class Resolver:
 
     def resolve(self, ent: str, kind: str):
         """kind = 'give' ou 'find'. Retourne (nom_fonction_reel, instance, stem_om, nb_champs_cle, nb_params) ou None.
-        nb_params = nombre total de parametres de la signature cible (sert a trim_args, SC-001)."""
+        nb_params = nombre total de parametres de la signature cible (sert a trim_args)."""
         key = (ent.lower(), kind)
         if key in self.cache:
             return self.cache[key]
@@ -363,7 +363,7 @@ def split_top_level_commas(expr: str):
 
 
 def trim_args(rendered: str, max_args):
-    """Tronque une liste d'args rendue a `max_args` args de 1er niveau (SC-001 / R-001).
+    """Tronque une liste d'args rendue a `max_args` args de 1er niveau.
 
     Les Lectab/Seek recopiaient des flags legacy (n d'erreur deja extrait, '0' de non-affichage,
     options) que Give_/Find_ n'acceptent pas -> trop d'arguments -> erreur de compilation. On ne
@@ -380,7 +380,7 @@ def trim_args(rendered: str, max_args):
 
 
 def build_seek_index(objets_root: Path):
-    """Index des symboles seek_* presents (EN CLAIR) dans l'arbre des objets compiles .dhop (SC-004 / R-004).
+    """Index des symboles seek_* presents (EN CLAIR) dans l'arbre des objets compiles .dhop.
 
     Permet de decider, pour un seek_<ent> vif : wrapper SURVIT dans la cible (present -> garder)
     ou a disparu (absent -> convertir vers Give_<ent>). Retourne un set de noms minuscules, ou
@@ -443,7 +443,7 @@ def build_replacement(name: str, inner: str, resolver: Resolver, skip_names=None
     # seek_soc -> Load_gtfdos (exception directe, pas de verif objet metier, pas de module a ajouter)
     if lname == "seek_soc":
         newargs = transform_segment(inner, resolver, skip_names=skip_names, consumed=consumed, seek_index=seek_index).strip()
-        newargs, dropped = trim_args(newargs, 1)  # Load_gtfdos prend 1 argument (SC-001 / R-001)
+        newargs, dropped = trim_args(newargs, 1)  # Load_gtfdos prend 1 argument
         return f"Load_gtfdos({newargs})", ("applied", "Seek_Soc() -> Load_gtfdos()", LOAD_GTFDOS_OM, None, None, dropped)
 
     # seek_<ent> generiques
@@ -452,13 +452,13 @@ def build_replacement(name: str, inner: str, resolver: Resolver, skip_names=None
         if lname in resolver.pack_funcs:
             return None, ("modern", name)
         ent = name[5:]
-        # SC-004 / R-004 : decision 3-voies quand l'index des .dhop (--objets) est disponible.
+        # decision 3-voies quand l'index des .dhop (--objets) est disponible.
         # (1) GARDER intact si le wrapper seek_<ent> survit dans la cible (present dans l'index).
         #     La reference garde 79 entites (seek_art, seek_c3, seek_sart...). Sans index : on
         #     conserve le comportement historique (tout convertir).
         if seek_index is not None and lname in seek_index:
             return None, ("kept", name)
-        # Resoudre Give_<ent> ; SC-002 / R-002 : recuperer le suffixe de variante _Key.
+        # Resoudre Give_<ent> ; recuperer le suffixe de variante _Key.
         res = resolver.resolve(ent, "give")
         if res is None and ent.lower().endswith("_key"):
             # Seek_<ent>_Key : variante d'acces par cle ; l'objet metier reel est <ent>.
@@ -474,7 +474,7 @@ def build_replacement(name: str, inner: str, resolver: Resolver, skip_names=None
         # (2) wrapper disparu (ou index absent) mais Give_<ent> existe dans le pack -> CONVERTIR.
         fn, inst, om, kc, npar = res
         key_str, warn, splitn = render_key(inner, kc)
-        key_str, dropped = trim_args(key_str, npar - 1)  # arite reelle = params apres l'instance (SC-001)
+        key_str, dropped = trim_args(key_str, npar - 1)  # arite reelle = params apres l'instance
         # En X.13, Seek_<ent> survit comme wrapper framework (gtpmfic.dhsp) et declenche les hooks
         # <Ent>_Seek_Av/_Ap. Give_<ent> ne les appelle pas -> on convertit (modernisation) MAIS on
         # signale la perte potentielle des hooks via un ;TODO (event "seekhook").
@@ -512,7 +512,7 @@ def build_replacement(name: str, inner: str, resolver: Resolver, skip_names=None
             inst_name = "T0" + nn  # nom conventionnel de l'instance/enregistrement de la table
             key, warn, splitn = render_key(rest, kc)
             # Find_T0nn ne prend que les champs de cle (l'instance n'est PAS passee) : tronquer
-            # les flags legacy surnumeraires a l'arite de la cle (SC-001 / R-001).
+            # les flags legacy surnumeraires a l'arite de la cle.
             key, dropped = (trim_args(key, kc) if kc else (key, False))
             if inst_name.lower() in consumed:
                 # l'enregistrement T0nn est lu en aval -> charger toutes les colonnes ;
@@ -528,7 +528,7 @@ def build_replacement(name: str, inner: str, resolver: Resolver, skip_names=None
             return None, ("unresolved", ent, f"Give_T0{nn}")
         fn, inst, om, kc, npar = res
         key, warn, splitn = render_key(rest, kc)
-        key, dropped = trim_args(key, npar - 1)  # arite reelle = params apres l'instance (SC-001 / R-001)
+        key, dropped = trim_args(key, npar - 1)  # arite reelle = params apres l'instance
         return f"{fn}({inst}, {key})", ("applied", f"Lectab({nn}, ...) -> {fn}(...)", om, warn, splitn, dropped)
 
     return (None, None)
@@ -541,7 +541,7 @@ def transform_segment(body: str, resolver: Resolver, events=None, unresolved=Non
     events / unresolved sont alimentes si fournis (sinon ignores pour les sous-segments).
     skip_names : noms (minuscules) a laisser intacts (fonctions locales du fichier).
     consumed : instances T0nn (minuscules) dont un champ est lu dans le fichier.
-    seek_index : index des seek_* presents dans l'arbre Objets .dhop (--objets), ou None (SC-004).
+    seek_index : index des seek_* presents dans l'arbre Objets .dhop (--objets), ou None.
     """
     if events is None:
         events = []
@@ -594,7 +594,7 @@ def process_file(path: Path, resolver: Resolver, global_skip=None, diva_filter=T
 
     struct : None pour un fichier non filtre ; sinon le resultat de diva_block_range
     (('ok',start,end) | ('none',..) | ('skip',reason,..)) pour un masque .dhsf/.dhsi filtre.
-    kept : seek_<ent> gardes intacts car le wrapper survit dans l'index .dhop (--objets, SC-004).
+    kept : seek_<ent> gardes intacts car le wrapper survit dans l'index .dhop (--objets).
     seek_index : index des seek_* presents dans l'arbre Objets .dhop, ou None.
     """
     with open(path, "r", encoding=ENCODING, newline="") as fh:
@@ -624,7 +624,7 @@ def process_file(path: Path, resolver: Resolver, global_skip=None, diva_filter=T
     events_count = {}        # titre -> nb
     unresolved_count = {}    # (fonction, ent) -> nb
     modern_count = {}        # nom -> nb (deja API objet metier)
-    kept_count = {}          # seek_<ent> garde intact (wrapper survit dans l'index .dhop, SC-004)
+    kept_count = {}          # seek_<ent> garde intact (wrapper survit dans l'index .dhop)
     modules_used = set()     # stems d'objets metier referencés par les conversions
     keysplit_lines = []      # (lineno, nb_champs, ligne_convertie) : cles multi-champs eclatees
     for lineno, line in enumerate(lines, 1):
@@ -633,7 +633,7 @@ def process_file(path: Path, resolver: Resolver, global_skip=None, diva_filter=T
             new_lines.append(line)
             continue
         body, eol = split_eol(line)
-        # Ligne COMMENTEE DIVA (corps commencant par ';') -> jamais transformee (SC-003 / R-003).
+        # Ligne COMMENTEE DIVA (corps commencant par ';') -> jamais transformee.
         # La migration de reference laisse les commentaires intacts.
         if body.lstrip().startswith(";"):
             new_lines.append(line)
@@ -643,7 +643,7 @@ def process_file(path: Path, resolver: Resolver, global_skip=None, diva_filter=T
         hook_ents = []       # entites seek_ converties -> rappel perte des hooks _Seek_Av/_Ap
         keywarn = []         # conversions dont l'eclatement de la cle concatenee est incertain
         line_splits = []     # nb de champs de chaque cle reellement eclatee sur cette ligne
-        args_dropped = False # un arg surnumeraire NON trivial a ete tronque sur cette ligne (SC-001)
+        args_dropped = False # un arg surnumeraire NON trivial a ete tronque sur cette ligne
         new_body = transform_segment(body, resolver, ev, unres, skip_names, consumed, seek_index)
         for e in ev:
             if e[0] in ("applied", "findfull", "seekhook"):
@@ -694,7 +694,7 @@ def process_file(path: Path, resolver: Resolver, global_skip=None, diva_filter=T
         if keywarn and ";TODO cle" not in new_body:
             new_body = new_body + " ;TODO cle: eclatement a verifier (" + "; ".join(sorted(set(keywarn))) \
                 + ") - Lectab/Seek concatene la cle, Give/Find prend les champs separes"
-        # SC-001 : un arg surnumeraire NON trivial (autre que 0/vide) a ete tronque
+        # un arg surnumeraire NON trivial (autre que 0/vide) a ete tronque
         # (la signature cible a moins de parametres) -> a verifier manuellement.
         if args_dropped and ";TODO args" not in new_body:
             new_body = new_body + " ;TODO args: argument(s) surnumeraire(s) non trivial(aux) tronque(s) " \
@@ -734,7 +734,7 @@ def main():
     ap.add_argument("--std", required=True, help="Chemin du PACK STD DE DESTINATION de la migration (PAS C:\\...\\Std).")
     ap.add_argument("--objets", required=True,
                     help="OBLIGATOIRE. Arbre des Objets compiles (.dhop) de la CIBLE. Pilote la decision "
-                    "3-voies des seek_<ent> (SC-004) : un seek_<ent> dont le wrapper SURVIT dans la cible "
+                    "3-voies des seek_<ent> : un seek_<ent> dont le wrapper SURVIT dans la cible "
                     "(present dans les .dhop) est GARDE intact ; sinon converti vers Give_<ent> si le pack "
                     "l'expose ; sinon ;TODO. Sans cet arbre, la decision serait aveugle (sur-conversion) : "
                     "le skill refuse donc de tourner sans --objets.")
@@ -781,7 +781,7 @@ def main():
 
     resolver = Resolver(std)
 
-    # SC-004 : index des seek_* presents (en clair) dans l'arbre Objets .dhop de la cible.
+    # index des seek_* presents (en clair) dans l'arbre Objets .dhop de la cible.
     # --objets est obligatoire (valide ci-dessus) -> la decision 3-voies est toujours active.
     seek_index = build_seek_index(objets)
     print(f"Index Objets : {len(seek_index)} symboles seek_* lus dans {objets}")
@@ -814,7 +814,7 @@ def main():
     total_keysplits = 0
     total_kept = 0
     modern_global = {}
-    kept_global = {}       # nom seek_<ent> -> nb garde intact (wrapper survit, SC-004)
+    kept_global = {}       # nom seek_<ent> -> nb garde intact (wrapper survit)
     keysplit_report = []   # lignes "fichier:ligne (N champs) -> appel converti"
     masks_skipped = []     # (rel, raison) : masques laisses INTACTS par securite (structure inattendue)
     masks_filtered = []    # (rel, lo, hi) : masques convertis dans [diva] (invariant auto-verifie)
@@ -872,7 +872,7 @@ def main():
     header.append(f"stdPack={std}")
     header.append(f"extensions={','.join(exts)}")
     header.append(f"divaFilter={'OFF (danger)' if args.no_diva_filter else 'on (.dhsf/.dhsi -> bloc [diva] uniquement)'}")
-    header.append(f"objetsTree={objets} (index seek_*: {len(seek_index)} symboles ; decision 3-voies SC-004)")
+    header.append(f"objetsTree={objets} (index seek_*: {len(seek_index)} symboles ; decision 3-voies)")
     header.append("recursiveSearch=True")
     header.append(f"writeNewFiles={'False (DRY-RUN : rapport seul)' if args.dry_run else 'True'}")
     header.append("")
@@ -914,7 +914,7 @@ def main():
             footer.append(f"  {name} (x{modern_global[name]})")
     if kept_global:
         footer.append("")
-        footer.append("seek_ GARDES intacts (wrapper survit dans l'arbre Objets .dhop, --objets/SC-004) :")
+        footer.append("seek_ GARDES intacts (wrapper survit dans l'arbre Objets .dhop, --objets) :")
         for name in sorted(kept_global, key=lambda k: (-kept_global[k], k)):
             footer.append(f"  {name} (x{kept_global[name]})")
 

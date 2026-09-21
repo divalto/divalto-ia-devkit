@@ -12,8 +12,6 @@
 ---
 
 
-> Reference : la référence navigation ERP (interne) section 3.4
-
 ## Role
 
 Dialog accessible par **F1** (ou menu Aide > "A propos du Zoom") dans un zoom ouvert.

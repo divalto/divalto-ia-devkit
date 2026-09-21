@@ -7,14 +7,14 @@
 | P01 | error | .dhpt/.dhps | Encodage UTF-8 au lieu de ISO-8859-1 |
 | P02 | error | .dhpt/.dhps | Fins de ligne LF au lieu de CRLF |
 | P03 | *V2* | — | Utilisation Edit/Write sur fichier Divalto |
-| P04 | error | .dhps | En-tete `xwin-projet` au lieu de `xwin-sprojet` |
-| P05 | error | .dhpt | En-tete `xwin-sprojet` au lieu de `xwin-projet` |
+| P04 | error | **.dhps** | En-tete invalide : attendu `xwin-sprojet`, ou `xwin-s-sprojet` pour un sous-projet de **surcharge** -- legitime, cf. `managing-diva-projects` P08/P17 (#293/#307) |
+| P05 | error | **.dhpt** | En-tete invalide : attendu `xwin-projet`, ou `xwin-s-projet` pour un projet de **surcharge**. **Un code par extension** : P04 controle le `.dhps`, P05 le `.dhpt`. Auparavant P04 etait dispatche sur les deux ET P05 testait une sous-chaine, si bien qu'un `.dhpt` mal en-tete remontait **les deux codes** pour un seul defaut, tandis que `xwin-s-sprojet` echappait a P05 (la sous-chaine `xwin-sprojet` n'y figure pas) |
 | P06 | error | .dhps | Syntaxe `fic="x"," "` dans `[includes]` (doit etre sans `," "`) |
 | P07 | error | .dhps | Syntaxe `fic="x"` dans `[fichiers]` (manque `," "`) |
 | P08 | *V2* | — | Sous-projet non reference dans .dhpt parent |
-| P09 | warning | .dhps | `zdiva.dhsp` manquant dans `[includes]` |
+| P09 | `info` **hors defaut** | .dhps | `zdiva.dhsp` manquant dans `[includes]` -- **convention**, `--rules P09`. Le standard livre ne le fait **jamais** (0/2304 `.dhps`), un specifique partenaire mesure le fait a 80-98 % : active par defaut, la regle remonte 100 % des sous-projets du standard -- or les linter comme **modele de reference** est un usage courant. |
 | P10 | *V2* | — | Groupes communs dict/rsql manquants |
-| P11 | warning | .dhps | Prefixes domaine mixtes dans les fichiers |
+| P11 | *V2* | — | Prefixes domaine mixtes dans les fichiers |
 | P12 | warning | .dhps | Section `[autres]` manquante |
 | P13 | warning | .dhpt | Sections obligatoires manquantes |
 | P14 | warning | .dhpt | `developpement` sans accent dans profil |

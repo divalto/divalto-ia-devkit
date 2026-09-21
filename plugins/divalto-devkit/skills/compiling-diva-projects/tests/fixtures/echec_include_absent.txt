@@ -1,0 +1,10 @@
+[TOTAL_ERRORS]1
+[INFO]---------------Compilation. Reconstruction de tout le sous-projet monsousprojet.dhps du projet c:/specifs/monworkspace/projets/monprojet.dhpt (25/08/2026 12:00:00). Profil courant : monprofil---------------
+[INFO]Construction du plan de compilation
+[INFO]Compilations des sources
+[INFO]</specifs/monworkspace/sources/monentite.dhsp>  version : 7.1-203c
+[ERROR]/specifs/monworkspace/sources/monentite.dhsp (4) Erreur fatale 7 : Erreur 0x0014 lors de l'ouverture du fichier include                           Fichier  MON_INCLUDE_ABSENT.DHSP  absent ou inaccessible
+[INFO]Mise à jour des includes
+[INFO]
+========== Erreur(s)=1   Warning(s)=0 ==========
+Durée=0:0:0

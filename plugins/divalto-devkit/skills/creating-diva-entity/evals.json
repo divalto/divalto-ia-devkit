@@ -28,6 +28,13 @@
         "files_generated": 5,
         "validation": "success=true, cross_validate 0 errors"
       }
+    },
+    {
+      "name": "Domaine maison (prefixe partenaire) — hors perimetre, redirection",
+      "input": "Cree l'entite Article dans un domaine maison au prefixe partenaire (dico dedie, ex. <prefixe>_gtfdd.dhsd), hors des domaines standard.",
+      "expected": {
+        "behavior": "Reconnait que ce domaine maison n'est pas un domaine STANDARD enregistre (registre _naming.py) : ne lance PAS l'orchestrateur. Explique que creating-diva-entity cree des entites custom mais uniquement dans un domaine standard, puis redirige vers la composition : managing-diva-dictionaries (entite dans le dico maison) + generating-zoom-sql + manipulating-dhsf-screens, avec understanding-integrator-workspace pour localiser le dico maison. Ne propose PAS un flag --custom-domain (evolution non implementee)."
+      }
     }
   ]
 }

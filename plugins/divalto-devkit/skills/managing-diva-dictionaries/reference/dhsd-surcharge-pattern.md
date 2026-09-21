@@ -4,6 +4,7 @@
 
 - Quand surcharger un dictionnaire
 - Prerequis -- container U<NomTable> dans le standard
+- **`Filler` vs container `U` -- deux reserves, deux proprietaires**
 - Structure du fichier `<dict>u.dhsd`
 - Bloc `[CHAMP]` -- declarations globales
 - Bloc `[CHAMPR]` / `[CHAMPL]` -- ancrage et offsets
@@ -12,7 +13,7 @@
 - Regle d'offset cumule dans le U-container
 - Options A/B/C : modifier un champ standard est interdit
 - Workflow complet
-- Anti-patterns associes (D14/D15/D16)
+- Anti-patterns associes (DICT14/DICT15/DICT16)
 
 ---
 
@@ -58,11 +59,59 @@ Nom=UArt,847,2,N,0,0,N,3    <-- container present, Nature=1500 -> table surcharg
 
 Si `Nom=U<NomTable>` est absent du `[CHAMPS]`, **la table n'est pas surchargeable**. Options legitimes :
 
-- Demander a Divalto/Stephane Castelain d'ajouter un container dans une prochaine release
+- Demander a Divalto d'ajouter un container dans une prochaine release
 - Rediriger le besoin metier vers une autre table surchargeable
-- Sinon abandonner la demande (anti-pattern D15)
+- Sinon abandonner la demande (anti-pattern DICT15)
 
 > Voir aussi la regle de gouvernance : tout cas de table sans U-container devrait etre remonte a Divalto (catalogue evolutif des defauts de conception du standard).
+
+---
+
+## `Filler` vs container `U` -- deux reserves, deux proprietaires
+
+Dans un `[CHAMPS]`, `Filler` et `U<NomTable>` se ressemblent : deux zones d'octets sans
+usage metier, en fin de table. Ce sont pourtant **deux reserves distinctes, appartenant a
+deux acteurs differents** -- et s'y tromper est la cause la plus directe de corruption
+silencieuse.
+
+| Zone | Proprietaire | Evolution observee entre deux versions majeures du standard |
+|------|--------------|--------------------------------------------------------------|
+| `Filler` | **Divalto** | **262 tables** l'ont vu **diminuer** : l'editeur consomme sa propre reserve pour ajouter des champs standard **a taille de table constante** |
+| `U<NomTable>` | **le distributeur / l'integrateur** | **5 changements** seulement sur le meme pas -- une zone `U` reste **stable ou s'agrandit** |
+
+**Regle** : le seul point d'ancrage legitime d'un champ custom est le container
+`U<NomTable>`. Ancrer un champ dans le `Filler`, ou a un offset pris « dans ce qui reste
+apres le dernier champ », revient a **poser son champ dans la reserve de Divalto** : la
+prochaine release y ecrira ses propres champs, a la meme place, **sans changer la taille
+de la table** -- donc **sans qu'aucun controle de compatibilite ne le detecte**.
+
+> Une reduction de zone `U` est en soi **anormale** (nous en avons mesure une seule, qui
+> s'analyse comme une correction d'une valeur erronee). Si un pas de version reduit une
+> zone `U` que vous utilisez, c'est a **remonter a Divalto**.
+
+### Corollaire rassurant : un Service Pack qui mange du `Filler` est transparent
+
+Si vos champs sont dans la zone `U`, **vous n'avez rien a verifier** cote `Filler` : le
+standard consomme sa reserve, la taille de la table ne change pas, vos offsets sont
+intacts. C'est precisement la contrepartie de la regle -- elle est contraignante a
+l'ecriture, et elle vous protege ensuite.
+
+Reste le cas ou la table **change de taille** : la, il faut recompiler votre specifique
+(voir [dhsd-diff-downgrade.md](dhsd-diff-downgrade.md), section « Compatibilite binaire »).
+
+### Piege de lecture : la capacite d'un `U` n'est PAS sur la ligne `[CHAMPS]`
+
+Les deux zones n'exposent pas leur taille au meme endroit :
+
+```ini
+Nom=Filler,2097,2,N,0,404,N,1     <-- 404 octets : la taille est EN LIGNE (6e position)
+Nom=UArt,847,2,N,0,0,N,3          <-- 0 en 6e position : ce n'est PAS une zone vide !
+```
+
+Pour un container `U<X>`, la 6e position vaut **toujours 0**. Sa capacite reelle est la
+**`Nature=` de sa declaration globale** dans le bloc `[CHAMP]` (ici `UArt` -> `Nature=1500`,
+soit 1500 octets). Lire la 6e position conduit a conclure « container vide / capacite 0 »
+sur **toutes** les tables surchargeables.
 
 ---
 
@@ -223,7 +272,7 @@ DateM=<ts_origine_du_standard>,<FILETIME_courant>
 - `Version=`, `Nom=`, premier `DateM=` -- recopies a l'identique du `[TABLE]` standard
 - Second `DateM=` (timestamp FILETIME) -- date courante (modif de la surcharge)
 
-**Ne JAMAIS inventer** un libelle ou un timestamp `DateM` : un `Nom=ART,Article extension,1` divergeant peut casser le merge surcharge/standard de facon non deterministe (anti-pattern D14).
+**Ne JAMAIS inventer** un libelle ou un timestamp `DateM` : un `Nom=ART,Article extension,1` divergeant peut casser le merge surcharge/standard de facon non deterministe (anti-pattern DICT14).
 
 ---
 
@@ -268,7 +317,7 @@ Exemple valide (3 champs sur `UArt`, container Nature=1500) :
 
 > **Piege le plus dangereux de la surcharge dictionnaire** : interpretation "ordre d'ajout" (1, 2, 3) au lieu d'offsets cumules (1, 2, 10). xwin7 **n'effectue aucune verification de chevauchement** ; un mauvais offset est accepte au compile et au synchroauto, les colonnes en base se chevauchent silencieusement, les donnees runtime sont corrompues. Bug invisible jusqu'a l'execution, parfois bien apres mise en production.
 
-> Voir [nature-types.md](nature-types.md) pour la taille en octets des Natures observees. Si la Nature n'est pas documentee (R-017 -- couverture ~40 %), inspecter le standard pour trouver un autre champ de meme Nature et confirmer la taille -- ne pas deviner.
+> Voir [nature-types.md](nature-types.md) pour la taille en octets des Natures observees. Si la Nature n'est pas documentee (couverture ~40 %), inspecter le standard pour trouver un autre champ de meme Nature et confirmer la taille -- ne pas deviner.
 
 ### Contrainte de capacite du container
 
@@ -304,7 +353,7 @@ Exemple :
 - Demande : ajouter un Ref de Nature=8 sur la table CLI
 - Reponse correcte : refuser l'option C, proposer A (reutiliser Nature=25) ou B (creer `miRef` Nature=8 avec prefixe)
 
-Anti-pattern D16. Le validator peut detecter en mode cross-reference avec `--dhsd-standard <path>`.
+Anti-pattern DICT16. Le validator peut detecter en mode cross-reference avec `--dhsd-standard <path>`.
 
 ---
 
@@ -328,7 +377,7 @@ SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'ART';
 -- attendu : nb_colonnes_standard + nb_champs_ajoutes
 ```
 
-Si le compte n'augmente pas, le merge surcharge/standard a echoue silencieusement -- verifier les metadonnees `[BASEU]`/`[TABLEU]` (anti-pattern D14) ou l'existence du U-container cible (anti-pattern D15).
+Si le compte n'augmente pas, le merge surcharge/standard a echoue silencieusement -- verifier les metadonnees `[BASEU]`/`[TABLEU]` (anti-pattern DICT14) ou l'existence du U-container cible (anti-pattern DICT15).
 
 ---
 
@@ -336,8 +385,8 @@ Si le compte n'augmente pas, le merge surcharge/standard a echoue silencieusemen
 
 | Code | Severite | Quoi |
 |------|----------|------|
-| D14 | warning (error si `--dhsd-standard` fourni) | Metadonnees `[BASEU]/[TABLEU]` divergentes du standard (libelle, Version, DateM) |
-| D15 | error | Ajout `[CHAMPR] nom=<X>` sans container `U<NomTable>` correspondant dans le standard -- table non surchargeable |
-| D16 | error | Redeclaration d'un `[CHAMP]` global du standard avec Nature/Gel/Flags differents -- option C interdite |
+| DICT14 | warning (error si `--dhsd-standard` fourni) | Metadonnees `[BASEU]/[TABLEU]` divergentes du standard (libelle, Version, DateM) |
+| DICT15 | error | Ajout `[CHAMPR] nom=<X>` sans container `U<NomTable>` correspondant dans le standard -- table non surchargeable |
+| DICT16 | error | Redeclaration d'un `[CHAMP]` global du standard avec Nature/Gel/Flags differents -- option C interdite |
 
-Voir [dhsd-anti-patterns.md](dhsd-anti-patterns.md) pour le detail des regles D01-D16.
+Voir [dhsd-anti-patterns.md](dhsd-anti-patterns.md) pour le detail des regles DICT01-DICT16.

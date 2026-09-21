@@ -12,7 +12,7 @@
 ---
 
 
-Source : référentiel interne -- dictionnaire (.dhsd).
+Structure d'un dictionnaire `.dhsd` : le digest livré avec ce skill.
 
 ---
 
@@ -147,6 +147,84 @@ La valeur est doublee : `Taille={T},{T}`.
 
 ---
 
+### `TableInsere=` -- embarquer une table dans une autre
+
+Une table peut **embarquer l'integralite de l'enregistrement d'une autre table**, dans une
+fenetre d'octets figee, par une directive placee **dans le `[CHAMPS]`** :
+
+```ini
+[CHAMPS]
+TableInsere=<table_inseree>,<position>,<longueur>,0,<gel>
+Nom=<ChampPropre1>,<position_apres_la_fenetre>,2,N,0,0,N,3
+...
+[/CHAMPS]
+```
+
+Ce n'est pas marginal : le dictionnaire standard `gtfdd` porte **257 directives** dans
+**256 tables sur 960** -- plus d'une table sur quatre.
+
+#### Format
+
+| Pos | Champ | Valeurs mesurees (257 directives) |
+|-----|-------|-----------------------------------|
+| 1 | table inseree | -- |
+| 2 | position de debut de la fenetre | `1` dans **239** cas ; sinon la table hote a des champs **avant** la fenetre |
+| 3 | longueur de la fenetre | **toujours** la `Taille=` de la table inseree (voir ci-dessous) |
+| 4 | -- | `0` dans **257 / 257** |
+| 5 | Gel | `1` (252) ou `3` (5) -- meme semantique que le dernier champ d'une ligne `Nom=` |
+
+Les positions restent **cumulatives et sans trou** : les champs propres de l'hote commencent
+a `position + longueur`. Une table peut porter **plusieurs** directives consecutives (un cas
+mesure avec deux fenetres jointives), et des champs propres **avant** la premiere.
+
+#### La fenetre vaut exactement la taille de la table inseree
+
+Mesure sur les 257 directives, en comparant la longueur declaree a la `Taille=` reelle de la
+table inseree :
+
+| Constat | Nombre |
+|---------|--------|
+| fenetre **==** `Taille=` de la table inseree | **257** |
+| fenetre plus grande (marge disponible) | **0** |
+| fenetre plus petite (debordement) | **0** |
+
+**Aucune marge, aucune exception.** C'est ce qui rend la suite previsible.
+
+#### Consequence : un champ custom se propage tout seul
+
+Le container `U<NomTable>` de la table inseree est **a l'interieur** de sa propre `Taille=`,
+donc **a l'interieur de la fenetre**. Un champ custom ajoute dans ce container par surcharge
+est donc automatiquement expose sur **toutes** les tables hotes qui embarquent cette table --
+**sans recopie et sans surcharger l'hote**.
+
+C'est le cas d'usage : propager un champ d'une table de base vers une table d'arbre ou
+d'affichage. Et c'est aussi une bonne surprise pour qui ne connait pas le mecanisme -- d'ou
+cette section.
+
+#### Qui peut casser la fenetre, et qui ne peut pas
+
+| Acteur | Effet sur la fenetre |
+|--------|----------------------|
+| L'integrateur qui ajoute un champ dans le container `U` de la table inseree | **aucun risque**. Le container est deja compte dans la `Taille=`, donc dans la fenetre. La taille ne change pas. |
+| Un changement de version qui fait **grandir la `Taille=`** de la table inseree | **la fenetre devient trop petite** : il n'y a aucune marge. C'est le seul scenario de collision. |
+
+Le second cas se detecte avant de compiler, avec l'outil de comparaison de versions :
+
+```
+py .claude/skills/managing-diva-dictionaries/scripts/compare_dhsd_versions.py \
+    --from <ancien.dhsd> --to <nouveau.dhsd> --only-incompatible
+```
+
+Toute table listee en `incompatibles` a change de `Taille=`. Si elle est **inseree** ailleurs
+(`grep TableInsere=<nom>` dans le dictionnaire), les fenetres correspondantes sont a
+verifier. Voir [dhsd-diff-downgrade.md](dhsd-diff-downgrade.md), section « Compatibilite
+binaire ».
+
+> **Non verifie** : la documentation source/editeur xwin mentionnerait une syntaxe `$`
+> equivalente. Elle est **absente** des dictionnaires deployes que nous avons examines (qui
+> n'utilisent que `TableInsere=`), et le graphe de connaissance ne l'expose pas. Nous ne la
+> documentons donc pas -- la forme ci-dessus est celle mesuree sur le standard livre.
+
 ## Zone 3 : [BASE] -- Fichier physique
 
 ### Format
@@ -182,7 +260,12 @@ Le prefixe de la base depend du dictionnaire :
 
 - `Fichier=I,0,{NOM}.dhfi` : format fixe (le nom est en MAJUSCULES)
 - `Versionbase=223` : valeur standard
-- Une base peut contenir **plusieurs tables** -- dans ce cas, ajouter la nouvelle table dans `[TABLES]`
+- Une base peut contenir **plusieurs tables** -- dans ce cas, ajouter la nouvelle table
+  dans `[TABLES]`, au **rang alphabetique** (convention verifiee sur les 10 bases
+  multi-tables d'un dictionnaire specifique reel de 24 bases). Outille par
+  `insert_dhsd_blocks.py --attach-to-base <NomBase>` : **ne pas** creer un second bloc
+  `[BASE]`, et **ne pas** se contenter de l'omettre -- sans la ligne dans `[TABLES]` la
+  table reste orpheline.
 - Pour une nouvelle base, creer un nouveau bloc `[BASE]`
 - `DateM` et `DateMIndex` : hash hex genere automatiquement (utiliser un hash aleatoire)
 
@@ -245,6 +328,49 @@ ART.Ce4 = Condition(ART.Ean <> ' ', '1', ' ')
 `Ce4` est un champ ordinaire de la table ART, automatiquement maintenu par le mchk. L'index correspondant filtre sur `Ce4='1'` -> ne contient que les articles ayant un EAN.
 
 Pour creer un nouvel index filtre custom dans une surcharge, voir [dhsd-surcharge-indexes.md](dhsd-surcharge-indexes.md) section "Filtered indexes Divalto".
+
+### Table sans discriminateur -- lecture seulement
+
+Une table **peut** exister sans discriminateur : mesure sur un dictionnaire specifique
+reel de 103 tables, **28 n'ont aucune ligne `CE=`** (pas une ligne `CE=` vide : la ligne
+est absente du bloc `[TABLE]`), et seules 10 des 103 ont `Ce1` en premier champ.
+
+**Ce n'est pas pour autant la bonne pratique.** Quand on **genere** une table, on prevoit
+son `Ce1` -- et `generate_dhsd_block.py` le fait toujours, sans option pour s'en passer.
+Cette section sert a **lire** et comprendre l'existant, pas a produire du neuf.
+
+Sur une table sans discriminateur, la ligne `CLE=` de ses index prend une forme
+particuliere : positions 3 et 5 mises a une valeur convenue, position 4 a `1`.
+
+```ini
+CLE=<NomBase>,A,,1,032,n,1,n
+;              ^ ^^ ^^^
+;              | |  |
+;              | |  +-- pos 5 ValeurCE : les trois caracteres 032 (litteralement)
+;              | +----- pos 4 flag : 1
+;              +------- pos 3 ChampCE : VIDE
+```
+
+| Pos | Avec discriminateur | Sans discriminateur |
+|-----|---------------------|---------------------|
+| 3 -- ChampCE | `Ce1`, `Ce`, `Ce2`... | **vide** |
+| 4 -- flag | `2` | **`1`** |
+| 5 -- ValeurCE | la valeur CE de la table | **`032`** (chaine litterale) |
+
+**Mesure** : sur les 115 lignes `CLE=` de ce dictionnaire, des que la position 3 est vide,
+la position 4 vaut `1` et la position 5 vaut `032` -- **44 occurrences, aucune exception**.
+Reciproquement, les 71 lignes avec un discriminateur ont toutes `2` en position 4.
+
+> **Deux conventions a ne pas confondre.** L'absence de discriminateur (pos 3 vide + pos 4
+> `1` + pos 5 `032`) est **independante** de la convention « pos 2 = espace + ligne
+> `Alias=` », qui sert a nommer un index custom. Elles se combinent parfois, mais 39 des 44
+> lignes sans discriminateur gardent une **vraie lettre** en position 2. Voir
+> [dhsd-surcharge-indexes.md](dhsd-surcharge-indexes.md) pour la convention `Alias=`.
+
+> **Reserve sur la position 4.** La section « Format CLE » ci-dessus explique la position 4
+> par la famille de dictionnaire (`2` pour gtfdd, `1` pour ccfdd). Dans le dictionnaire
+> mesure, elle correspond a la **presence du discriminateur**, sans exception. Nous n'avons
+> qu'un dictionnaire : les deux lectures sont consignees, aucune n'est retiree.
 
 ### Format `CLE=` en surcharge -- espace + Alias=
 

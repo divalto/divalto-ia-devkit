@@ -1,0 +1,10 @@
+{
+  "type": "ticket",
+  "resume": "La contremarque ne se declenche pas a la validation de la commande.",
+  "domaine_pressenti": "DAV",
+  "keywords_metier": ["contremarque", "validation"],
+  "keywords_techniques": ["Ctm", "ActionERP"],
+  "ca_detectes": [],
+  "message_erreur": "Contremarque absente apres validation",
+  "entites_manipulees": ["CDE"]
+}

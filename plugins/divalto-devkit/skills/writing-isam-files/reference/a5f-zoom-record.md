@@ -14,8 +14,9 @@
 
 
 Reference pratique pour ecrire un enregistrement zoom (table M4) dans le fichier
-A5F.dhfi (zoom des zooms). Voir la référence d'intégration zoom (interne) pour la documentation
-complete (structure, plages moulinette 58, menu domaine).
+A5F.dhfi (zoom des zooms). La structure et les plages moulinette 58 sont decrites
+ci-dessous ; le menu domaine est traite par le skill `creating-diva-entity`, page
+`reference/menu-domain.md`.
 
 ---
 
@@ -67,7 +68,7 @@ Les champs non renseignes restent paddes avec des espaces (0x20).
 - `MsqEcran` et `ModTrait` referent les fichiers **compiles** (.dhof/.dhop)
 - Les champs numeriques dans les cles d'index (ZoomNum, Ordre) doivent etre **cadres a droite**
 
-### Piege `ZoomEnr` : nom du RecordSql public, pas nom de table (R-007, 2026-04-22)
+### Piege `ZoomEnr` : nom du RecordSql public, pas nom de table (2026-04-22)
 
 `ZoomEnr` **doit contenir le nom du RecordSql public** declare dans le module zoom
 (`gttz<entite>_sql.dhsp`), et **pas** le nom de la table dans le dictionnaire.
@@ -113,7 +114,7 @@ A5F (ZoomEnr: "RaceChien" -> "RaceChienGtf").
 | Gestion Ressources | DGRM | 45000-45999 |
 | Reglement | DREG | 49000-49999 |
 
-Certains domaines ont des plages secondaires (voir la référence d'intégration zoom (interne) section 4.2).
+Certains domaines ont des plages secondaires. Elles ne sont pas couvertes ici : releverez-les sur le fichier A5F du client avant d'allouer un numero.
 
 ---
 
@@ -123,7 +124,7 @@ Certains domaines ont des plages secondaires (voir la référence d'intégration
 
 ```json
 {
-    "Fichier": "C:\\Developpements harmony\\Bases sql\\a5f.dhfi",
+    "Fichier": "{CHEMIN_FICHIERS}/a5f.dhfi",
     "Structure": "structure_a5f_m4.json",
     "Donnees": {
         "Ce": "4",
@@ -187,11 +188,35 @@ Cas valide (test de reference) : zoom ecrit avec les parametres de la section
 "Exemple complet" ci-dessous est retrouvable par
 `read_isam.py --key A4 --max N`.
 
+## En environnement specifique : ecrire dans `a5fu.dhfi`, pas `a5f.dhfi`
+
+Tout ce qui precede decrit la **structure** de l'enregistrement zoom. Reste la question
+du **fichier cible**, et la reponse n'est pas `a5f.dhfi` :
+
+| Fichier | Role |
+|---------|------|
+| `a5f.dhfi` (pack standard) | zooms **livres par Divalto**. **Jamais modifie.** |
+| **`a5fu.dhfi`** (arborescence specifique) | zooms **specifiques / surcharge**. Meme structure M4. Une entree y est **prioritaire** sur celle du standard. |
+
+Ecrire un zoom custom dans `a5f.dhfi` l'expose a etre **ecrase** a la prochaine montee
+de version ou au prochain patch ERP. Cas reel : un zoom custom enregistre dans le
+`a5fu.dhfi` du partenaire, dans son arborescence specifique -- **pas** dans le
+`a5f.dhfi` du pack standard.
+
+> `write_isam.py` **avertit** si la cible est `a5f.dhfi` : voir le SKILL.md, section
+> « Quel fichier viser : overlay `*u` ou fichier propre ? ».
+
+Cote **allocation** du numero, le used-set doit etre l'**union** `a5f` + `a5fu` -- sinon un
+numero deja pris dans l'overlay serait propose comme libre. C'est le role de
+[allocating-zoom-numbers](../../allocating-zoom-numbers/SKILL.md) (option `--a5fu`).
+
+---
+
 ## Apres l'ecriture
 
-1. **Declarer la constante** dans `a5tczoom.dhsp` (voir la référence d'intégration zoom (interne) section 3)
+1. **Declarer la constante** dans `a5tczoom.dhsp`
 2. **Recompiler** (a5tczoom.dhsp modifie)
-3. **Ajouter au menu du domaine** -- ecrire un M2 dans le .dhfi du domaine (voir ci-dessous)
+3. **Ajouter au menu du domaine** -- ecrire un M2 dans le `g3fu.dhfi` du domaine (l'overlay, pas `g3f.dhfi` ; voir ci-dessous), apres avoir alloue un EnrNo libre sur l'**union** g3f + g3fu via [allocating-menu-enrno](../../allocating-menu-enrno/SKILL.md)
 4. **Tester dans l'ERP**
 
 ---
@@ -204,7 +229,7 @@ Structure pre-construite : `scripts/structures/structure_xmenuf_m2.json` (table 
 
 ```json
 {
-    "Fichier": "C:\\Developpements harmony\\Bases sql\\g3f.dhfi",
+    "Fichier": "{CHEMIN_FICHIERS}/g3f.dhfi",
     "Structure": "structure_xmenuf_m2.json",
     "Donnees": {
         "Ce": "2",
@@ -237,4 +262,4 @@ py .claude/skills/writing-isam-files/scripts/write_isam.py \
     --structure-dir ".claude/skills/writing-isam-files/scripts/structures"
 ```
 
-Voir la référence d'intégration zoom (interne) section 5 pour la reference complete (TypeChain, regroupements, index).
+Reference complete des champs (TypeChain, regroupements, index) : skill `creating-diva-entity`, page `reference/isam-fields.md`.

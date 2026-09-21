@@ -16,7 +16,7 @@
 
 **Definition** : une affirmation textuelle dans les couches `business.*`, `schema.*` ou `technical.*` d'une entite qui n'a ni citation `fichier:ligne` vers une source X.13, ni marquage explicite dans `meta.a_verifier`.
 
-**Pourquoi c'est une erreur** : viole CA4 de UC-200 ("Regle de citation stricte"). Une affirmation non tracee est soit le resultat d'une hallucination LLM, soit un oubli de sourcing du producteur. Dans les deux cas, elle degrade la confiance dans tout le livrable.
+**Pourquoi c'est une erreur** : viole la regle de citation stricte de `documenting-erp`. Une affirmation non tracee est soit le resultat d'une hallucination LLM, soit un oubli de sourcing du producteur. Dans les deux cas, elle degrade la confiance dans tout le livrable.
 
 **Severite par defaut** : `erreur`.
 
@@ -37,7 +37,7 @@ Rapport :
 ```
 [E1 erreur] CLI / business.role
 Extrait livrable : "Le client est l'entite pivot du module DAV."
-Challenge : affirmation non sourcee (ni citation fichier:ligne, ni meta.a_verifier). Viole CA4 UC-200.
+Challenge : affirmation non sourcee (ni citation fichier:ligne, ni meta.a_verifier). Viole la regle de citation stricte.
 ```
 
 **Ce qui N'EST PAS E1** :
@@ -51,7 +51,7 @@ Challenge : affirmation non sourcee (ni citation fichier:ligne, ni meta.a_verifi
 
 **Definition** : une affirmation narrative est correctement citee (la reference `fichier:ligne` existe et pointe un code valide), mais la paraphrase du narratif diverge de ce que dit reellement le code cite. Le producteur a cite la bonne source mais l'a mal lue.
 
-**Pourquoi c'est un warning** : le livrable est formellement conforme a CA4 (source citee), mais semantiquement incorrect. Detectable uniquement par jugement semantique -- seule categorie LLM-driven du relecteur.
+**Pourquoi c'est un warning** : le livrable est formellement conforme a la regle de citation (source citee), mais semantiquement incorrect. Detectable uniquement par jugement semantique -- seule categorie LLM-driven du relecteur.
 
 **Severite par defaut** : `warning` (`non`) ou `info` (`douteux`).
 
@@ -62,7 +62,7 @@ Challenge : affirmation non sourcee (ni citation fichier:ligne, ni meta.a_verifi
    - `non` : narratif contredit le contexte -> warning
    - `douteux` : contexte ambigu ou trop court -> info
 
-**Exemple remonte (test plante dans scenario 2 UC-201)** :
+**Exemple remonte (test plante dans le scenario 2 de la recette)** :
 
 ```yaml
 business:
@@ -95,7 +95,7 @@ Challenge : la source rejette les clients avec Bloque <> 0, le narratif affirme 
 
 **Definition** : une structure (champ, index, cle primaire, relation FK) est presente dans la source de verite X.13 (dictionnaire `.dhsd`, masque `.dhsf`, schema SQL) mais absente du livrable, sans qu'un item `meta.a_verifier` justifie l'omission.
 
-**Pourquoi c'est une erreur** : UC-200 garantit (CA2) que les structures sont extraites automatiquement. Une omission est soit un bug du producteur, soit un filtrage non declare. Dans les deux cas, le livrable est incomplet par rapport a la source de verite.
+**Pourquoi c'est une erreur** : `documenting-erp` extrait les structures par script, pas par redaction. Une omission est soit un bug du producteur, soit un filtrage non declare. Dans les deux cas, le livrable est incomplet par rapport a la source de verite.
 
 **Severite par defaut** : `erreur`.
 
@@ -124,21 +124,20 @@ Challenge : champ present dans le dictionnaire mais absent de technical.fields d
 
 ## E4 -- Contradiction avec le referentiel DIVA
 
-**Definition** : une affirmation du livrable contredit une regle documentee dans le referentiel `docs/` du workspace (Nature d'un suffixe, convention de prefixe de domaine, pattern 3 fichiers, anti-pattern connu).
+**Definition** : une affirmation du livrable contredit une regle documentee dans une page de reference livree -- la Nature attendue d'un suffixe de champ, ou le prefixe module attendu pour un domaine.
 
 **Pourquoi c'est un warning** : le referentiel DIVA est une source complementaire aux sources X.13. Une contradiction peut signifier soit une erreur du livrable, soit un referentiel obsolete. Dans les deux cas, a verifier.
 
 **Severite par defaut** : `warning`.
 
-**Comment la detecter** : heuristiques deterministes sur un corpus cible de `docs/*.md`. Details dans [docs-corpus.md](docs-corpus.md).
+**Comment la detecter** : deux heuristiques deterministes sur des tables livrees. Details dans [referentiel-e4.md](referentiel-e4.md).
 
 Exemples de regles detectables :
-- Le champ `SOC.CodePostal` est declare Nature `Fl` dans le livrable, mais le référentiel dictionnaire (interne) dit que les codes postaux doivent etre `Ch5` -> contradiction
-- Le livrable declare un domaine `ABC` pour une entite `CLI`, mais le référentiel des modules ERP (interne) liste `CLI` dans le domaine `DAV` -> contradiction
-- Le livrable cite un fichier `Gttcli.dhop` mais le pattern 3 fichiers (documente dans le référentiel architecture d'entité (interne)) attend `Gttmchkcli.dhop` -> contradiction
+- Un champ nomme `CdeDt` est declare Nature `C8` dans le livrable, alors que le suffixe `Dt` predit `D8` a 93 % -> contradiction
+- Une entite declaree dans le domaine `DAV` cite un fichier `Rttcli.dhop`, alors que `DAV` attend le prefixe module `gtt` -> contradiction
 
 **Interdit** :
-- Proposer une modification du referentiel `docs/`
+- Proposer une modification d'une page de reference du devkit
 - Considerer une contradiction comme une erreur bloquante -- c'est toujours `warning` car le referentiel peut etre en retard
 
 **Ce qui N'EST PAS E4** :

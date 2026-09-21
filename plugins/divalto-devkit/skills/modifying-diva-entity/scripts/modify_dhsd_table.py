@@ -67,10 +67,21 @@ def read_dhsd(path):
     return text.replace("\r\n", "\n").split("\n")
 
 
-def write_dhsd(path, lines, backup=False):
-    """Ecrit un .dhsd en ISO-8859-1 + CRLF."""
-    if backup:
-        shutil.copy2(path, path + ".bak")
+def write_dhsd(path, lines, backup=True):
+    """Ecrit un .dhsd en ISO-8859-1 + CRLF, apres sauvegarde.
+
+    La sauvegarde est l ETAT PAR DEFAUT (--no-backup pour s en passer), comme dans
+    writing-diva-files. Et si la copie echoue, on REFUSE d ecrire : ecraser un fichier
+    existant apres avoir perdu le filet est le scenario que le filet couvre.
+    """
+    if backup and os.path.exists(path):
+        try:
+            shutil.copy2(path, path + ".bak")
+        except Exception as e:
+            print("Erreur: sauvegarde impossible (%s) -- ecriture ANNULEE, le fichier "
+                  "existant est intact. Liberer ou reparer le dossier, ou assumer le "
+                  "risque explicitement avec --no-backup." % e, file=sys.stderr)
+            sys.exit(1)
     data = "\r\n".join(lines)
     with open(path, "wb") as f:
         f.write(data.encode(ENCODING))
@@ -270,31 +281,66 @@ def find_indexes_for_table(lines, table_name, champ_natures):
     return indexes
 
 
-def recalc_positions(fields, champ_natures, table_name=None):
-    """Recalcule les positions de tous les champs sequentiellement.
+def annotate_sizes(fields, taille, table_name=None):
+    """Annote chaque champ avec sa taille REELLE (f['_actual']), deduite du
+    LAYOUT du fichier -- source de verite, independante de toute hypothese de
+    taille standard (correction #321 : ne plus se fier a STANDARD_SIZES).
 
-    Le U-field (s'il existe) a size=0 : il ne decale pas la position du champ
-    suivant. En pratique c'est toujours le dernier champ, donc sans effet.
-    Sa position sera egale a la somme des tailles des champs precedents + 1.
-    Pour preserver la position d'origine du U-field, appeler recalc_filler.
+    - Filler        -> repetition
+    - U-field       -> 0 (dernier champ, absorbe l'espace restant ; neutre au cumul)
+    - dernier champ -> Taille - position + 1
+    - sinon         -> position(champ suivant) - position(champ courant)
+
+    Retourne la liste des incoherences de layout detectees AVANT toute
+    modification (1er champ hors position 1, taille negative). Ces controles ne
+    dependent PAS de tailles supposees -- ils lisent la realite du fichier.
+    """
+    errs = []
+    n = len(fields)
+    for i, f in enumerate(fields):
+        if f["name"] == "Filler":
+            f["_actual"] = f["repetition"]
+            continue
+        if is_u_field(f["name"], table_name):
+            f["_actual"] = 0
+            continue
+        if i + 1 < n:
+            size = fields[i + 1]["position"] - f["position"]
+        else:
+            size = (taille - f["position"] + 1) if taille is not None else None
+        f["_actual"] = size
+        if size is not None and size < 0:
+            errs.append(
+                f"Layout incoherent : taille negative deduite pour '{f['name']}' "
+                f"(position {f['position']} > position du champ suivant)"
+            )
+    if fields and fields[0]["position"] != 1:
+        errs.append(
+            f"Layout incoherent : 1er champ '{fields[0]['name']}' en position "
+            f"{fields[0]['position']} (attendu 1)"
+        )
+    return errs
+
+
+def recalc_positions(fields, champ_natures=None, table_name=None):
+    """Recalcule les positions sequentiellement a partir de la taille REELLE de
+    chaque champ (f['_actual']), fixee par annotate_sizes pour les champs existants
+    et depuis la Nature pour un champ ajoute/modifie.
+
+    Correction #321 : on ne recalcule plus a partir de tailles standard SUPPOSEES
+    (3/30/30...). Un champ 'Dos'/'UserCr' qui fait en realite 8/20 octets est traite
+    a sa taille reelle -> plus de decalage silencieux des positions en aval.
     """
     pos = 1
     for f in fields:
         f["position"] = pos
-        if f["name"] == "Filler":
-            pos += f["repetition"]
-        elif f["name"] in STANDARD_SIZES:
-            pos += STANDARD_SIZES[f["name"]]
-        elif is_u_field(f["name"], table_name):
-            pass
-        else:
-            size = get_field_size(f["name"], champ_natures, table_name)
-            if size is None:
-                fail(f"Impossible de calculer la taille du champ '{f['name']}'")
-            pos += size
+        size = f.get("_actual")
+        if size is None:
+            fail(f"Taille inconnue pour le champ '{f['name']}' (layout non annote)")
+        pos += size
 
 
-def recalc_filler(fields, champ_natures, original_taille, table_name=None):
+def recalc_filler(fields, champ_natures, original_taille, table_name=None, u_original_pos=None):
     """Recalcule le Filler pour preserver l'invariant de la table.
 
     - Si un U-field est present : le Filler est ajuste pour preserver la position
@@ -302,15 +348,21 @@ def recalc_filler(fields, champ_natures, original_taille, table_name=None):
       inchangee (l'espace absorbe/libere est pris sur le Filler).
     - Sinon : le Filler est ajuste pour preserver la Taille totale.
 
+    `u_original_pos` DOIT etre la position du U-field capturee **avant** tout
+    `recalc_positions` : sinon l'ancrage se fait sur une position deja decalee, le
+    Filler ne se contracte pas, et le contenu peut depasser `Taille` (table
+    incoherente). Si None, on retombe sur la position courante (comportement
+    historique, NON fiable des qu'un champ grossit de plus que le slack du U-field).
+
     Returns:
         (new_taille, filler_adjusted)
     """
-    u_original_pos = None
     u_idx = None
     if table_name:
         for i, f in enumerate(fields):
             if is_u_field(f["name"], table_name):
-                u_original_pos = f["position"]
+                if u_original_pos is None:
+                    u_original_pos = f["position"]
                 u_idx = i
                 break
 
@@ -328,18 +380,15 @@ def recalc_filler(fields, champ_natures, original_taille, table_name=None):
                 filler_idx = i
                 break
 
-    # Calcule la taille effective d'un champ. Pour Filler : sa repetition.
+    # Taille effective d'un champ : sa taille REELLE annotee (f['_actual']).
+    # Le Filler suit sa repetition courante (peut etre ajustee ci-dessous).
     def _field_size(f):
         if f["name"] == "Filler":
             return f["repetition"]
-        if f["name"] in STANDARD_SIZES:
-            return STANDARD_SIZES[f["name"]]
-        if is_u_field(f["name"], table_name):
-            return 0
-        size = get_field_size(f["name"], champ_natures, table_name)
-        if size is None:
-            fail(f"Impossible de calculer la taille du champ '{f['name']}'")
-        return size
+        s = f.get("_actual")
+        if s is None:
+            fail(f"Taille inconnue pour le champ '{f['name']}' (layout non annote)")
+        return s
 
     total_without_filler = sum(
         _field_size(f) for f in fields if f["name"] != "Filler"
@@ -355,6 +404,7 @@ def recalc_filler(fields, champ_natures, original_taille, table_name=None):
                 f"position U-field = {u_original_pos}. Filler serait negatif."
             )
         fields[filler_idx]["repetition"] = needed_filler
+        fields[filler_idx]["_actual"] = needed_filler
         recalc_positions(fields, champ_natures, table_name)
         return original_taille, True
 
@@ -362,6 +412,7 @@ def recalc_filler(fields, champ_natures, original_taille, table_name=None):
         needed_filler = original_taille - total_without_filler
         if needed_filler > 0:
             fields[filler_idx]["repetition"] = needed_filler
+            fields[filler_idx]["_actual"] = needed_filler
             recalc_positions(fields, champ_natures, table_name)
             return original_taille, True
         fields.pop(filler_idx)
@@ -395,11 +446,16 @@ def update_taille_line(lines, taille_line_idx, new_taille):
     lines[taille_line_idx] = "Taille=" + ",".join(parts)
 
 
-def recalc_index_positions(lines, index_info, champ_natures, table_name=None):
-    """Recalcule les positions cumulees dans un bloc [INDEX]."""
+def recalc_index_positions(lines, index_info, champ_natures, table_name=None, size_by_name=None):
+    """Recalcule les positions cumulees dans un bloc [INDEX], en utilisant les
+    tailles REELLES des champs de la table (size_by_name) quand disponibles
+    (correction #321), avec repli sur la Nature."""
+    size_by_name = size_by_name or {}
     cum_pos = 1
     for f in index_info["fields"]:
-        size = get_field_size(f["name"], champ_natures, table_name)
+        size = size_by_name.get(f["name"])
+        if size is None:
+            size = get_field_size(f["name"], champ_natures, table_name)
         if size is None:
             fail(f"Impossible de calculer la taille du champ index '{f['name']}'")
         old_line = lines[f["line_index"]].strip()
@@ -409,27 +465,21 @@ def recalc_index_positions(lines, index_info, champ_natures, table_name=None):
         cum_pos += size
 
 
-def validate_positions(fields, champ_natures, table_name=None):
-    """Valide D01/D02 : positions contigues sans trou ni chevauchement.
+def validate_positions(fields, champ_natures=None, table_name=None):
+    """Valide DICT01/DICT02 : positions contigues sans trou ni chevauchement, en se
+    basant sur les tailles REELLES annotees (f['_actual']).
 
-    Le U-field est considere comme le dernier champ et occupe l'espace restant
-    jusqu'a la Taille totale ; il ne doit pas casser la sequence des positions.
+    Le U-field (_actual=0) et le Filler (_actual=repetition) sont geres comme les
+    autres champs via leur taille annotee.
     """
     errors = []
     expected = 1
     for f in fields:
         if f["position"] != expected:
             errors.append(f"Position du champ '{f['name']}' = {f['position']}, attendu {expected}")
-        if f["name"] == "Filler":
-            expected = f["position"] + f["repetition"]
-        elif f["name"] in STANDARD_SIZES:
-            expected = f["position"] + STANDARD_SIZES[f["name"]]
-        elif is_u_field(f["name"], table_name):
-            pass
-        else:
-            size = get_field_size(f["name"], champ_natures, table_name)
-            if size:
-                expected = f["position"] + size
+        size = f.get("_actual")
+        if size is not None:
+            expected = f["position"] + size
     return errors
 
 
@@ -505,6 +555,40 @@ def insert_champ_declaration(lines, field_name, nature_str, description=None):
     return insert_at
 
 
+def find_tableu_names(lines):
+    """Retourne l'ensemble des noms de tables declarees en [TABLEU] (surcharge)."""
+    names = set()
+    i, n = 0, len(lines)
+    while i < n:
+        if lines[i].strip() == "[TABLEU]":
+            j = i + 1
+            while j < n:
+                s = lines[j].strip()
+                if s.startswith("["):
+                    break
+                if s.startswith("Nom="):
+                    names.add(s[4:].split(",")[0])
+                    break
+                j += 1
+            i = j
+        else:
+            i += 1
+    return names
+
+
+def surcharge_redirect_msg(table_name):
+    """Message de redirection (#223) : la surcharge de dictionnaire n'est pas geree
+    ici -- c'est le role de managing-diva-dictionaries / generate_surcharge_field.py."""
+    return (
+        f"'{table_name}' est declaree en [TABLEU] : ce dictionnaire est une SURCHARGE. "
+        f"modify_dhsd_table.py ne gere que les tables standard [TABLE]. "
+        f"Pour ajouter un champ en surcharge, utiliser le skill managing-diva-dictionaries "
+        f"(generate_surcharge_field.py) : il ancre le champ dans le container U<Table> du "
+        f"standard, calcule l'offset cumule et recopie les metadonnees [TABLEU]/[BASEU] "
+        f"(regles DICT14/DICT15). Cf. managing-diva-dictionaries/reference/dhsd-surcharge-pattern.md."
+    )
+
+
 # -- Actions ----------------------------------------------------------------
 
 def action_list_fields(args):
@@ -512,35 +596,36 @@ def action_list_fields(args):
     champ_natures = parse_champ_declarations(lines)
     rng = find_table_range(lines, args.table)
     if rng is None:
+        if args.table in find_tableu_names(lines):
+            fail(surcharge_redirect_msg(args.table), code=1)
         fail(f"Table '{args.table}' non trouvee dans {args.dhsd}", code=2)
     table_start, champs_start, champs_end, table_end = rng
     fields = parse_table_fields(lines, champs_start, champs_end)
     taille, _ = get_taille(lines, table_start, champs_start)
+    annotate_sizes(fields, taille, args.table)
     indexes = find_indexes_for_table(lines, args.table, champ_natures)
 
     result_fields = []
     for f in fields:
         name = f["name"]
-        entry = {"name": name, "position": f["position"]}
+        # size = taille REELLE deduite du layout (#321), pas une taille supposee
+        entry = {"name": name, "position": f["position"], "size": f["_actual"]}
         if name == "Filler":
-            entry["size"] = f["repetition"]
             entry["nature"] = None
             entry["is_filler"] = True
         elif name in STANDARD_SIZES:
-            entry["size"] = STANDARD_SIZES[name]
-            entry["nature"] = str(STANDARD_SIZES[name])
+            entry["nature"] = champ_natures.get(name)
             entry["is_standard"] = True
+            entry["assumed_size"] = STANDARD_SIZES[name]
+            if f["_actual"] != STANDARD_SIZES[name]:
+                entry["size_mismatch"] = True  # taille reelle != taille historique supposee
         elif is_u_field(name, args.table):
             # Taille implicite = Taille totale - position + 1
-            implicit_size = (taille - f["position"] + 1) if taille else None
-            entry["size"] = implicit_size
+            entry["size"] = (taille - f["position"] + 1) if taille else None
             entry["nature"] = champ_natures.get(name)
             entry["is_u_field"] = True
         else:
-            nature = champ_natures.get(name)
-            size = get_field_size(name, champ_natures, args.table)
-            entry["size"] = size
-            entry["nature"] = nature
+            entry["nature"] = champ_natures.get(name)
             entry["is_standard"] = False
         result_fields.append(entry)
 
@@ -567,10 +652,18 @@ def action_add_field(args):
     champ_natures = parse_champ_declarations(lines)
     rng = find_table_range(lines, args.table)
     if rng is None:
+        if args.table in find_tableu_names(lines):
+            fail(surcharge_redirect_msg(args.table), code=1)
         fail(f"Table '{args.table}' non trouvee dans {args.dhsd}", code=2)
     table_start, champs_start, champs_end, table_end = rng
     fields = parse_table_fields(lines, champs_start, champs_end)
     taille_before, taille_line_idx = get_taille(lines, table_start, champs_start)
+
+    # Tailles reelles depuis le layout (#321) + garde-fou : refuser une table deja
+    # incoherente plutot que de la corrompre davantage.
+    layout_errs = annotate_sizes(fields, taille_before, args.table)
+    if layout_errs:
+        fail("Table deja incoherente (layout) -- modification refusee :\n" + "\n".join(layout_errs))
 
     # Validation : champ pas deja present
     existing_names = [f["name"] for f in fields]
@@ -618,7 +711,7 @@ def action_add_field(args):
         if insert_idx is None:
             insert_idx = len(fields)
 
-    # Creer l'entree du nouveau champ
+    # Creer l'entree du nouveau champ (taille reelle = taille Nature)
     new_field = {
         "name": args.name,
         "position": 0,
@@ -628,15 +721,19 @@ def action_add_field(args):
         "repetition": 0,
         "col6": "N",
         "gel": 3,
+        "_actual": new_size,
     }
     fields.insert(insert_idx, new_field)
 
     # Mettre a jour les natures connues
     champ_natures[args.name] = args.nature
 
+    # Position d'origine du U-field (AVANT tout recalc) -> ancrage correct
+    u_orig = next((f["position"] for f in fields if is_u_field(f["name"], args.table)), None)
+
     # Recalculer positions et Filler (U-field ancre si present)
     recalc_positions(fields, champ_natures, args.table)
-    new_taille, filler_adjusted = recalc_filler(fields, champ_natures, taille_before, args.table)
+    new_taille, filler_adjusted = recalc_filler(fields, champ_natures, taille_before, args.table, u_original_pos=u_orig)
     recalc_positions(fields, champ_natures, args.table)
 
     # Verifier [CHAMP]
@@ -660,7 +757,7 @@ def action_add_field(args):
     if taille_line_idx is not None:
         update_taille_line(lines, taille_line_idx, new_taille)
 
-    # Validation D01/D02
+    # Validation DICT01/DICT02
     errs = validate_positions(fields, champ_natures, args.table)
     if errs:
         fail("Erreur de validation post-modification :\n" + "\n".join(errs))
@@ -669,7 +766,7 @@ def action_add_field(args):
     fields_shifted = sum(1 for f in fields if f["position"] > fields[insert_idx]["position"])
 
     if not args.dry_run:
-        write_dhsd(args.dhsd, lines, backup=args.backup)
+        write_dhsd(args.dhsd, lines, backup=not args.no_backup)
 
     output = {
         "success": True,
@@ -694,6 +791,8 @@ def action_modify_field(args):
     champ_natures = parse_champ_declarations(lines)
     rng = find_table_range(lines, args.table)
     if rng is None:
+        if args.table in find_tableu_names(lines):
+            fail(surcharge_redirect_msg(args.table), code=1)
         fail(f"Table '{args.table}' non trouvee dans {args.dhsd}", code=2)
     table_start, champs_start, champs_end, table_end = rng
     fields = parse_table_fields(lines, champs_start, champs_end)
@@ -776,9 +875,22 @@ def action_modify_field(args):
     fields = parse_table_fields(lines, champs_start, champs_end)
     taille_before, taille_line_idx = get_taille(lines, table_start, champs_start)
 
+    # Tailles reelles depuis le layout (#321) ; le champ modifie prend la taille de
+    # sa NOUVELLE Nature, les autres conservent leur taille reelle d'origine.
+    layout_errs = annotate_sizes(fields, taille_before, args.table)
+    if layout_errs:
+        fail("Table deja incoherente (layout) -- modification refusee :\n" + "\n".join(layout_errs))
+    for f in fields:
+        if f["name"] == args.name:
+            f["_actual"] = new_size
+            break
+
+    # Position d'origine du U-field (AVANT tout recalc) -> ancrage correct
+    u_orig = next((f["position"] for f in fields if is_u_field(f["name"], args.table)), None)
+
     # Recalculer (U-field ancre si present)
     recalc_positions(fields, champ_natures, args.table)
-    new_taille, filler_adjusted = recalc_filler(fields, champ_natures, taille_before, args.table)
+    new_taille, filler_adjusted = recalc_filler(fields, champ_natures, taille_before, args.table, u_original_pos=u_orig)
     recalc_positions(fields, champ_natures, args.table)
 
     # Reconstruire [CHAMPS]
@@ -789,12 +901,13 @@ def action_modify_field(args):
     if taille_line_idx is not None:
         update_taille_line(lines, taille_line_idx, new_taille)
 
-    # Recalculer les index concernes
+    # Recalculer les index concernes (tailles reelles #321)
+    size_by_name = {f["name"]: f["_actual"] for f in fields}
     indexes = find_indexes_for_table(lines, args.table, champ_natures)
     indexes_updated = []
     for idx in indexes:
         if any(f["name"] == args.name for f in idx["fields"]):
-            recalc_index_positions(lines, idx, champ_natures, args.table)
+            recalc_index_positions(lines, idx, champ_natures, args.table, size_by_name)
             indexes_updated.append(idx["name"])
 
     # Validation
@@ -803,7 +916,7 @@ def action_modify_field(args):
         fail("Erreur de validation post-modification :\n" + "\n".join(errs))
 
     if not args.dry_run:
-        write_dhsd(args.dhsd, lines, backup=args.backup)
+        write_dhsd(args.dhsd, lines, backup=not args.no_backup)
 
     output = {
         "success": True,
@@ -828,6 +941,8 @@ def action_remove_field(args):
     champ_natures = parse_champ_declarations(lines)
     rng = find_table_range(lines, args.table)
     if rng is None:
+        if args.table in find_tableu_names(lines):
+            fail(surcharge_redirect_msg(args.table), code=1)
         fail(f"Table '{args.table}' non trouvee dans {args.dhsd}", code=2)
     table_start, champs_start, champs_end, table_end = rng
     fields = parse_table_fields(lines, champs_start, champs_end)
@@ -850,12 +965,20 @@ def action_remove_field(args):
     if args.name == "Filler":
         fail("Le champ Filler ne peut pas etre supprime directement")
 
+    # Tailles reelles depuis le layout (#321) AVANT suppression
+    layout_errs = annotate_sizes(fields, taille_before, args.table)
+    if layout_errs:
+        fail("Table deja incoherente (layout) -- modification refusee :\n" + "\n".join(layout_errs))
+
     # Supprimer le champ
     removed = fields.pop(target_idx)
 
+    # Position d'origine du U-field (AVANT tout recalc) -> ancrage correct
+    u_orig = next((f["position"] for f in fields if is_u_field(f["name"], args.table)), None)
+
     # Recalculer (U-field ancre si present)
     recalc_positions(fields, champ_natures, args.table)
-    new_taille, filler_adjusted = recalc_filler(fields, champ_natures, taille_before, args.table)
+    new_taille, filler_adjusted = recalc_filler(fields, champ_natures, taille_before, args.table, u_original_pos=u_orig)
     recalc_positions(fields, champ_natures, args.table)
 
     # Reconstruire [CHAMPS]
@@ -881,9 +1004,10 @@ def action_remove_field(args):
         if removed_from_idx:
             idx["fields"] = new_idx_fields
             lines = [l for l in lines if l != "" or l.strip() != ""]
+            size_by_name = {f["name"]: f["_actual"] for f in fields}
             indexes = find_indexes_for_table(lines, args.table, champ_natures)
             for idx2 in indexes:
-                recalc_index_positions(lines, idx2, champ_natures, args.table)
+                recalc_index_positions(lines, idx2, champ_natures, args.table, size_by_name)
                 indexes_updated.append(idx2["name"])
             break
 
@@ -893,7 +1017,7 @@ def action_remove_field(args):
         fail("Erreur de validation post-modification :\n" + "\n".join(errs))
 
     if not args.dry_run:
-        write_dhsd(args.dhsd, lines, backup=args.backup)
+        write_dhsd(args.dhsd, lines, backup=not args.no_backup)
 
     output = {
         "success": True,
@@ -932,8 +1056,8 @@ def main():
                         help="Inserer apres ce champ (add-field)")
     parser.add_argument("--dry-run", action="store_true",
                         help="Simuler sans ecrire")
-    parser.add_argument("--backup", action="store_true",
-                        help="Creer une copie .bak avant modification")
+    parser.add_argument("--no-backup", action="store_true",
+                        help="Ne pas creer la copie .bak avant modification")
 
     args = parser.parse_args()
 

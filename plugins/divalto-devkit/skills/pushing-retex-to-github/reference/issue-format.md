@@ -24,6 +24,14 @@ labels correspondants sont ajoutes.
 Les labels doivent **preexister** dans le repo cible. Sinon `gh issue create` echoue
 silencieusement sur le label inconnu et l'issue est creee sans ce label.
 
+**Droits requis** : poser un label exige le droit `triage` ou `push` sur le repo. Un compte
+en lecture seule (`pull` uniquement) voit ses labels **ignores silencieusement** par GitHub
+a la creation (`gh issue create --label X` sort en code 0 sans avertissement). `push_entry.py`
+relit donc les labels reellement poses apres creation : sa sortie JSON contient `labels`
+(labels effectivement appliques), `labels_requested` (demandes) et un `warning` explicite si
+l'ecart est non vide. La categorie/severite restent lisibles dans le corps de l'issue, donc
+l'information n'est jamais perdue meme sans label.
+
 A creer une fois pour toutes dans le repo cible :
 
 ```bash
@@ -76,7 +84,7 @@ Template (markdown) :
 
 _Date d'origine : YYYY-MM-DD_
 _ID local : R-NNN_
-_Hash : <8 premiers chars du sha1>_
+_Hash : <sha1 complet, 40 caracteres>_
 ```
 
 ## Mise a jour d'une entree existante
@@ -108,3 +116,7 @@ _Nouveau hash : <8 chars>_
 | Severite inconnue | Label brut `severite:<valeur>` ajoute |
 | Caracteres speciaux dans titre | Echappes pour `gh issue create --title` |
 | Body > 65k chars (limite GitHub) | Tronque + lien vers RETEX-skills.md commit hash si dispo |
+| Entree `Categorie=OK` | **Non poussee** : par convention une entree OK ne devient pas une issue. `push_new_entries.py` la met dans `skipped` (reason `categorie-ok-non-poussable`) avant tout appel `gh`, y compris la forme `OK (note)` (parenthese retiree) |
+| Compte sans droit `triage`/`push` | Labels ignores silencieusement par GitHub -> `push_entry.py` renvoie les labels reels + un `warning` (cf. section Labels) |
+| Accents (é è à ç) ou caractere hors cp1252 | Corps envoye via fichier UTF-8 (`gh --body-file`), captures `subprocess` en `encoding="utf-8"` -> pas de mojibake, pas de crash |
+| Nom de champ accentue (`Résultat`, `Catégorie`, `Sévérité`) | Tolere par le parser -> valeur extraite, hash stable (pas de faux `update`) |

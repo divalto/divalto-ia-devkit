@@ -23,10 +23,12 @@ Ne pas confondre les deux parsers.
 
 ## Structure du rapport
 
-Le rapport synchroauto contient :
-1. Les operations executees (CREATE TABLE, ALTER TABLE, etc.)
+Le rapport `-output` / `-outputall` de `synchroauto` contient **uniquement** :
+1. Les **logs d'etapes** (chargement `fhsqldivalto`, recherche des dictionnaires, copie, lancement, « Programme termine sans erreur »)
 2. Les messages d'erreur eventuels
 3. La ligne `[TOTAL_ERRORS]N` en fin de rapport
+
+> **Il ne contient PAS les DDL appliquees** (`CREATE TABLE` / `ALTER TABLE` / `CREATE INDEX`...). Ne jamais se fier au rapport `-output` pour savoir *ce qui a ete applique* sur la base : sur un vrai run (ex. changement de version), il ne remonte que les etapes + `[TOTAL_ERRORS]N`, aucune ligne DDL. Les DDL reellement executees sont dans **`C:\divalto\DivaltoLog\DhOdbcConfigSqlScript.sql`** (et `DhOdbcConfigSql.log`) -> voir « Delta de schema » ci-dessous et `parse_synchro.py --changes`.
 
 ---
 

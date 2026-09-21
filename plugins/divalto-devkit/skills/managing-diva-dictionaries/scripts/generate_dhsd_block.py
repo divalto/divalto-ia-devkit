@@ -23,7 +23,9 @@ Format JSON d'entree (fields.json ou stdin) :
     "base": "GtfMonEntite",
     "base_prefix": "Gtf",
     "dict_name": "gtfdd",
-    "u_field_size": 500,
+    "creator": "<login_diva>",
+    "u_field_size": 0,
+    "no_audit": false,
     "filler_size": 0,
     "fields": [
         {"name": "ChampMetier1", "nature": "20", "description": "Description champ 1"},
@@ -38,6 +40,25 @@ Format JSON d'entree (fields.json ou stdin) :
 
 Sortie JSON: {table, blocks: {champs[], table_block, base_block, indexes[], indexl_lines[]},
               positions: {field: {position, size}}, taille, summary}
+
+`summary` porte aussi : `creator` (login estampille), `u_field` (null = absence
+DELIBEREE de container U) et `audit_fields` (bool).
+
+Options ajoutees par (#207 / #245) :
+  --user <login_diva>   OBLIGATOIRE -- estampille dans chaque ligne Version=.
+                        Avant, toutes portaient "Claude" : tracabilite rompue.
+  --u-field-size 0      Defaut. PAS de container U : c'est la convention pour une
+                        table dont l'integrateur est proprietaire. En ajouter un
+                        n'est pas faux (--u-field-size 500), c'est un choix.
+  --no-audit            Ne pas ajouter UserCr/UserMo/UserCrDh/UserMoDh.
+
+Le discriminateur `Ce1` reste TOUJOURS genere : une table peut exister sans
+discriminateur, mais en prevoir un fait partie des bonnes pratiques (cf.
+reference/dhsd-5-zones.md, "Table sans discriminateur").
+
+Base deja existante : ne pas inserer le bloc [BASE] genere ; rattacher la table
+par `insert_dhsd_blocks.py --attach-to-base <NomBase>`.
+
 Exit codes: 0 = succes, 1 = erreur utilisateur, 2 = erreur interne
 """
 
@@ -83,8 +104,42 @@ def pad_name(name, width=20):
     return name.ljust(width)[:width]
 
 
-def generate_version_line(creator="Claude"):
-    """Genere une ligne Version= standard."""
+MAX_CREATOR = 20
+
+
+def valider_creator(creator):
+    """Valide l'identifiant estampille dans les lignes Version=.
+
+    C'est le **login DIVA** du developpeur -- pas son login Windows. Le script ne
+    peut donc pas le deviner : il est OBLIGATOIRE, comme dans le script voisin
+    generate_surcharge_field.py qui exige deja --user. Avant ce correctif, toutes
+    les lignes Version= portaient "Claude", ce qui rompait la tracabilite.
+
+    Deux gardes, pour la raison meme qui a motive la demande :
+      - une virgule casserait la ligne Version= (champs separes par des virgules) ;
+      - au-dela de 20 caracteres, le padding tronquerait en SILENCE -- donc on
+        refuse au lieu de tronquer.
+    """
+    if creator is None or not str(creator).strip():
+        raise ValueError(
+            "Identifiant createur manquant : passer --user <login_diva> (ou la cle "
+            "'creator' du JSON). C'est le login DIVA du developpeur, estampille dans "
+            "chaque ligne Version= ; aucune valeur par defaut n'est inventee.")
+    creator = str(creator).strip()
+    if "," in creator:
+        raise ValueError(
+            f"Identifiant createur invalide : '{creator}' contient une virgule, qui "
+            f"casserait la ligne Version= (format a champs separes par des virgules).")
+    if len(creator) > MAX_CREATOR:
+        raise ValueError(
+            f"Identifiant createur trop long : '{creator}' ({len(creator)} car.) depasse "
+            f"{MAX_CREATOR}. Il serait tronque en silence, ce qui detruirait la "
+            f"tracabilite recherchee -- utiliser un login de {MAX_CREATOR} car. maximum.")
+    return creator
+
+
+def generate_version_line(creator):
+    """Genere une ligne Version= standard. `creator` = login DIVA, obligatoire."""
     ts = generate_timestamp()
     padded = pad_name(creator)
     return f"Version=1,{ts},{padded},{ts},{padded}"
@@ -115,14 +170,17 @@ def compute_positions(all_fields):
     return result
 
 
-def generate_champ_blocks(fields, table_name, u_field_size):
+def generate_champ_blocks(fields, table_name, u_field_size, creator):
     """Genere les blocs [CHAMP] pour les champs metier + U-field.
 
     Ne genere PAS de [CHAMP] pour les champs standard (Ce1, Dos, UserCr, etc.)
     ni pour Filler (mot-cle special).
+
+    `u_field_size = 0` signifie **pas de container U** : ni declaration [CHAMP],
+    ni ligne de placement (cf. generate_all).
     """
     blocks = []
-    version = generate_version_line()
+    version = generate_version_line(creator)
 
     # Champs metier
     for field in fields:
@@ -137,25 +195,27 @@ def generate_champ_blocks(fields, table_name, u_field_size):
         )
         blocks.append({"name": field["name"], "block": block})
 
-    # U-field
-    u_name = f"U{table_name}"
-    block = (
-        f"[CHAMP]\n"
-        f"{version}\n"
-        f"Nom={u_name},Reserve distributeur {table_name},1\n"
-        f"Gel=3\n"
-        f"Nature={u_field_size}\n"
-        f"NomOdbc={u_name}\n"
-        f"Flags=n,1,o,o,n,n,n,n,o"
-    )
-    blocks.append({"name": u_name, "block": block})
+    # U-field (uniquement si une taille a ete demandee)
+    if u_field_size > 0:
+        u_name = f"U{table_name}"
+        block = (
+            f"[CHAMP]\n"
+            f"{version}\n"
+            f"Nom={u_name},Reserve distributeur {table_name},1\n"
+            f"Gel=3\n"
+            f"Nature={u_field_size}\n"
+            f"NomOdbc={u_name}\n"
+            f"Flags=n,1,o,o,n,n,n,n,o"
+        )
+        blocks.append({"name": u_name, "block": block})
 
     return blocks
 
 
-def generate_table_block(table_name, description, ce_value, positioned_fields, taille):
+def generate_table_block(table_name, description, ce_value, positioned_fields, taille,
+                         creator):
     """Genere le bloc [TABLE] complet."""
-    version = generate_version_line()
+    version = generate_version_line(creator)
     date_m = generate_hash()
     date_m2 = generate_hash()
 
@@ -182,9 +242,14 @@ def generate_table_block(table_name, description, ce_value, positioned_fields, t
     return "\n".join(lines)
 
 
-def generate_base_block(base_name, table_name, base_prefix):
-    """Genere le bloc [BASE]."""
-    version = generate_version_line()
+def generate_base_block(base_name, table_name, base_prefix, creator):
+    """Genere le bloc [BASE] pour une base NOUVELLE.
+
+    Si la base existe deja dans le dictionnaire, ce bloc ne doit PAS etre insere :
+    la table se rattache a la base existante par une ligne `Nom=<table>,0` dans son
+    `[TABLES]`. C'est le role de `insert_dhsd_blocks.py --attach-to-base`.
+    """
+    version = generate_version_line(creator)
     date_m = generate_hash()
     date_m_idx = generate_hash()
     fichier_name = base_name.upper()
@@ -208,7 +273,7 @@ INDEX_LETTER_RE = re.compile(r"^[A-Z0-9]$")
 
 
 def validate_ce_value(ce_value, discriminator="Ce1"):
-    """Valide ce_value selon le discriminator.
+    """Regle DICT12 -- valide ce_value selon le discriminator.
 
     Avec discriminator=Ce1 (defaut, Nature=1 char), ce_value doit etre
     1 caractere alphanumerique majuscule (A-Z, 0-9). Un multi-chiffres
@@ -260,10 +325,10 @@ def derive_index_letter(idx_name, used_letters):
     )
 
 
-def generate_index_blocks(indexes, base_name, ce_value, positioned_fields):
+def generate_index_blocks(indexes, base_name, ce_value, positioned_fields, creator):
     """Genere les blocs [INDEX]."""
     blocks = []
-    version = generate_version_line()
+    version = generate_version_line(creator)
 
     # Construire un mapping nom -> {position, size} pour calculer les positions dans l'index
     field_map = {pf["name"]: pf for pf in positioned_fields}
@@ -272,6 +337,7 @@ def generate_index_blocks(indexes, base_name, ce_value, positioned_fields):
     for idx in indexes:
         date_m = generate_hash()
         letter = derive_index_letter(idx["name"], used_letters)
+        # Regle DICT13 : la lettre cle doit etre 1 caractere alphanumerique
         if not INDEX_LETTER_RE.match(letter):
             raise ValueError(
                 f"Lettre cle invalide pour index '{idx['name']}' : '{letter}' "
@@ -330,10 +396,15 @@ def generate_all(params):
     ce_value = params["ce_value"]
     base_name = params["base"]
     base_prefix = params.get("base_prefix", "")
-    u_field_size = params.get("u_field_size", 500)
+    # Defaut 0 = PAS de container U. La convention pour une table dont
+    # l'integrateur est proprietaire est de ne pas en reserver ; en ajouter un
+    # n'est pas faux, mais c'est un choix explicite (--u-field-size N).
+    u_field_size = params.get("u_field_size", 0)
+    no_audit = bool(params.get("no_audit", False))
     filler_size = params.get("filler_size", 0)
     user_fields = params["fields"]
     indexes = params.get("indexes", [])
+    creator = valider_creator(params.get("creator"))
 
     # Garde-fou : Ce1 = 1 char alphanumerique majuscule (A-Z, 0-9)
     validate_ce_value(ce_value, discriminator=params.get("discriminator", "Ce1"))
@@ -342,7 +413,8 @@ def generate_all(params):
     all_fields = []
     all_fields.extend(STANDARD_FIELDS_BEFORE)
     all_fields.extend(user_fields)
-    all_fields.extend(STANDARD_FIELDS_AFTER)
+    if not no_audit:
+        all_fields.extend(STANDARD_FIELDS_AFTER)
 
     # Ajouter Filler si taille > 0
     if filler_size > 0:
@@ -353,13 +425,14 @@ def generate_all(params):
             "filler_size": filler_size,
         })
 
-    # Ajouter U-field
-    u_name = f"U{table_name}"
-    all_fields.append({
-        "name": u_name,
-        "nature": str(u_field_size),
-        "description": f"Reserve distributeur {table_name}",
-    })
+    # Ajouter le container U seulement si une taille a ete demandee
+    u_name = f"U{table_name}" if u_field_size > 0 else None
+    if u_name:
+        all_fields.append({
+            "name": u_name,
+            "nature": str(u_field_size),
+            "description": f"Reserve distributeur {table_name}",
+        })
 
     # Calculer les positions
     positioned = compute_positions(all_fields)
@@ -369,10 +442,11 @@ def generate_all(params):
     taille = last["position"] + last["size"] - 1
 
     # Generer les blocs
-    champ_blocks = generate_champ_blocks(user_fields, table_name, u_field_size)
-    table_block = generate_table_block(table_name, description, ce_value, positioned, taille)
-    base_block = generate_base_block(base_name, table_name, base_prefix)
-    index_blocks = generate_index_blocks(indexes, base_name, ce_value, positioned)
+    champ_blocks = generate_champ_blocks(user_fields, table_name, u_field_size, creator)
+    table_block = generate_table_block(table_name, description, ce_value, positioned, taille,
+                                       creator)
+    base_block = generate_base_block(base_name, table_name, base_prefix, creator)
+    index_blocks = generate_index_blocks(indexes, base_name, ce_value, positioned, creator)
     indexl_lines = generate_indexl_lines(indexes, base_name, table_name)
 
     # Construire le mapping positions pour reference
@@ -397,6 +471,12 @@ def generate_all(params):
             "indexes": len(index_blocks),
             "indexl_lines": len(indexl_lines),
             "taille_table": taille,
+            "creator": creator,
+            # `u_field: null` = absence DELIBEREE (aucun container demande). Le
+            # validateur s'appuie dessus pour classer DICT03 en warning plutot qu'en
+            # error : une absence choisie n'est pas une perte accidentelle.
+            "u_field": None if u_name is None else {"name": u_name, "size": u_field_size},
+            "audit_fields": not no_audit,
         },
     }
 
@@ -415,8 +495,18 @@ def main():
     parser.add_argument("--base", default=None, help="Nom de la base physique")
     parser.add_argument("--base-prefix", default=None, help="Prefixe de la base (Gtf, Ccf...)")
     parser.add_argument("--dict-name", default=None, help="Nom du dictionnaire (gtfdd, ccfdd...)")
-    parser.add_argument("--u-field-size", type=int, default=500,
-                        help="Taille du U-field en octets (defaut: 500)")
+    parser.add_argument("--user", default=None,
+                        help="OBLIGATOIRE. Login DIVA du developpeur, estampille dans "
+                             "chaque ligne Version= (20 car. max, pas de virgule). "
+                             "Peut aussi etre fourni par la cle 'creator' du JSON ; "
+                             "l'option CLI est prioritaire.")
+    parser.add_argument("--u-field-size", type=int, default=None,
+                        help="Taille du container U en octets (defaut: 0 = PAS de "
+                             "container U -- convention pour une table dont "
+                             "l'integrateur est proprietaire)")
+    parser.add_argument("--no-audit", action="store_true",
+                        help="Ne pas ajouter les champs d'audit "
+                             "(UserCr/UserMo/UserCrDh/UserMoDh)")
     parser.add_argument("--filler-size", type=int, default=0,
                         help="Taille du Filler en octets (defaut: 0 = pas de filler)")
     parser.add_argument("--output", default=None,
@@ -451,6 +541,14 @@ def main():
     else:
         parser.print_help()
         sys.exit(1)
+
+    # Les options CLI sont prioritaires sur le JSON
+    if args.user:
+        params["creator"] = args.user
+    if args.u_field_size is not None:
+        params["u_field_size"] = args.u_field_size
+    if args.no_audit:
+        params["no_audit"] = True
 
     # Valider les parametres obligatoires
     required = ["table", "ce_value", "base", "fields"]

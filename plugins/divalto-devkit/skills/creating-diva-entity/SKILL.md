@@ -1,11 +1,11 @@
 ---
 name: creating-diva-entity
 description: >
-  Orchestre la creation de bout en bout d'une entite metier DIVA en mode collaboratif.
+  Orchestre la creation de bout en bout d'une entite metier custom dans un domaine STANDARD du referentiel ERP (DAV, Retail, GRM...) ; un domaine maison (prefixe/dico propre au partenaire, ex. <prefixe>_) n'est pas gere (cf. section "Portee et limites").
   A partir des parametres utilisateur (domaine, entite, table, champ cle, description),
   enchaine : calcul des noms, generation RecordSql, Module Check, Zoom SQL, bloc d'alias,
   validation croisee inter-fichiers, dictionnaire, compilation, ISAM et menu.
-  Orchestration LLM avec 11 checkpoints de validation humaine — Claude s'arrete
+  Orchestration LLM avec 14 checkpoints de validation humaine — Claude s'arrete
   apres chaque etape significative pour expliquer et attendre le feu vert.
 ---
 
@@ -27,9 +27,13 @@ de generation. Les skills suivants doivent etre disponibles :
 
 ---
 
+## Portee et limites
+
+Entites custom **dans un domaine STANDARD enregistre** (DAV, Retail, GRM...) uniquement ; un domaine maison (prefixe/dico propre au partenaire, ex. `<prefixe>_` / `<prefixe>_gtfdd.dhsd`) est **hors perimetre** -> composition (`managing-diva-dictionaries` + `generating-zoom-sql` + `manipulating-dhsf-screens`). Detail + evolution `--custom-domain` : [reference/scope-domaine-maison.md](reference/scope-domaine-maison.md).
+
 ## Carte des checkpoints
 
-13 checkpoints ponctuent l'orchestration : CP1 (Nommage, apres etape 1), CP1bis (FK detectees, apres 1bis), CP2 (Sources generees, apres 2-5ter), CP3 (Coherence inter-fichiers, apres 6-7), CP3bis (Champs metier, apres 7bis), CP4 (Dictionnaire, 8), CP5 (Integration ERP, 9-10), CP6 (Compilation, 11-12), CP7 (Sous-projet, 13), CP8 (Synchro SQL, 14), CP9 (Zoom des zooms, 15-16), CP10 (Menu domaine, 17), CP11 (Visibilite F7 via M1, 18).
+14 checkpoints ponctuent l'orchestration : CP1 (Nommage, apres etape 1), CP1bis (FK detectees, apres 1bis), CP2 (Sources generees, apres 2-5ter), CP3 (Coherence inter-fichiers, apres 6-7), CP3bis (Champs metier, apres 7bis), CP4 (Dictionnaire, 8), CP5 (Integration ERP, 9-10), CP6 (Compilation, 11-12), CP6bis (Cleanup `[communs]`, conditionnel), CP7 (Sous-projet, 13), CP8 (Synchro SQL, 14), CP9 (Zoom des zooms, 15-16), CP10 (Menu domaine, 17), CP11 (Visibilite F7 via M1, 18). Dix sont ecrits en bloc `> **CHECKPOINT**` dans cette page. Les quatre autres -- CP1bis, CP3bis, CP6bis et CP7 -- sont detailles dans la page de reference de leur etape, liee depuis l'etape elle-meme : [fk-detection.md](reference/fk-detection.md), [champs-metier.md](reference/champs-metier.md), [cleanup-post-compilation.md](reference/cleanup-post-compilation.md), [sous-projet-config.md](reference/sous-projet-config.md).
 
 A chaque checkpoint, Claude : (1) decrit ce qu'il a fait, (2) explique ses choix, (3) montre les resultats de validation, (4) attend la validation du collaborateur.
 
@@ -124,7 +128,7 @@ py .claude/skills/generating-recordsql/scripts/validate_rsql.py \
 
 ### Etape 3 : Generer Module Check
 
-Invoquer le skill `generating-objet-metier`. Si des FK ont ete validees a **CP1bis**, les propager via `--fk` (cf. FK-02) -- cela genere automatiquement les imports `Module "Gttmchk<cible>.dhop"` et les procedures `Check_<SRC>_Field_<CHAMP>(+_Lib)` :
+Invoquer le skill `generating-objet-metier`. Si des FK ont ete validees a **CP1bis**, les propager via `--fk` (cf. FK-01) -- cela genere automatiquement les imports `Module "Gttmchk<cible>.dhop"` et les procedures `Check_<SRC>_Field_<CHAMP>(+_Lib)` :
 
 ```
 py .claude/skills/generating-objet-metier/scripts/generate_mchk.py \
@@ -133,7 +137,7 @@ py .claude/skills/generating-objet-metier/scripts/generate_mchk.py \
     [--fk CHAMP1:TARGET1:ZOOM1] [--fk CHAMP2:TARGET2] ...
 ```
 
-Sans `--fk`, le Module Check est genere standard (retrocompat pre-FK-02).
+Sans `--fk`, le Module Check est genere standard, comme avant le support des FK.
 
 Puis valider :
 
@@ -167,7 +171,7 @@ py .claude/skills/creating-diva-entity/scripts/generate_alias.py \
 
 ### Etape 5bis : Generer le masque ecran (.dhsf)
 
-> **PREREQUIS -- formules normes-graphiques (R-007 2026-04-23)**
+> **PREREQUIS -- formules normes-graphiques (2026-04-23)**
 >
 > Avant toute manipulation de groupbox / champ / position, LIRE `manipulating-dhsf-screens/reference/normes-graphiques.md` section 5 "Formules". Ne JAMAIS iterer aveuglement sur les positions -- l'incident RaceChat du 2026-04-23 a montre 4+ iterations perdues (titres tronques, erreur "clip grille" mal diagnostiquee) parce que la charte n'a pas ete consultee.
 >
@@ -180,7 +184,7 @@ py .claude/skills/creating-diva-entity/scripts/generate_alias.py \
 > | Gap entre 2 groupbox consecutives | `>= 8` unites |
 > | Bornes de grille (erreur "clip grille") | `max_X <= nb_col * 4` et `max_Y <= nb_lig * 14` |
 >
-> Toute generation ou modification du masque (template initial, `dhsf_add_fk.py`, `dhsf_modify.py add-field/add-column/add-page`) invoque automatiquement `validate_groupbox_layout()` et retourne `post_validation` dans le JSON. **Lire `post_validation.violations` apres chaque operation** : une violation `severity=error` (R1/R4/R5) signifie que la compilation xwin7 echouera avec "Objet en dehors de la clip grille".
+> Toute generation ou modification du masque (template initial, `dhsf_add_fk.py`, `dhsf_modify.py add-field/add-column/add-page`) invoque automatiquement `validate_groupbox_layout()` et retourne `post_validation` dans le JSON. **Lire `post_validation.violations` apres chaque operation** : une violation `severity=error` (DHSF01/DHSF04/DHSF05) signifie que la compilation xwin7 echouera avec "Objet en dehors de la clip grille".
 
 Invoquer le skill `manipulating-dhsf-screens` (template zoom) :
 
@@ -209,7 +213,7 @@ Le fichier genere est en ISO-8859-1+CRLF (gere par dhsf_template.py).
 
 ### Etape 5ter : Appliquer le binding FK au masque (si FK validees a CP1bis)
 
-Si des FK ont ete validees a CP1bis, enrichir le masque avec `dhsf_add_fk.py` (cf. FK-03) :
+Si des FK ont ete validees a CP1bis, enrichir le masque avec `dhsf_add_fk.py` (cf. FK-02) :
 
 ```
 py .claude/skills/manipulating-dhsf-screens/scripts/dhsf_add_fk.py \
@@ -234,7 +238,7 @@ Le compteur `<id>` est global au masque, coherent avec la convention Divalto.
 
 Si un bloc `[champ]` correspondant n'existe pas (champ FK pas encore present dans le masque), le script emet un warning et ajoute la procedure dans `[diva]` ; le bloc `[champ]` reste a ajouter manuellement (ou via `dhsf_modify.py add-field`).
 
-**Post-validation layout** : `dhsf_add_fk.py` retourne un `post_validation` dans le JSON. Verifier `violations[].severity == "error"` avant de passer a l'etape suivante. En cas d'erreur R1/R4/R5, ajuster les positions/tailles et re-valider (`dhsf_modify.py --action validate`).
+**Post-validation layout** : `dhsf_add_fk.py` retourne un `post_validation` dans le JSON. Verifier `violations[].severity == "error"` avant de passer a l'etape suivante. En cas d'erreur DHSF01/DHSF04/DHSF05, ajuster les positions/tailles et re-valider (`dhsf_modify.py --action validate`).
 
 Sans `--fk`, aucune modification (inutile d'appeler le script).
 
@@ -343,22 +347,22 @@ Cela met a jour les `.dhop` dans le repertoire objet ERP.
 > (`divalto.dhpt`) ou ajouter temporairement ces fichiers dans `[fichiers]` du sous-projet.
 > Cette etape 11 DOIT etre terminee avant l'etape 12 (harness standalone).
 
-### Etape 12 : Compilation harness standalone (validation rapide, ~44s)
+### Etape 12 : Compilation harness standalone (validation rapide)
+
+Les sources ne sont **pas encore** dans un sous-projet (c'est l'etape 13) : cas « source neuf »
+-> harness, qui **emprunte** profil/implicite a un `.dhpt` reel (cf. `compiling-diva-projects`).
 
 ```
 py .claude/skills/compiling-diva-projects/scripts/generate_harness.py \
-    --sources "{REPERTOIRE_TRAVAIL}/{fichier_rsql}" "{REPERTOIRE_TRAVAIL}/{fichier_mchk}" "{REPERTOIRE_TRAVAIL}/{fichier_zoom}" \
-    --with-zdiva --with-communs
+    --from-dhpt "<.dhpt ERP du workspace, ex. divalto.dhpt>" --with-zdiva \
+    --output-dir "{REPERTOIRE_TRAVAIL}/harness" \
+    --sources "{REPERTOIRE_TRAVAIL}/{fichier_rsql}" "{REPERTOIRE_TRAVAIL}/{fichier_mchk}" "{REPERTOIRE_TRAVAIL}/{fichier_zoom}"
+py .claude/skills/compiling-diva-projects/scripts/compile_project.py --action buildall \
+    --project "{REPERTOIRE_TRAVAIL}/harness/projet/harness.dhpt" \
+    --profile "<borrowed_profile>" --log-path "{REPERTOIRE_TRAVAIL}/harness/log/compil.txt"
 ```
 
-Le script retourne le chemin du log unique (ex: `harness_20260414_185848.txt`).
-
-```
-powershell -ExecutionPolicy Bypass -File "{REPERTOIRE_TRAVAIL}/scripts/harness_compile.ps1"
-
-py .claude/skills/compiling-diva-projects/scripts/parse_compilation.py \
-    --path "{log_file retourne par generate_harness}"
-```
+Le `borrowed_profile` retourne par la 1re commande est le `--profile` de la 2e. Le verdict est **deja applique** dans le JSON (`success`) -- ne pas le re-juger sur `Erreur(s)=0`.
 
 Si `success: true` → passer a l'etape suivante. Sinon corriger et recompiler.
 
@@ -448,9 +452,9 @@ Voir [reference/menu-domain.md](reference/menu-domain.md) pour le detail :
 > - Resultat attendu : une nouvelle entree dans le menu ERP a l'emplacement prevu
 > Attendre validation avant l'etape de visibilite F7.
 
-### Etape 18 : Visibilite F7 via M1 (skill `writing-isam-files`) -- R-002
+### Etape 18 : Visibilite F7 via M1 (skill `writing-isam-files`)
 
-RETEX R-002 (2026-04-23) : **M4 seul ne suffit pas**. Sans enreg M1 (`Ce=5`) dans `a5f.dhfi` pour ce `ZoomNum`, le zoom est **invisible via F7**.
+RETEX (2026-04-23) : **M4 seul ne suffit pas**. Sans enreg M1 (`Ce=5`) dans `a5f.dhfi` pour ce `ZoomNum`, le zoom est **invisible via F7**.
 
 Pattern : 1 enreg M1 par domaine de visibilite (typique = M4.Ap ; multi-domaine pour tables communes type Pays/Devise, ex `ZoomNum=540` visible en DAV+DCPT+DPAIE = 3 M1).
 

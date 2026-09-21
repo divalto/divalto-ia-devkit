@@ -44,7 +44,7 @@
     },
     {
       "name": "apercu-dry-run-et-delta",
-      "description": "Le collaborateur veut voir ce que la synchro va changer avant/apres application (R-013 / #148).",
+      "description": "Le collaborateur veut voir ce que la synchro va changer avant/apres application (#148).",
       "prompt": "Avant d'appliquer la synchro SQL, je veux savoir ce qu'elle va changer dans le schema. Comment faire ?",
       "expected": {
         "actions": [
@@ -54,6 +54,33 @@
           "Le --changes restitue le DELTA par table (add_columns/drop_columns/create_index/drop_index/created/dropped), pas un DROP+CREATE en bloc",
           "Preciser que le bruit est filtre (tables *_oldcolumns de sauvegarde, INSERT, sp_addextendedproperty) et que les procedures ERASE_* sont des regenerations techniques",
           "Ne PAS pretendre creer un dry-run natif (inexistant)"
+        ]
+      }
+    },
+    {
+      "name": "pre-vol-avant-application",
+      "description": "Valider les changements AVANT synchroauto sur base sensible (#192).",
+      "prompt": "Je dois synchroniser une base quasi-prod apres un changement de version. Je veux valider les modifs avant qu'elles s'appliquent.",
+      "expected": {
+        "actions": [
+          "Rappeler que synchroauto en CLI applique DIRECTEMENT (pas d'etape de validation), contrairement au GUI (menu Projet > Synchroniser la BDD) qui montre la liste avant application",
+          "Rappeler qu'il n'existe pas de dry-run natif",
+          "Faire un pre-vol : lister les changements attendus (note de version du SP cible) et les presenter comme checklist",
+          "CHECKPOINT : ne lancer synchroauto qu'apres validation humaine explicite ; proposer le GUI pour un cas tres sensible",
+          "Preciser qu'il n'y a pas de rollback automatique une fois applique"
+        ]
+      }
+    },
+    {
+      "name": "rapport-sans-ddl",
+      "description": "Le rapport synchroauto ne detaille pas les DDL appliquees (#193).",
+      "prompt": "La synchro a reussi ([TOTAL_ERRORS]0) mais le rapport ne me dit pas quels index/colonnes ont ete crees ou supprimes. Comment savoir ce qui a ete applique ?",
+      "expected": {
+        "actions": [
+          "Corriger l'attente : le rapport -output/-outputall ne contient PAS les DDL (seulement les etapes + [TOTAL_ERRORS]N)",
+          "Indiquer que les DDL reellement appliquees sont dans C:/divalto/DivaltoLog/DhOdbcConfigSqlScript.sql",
+          "Lancer parse_synchro.py --path .../DhOdbcConfigSqlScript.sql --changes pour obtenir le delta par table",
+          "Ne pas affirmer que le rapport synchroauto liste les CREATE/ALTER (faux)"
         ]
       }
     }

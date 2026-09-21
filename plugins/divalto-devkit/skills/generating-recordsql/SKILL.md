@@ -13,8 +13,8 @@ description: >
 ## Contenu
 
 - Utilisation rapide
-- Multi-table (jointures G-021)
-- Bibliotheque de squelettes (G-022)
+- Multi-table (jointures)
+- Bibliotheque de squelettes
 - Workflow complet
 - Validation
 - Scripts disponibles
@@ -33,7 +33,7 @@ py .claude/skills/generating-recordsql/scripts/generate_rsql.py \
 
 ---
 
-## Multi-table (jointures G-021)
+## Multi-table (jointures)
 
 Le template supporte les **jointures parametriques** : 65 % du corpus X.13 joint >= 2 tables.
 Deux types supportes :
@@ -68,7 +68,7 @@ Types supportes : `implicit` | `left_join` pour jointures, `equal` | `like` | `b
 
 ---
 
-## Bibliotheque de squelettes (G-022)
+## Bibliotheque de squelettes
 
 8 squelettes pre-configures couvrant les super-patterns X.12 (>900 RSQL du corpus) :
 
@@ -135,9 +135,9 @@ py .claude/skills/generating-recordsql/scripts/validate_rsql.py \
 
 ### 3. Corriger si erreurs
 
-- **R01 (Dos = MZ.Dos absent)** : erreur critique, le template l'inclut automatiquement — si absent, le template est corrompu
-- **R02 (OverWrittenBy absent)** : le template l'inclut automatiquement
-- **R06 (encodage)** : le script ecrit en ISO-8859-1+CRLF — si erreur, utiliser le skill `writing-diva-files` pour convertir le fichier
+- **RSQ01 (Dos = MZ.Dos absent)** : erreur critique, le template l'inclut automatiquement — si absent, le template est corrompu
+- **RSQ02 (OverWrittenBy absent)** : le template l'inclut automatiquement
+- **RSQ06 (encodage)** : le script ecrit en ISO-8859-1+CRLF — si erreur, utiliser le skill `writing-diva-files` pour convertir le fichier
 
 ### 4. Verifier l'encodage
 
@@ -147,20 +147,20 @@ Utiliser le skill `writing-diva-files` pour verifier l'encodage du fichier gener
 
 ## Validation
 
-Le script `validate_rsql.py` verifie 8 regles (R01-R06 anti-patterns DIVA, R07/R08 jointures G-021 -- detail dans [reference/recordsql-anti-patterns.md](reference/recordsql-anti-patterns.md)) :
+Le script `validate_rsql.py` verifie 8 regles (RSQ01-RSQ06 anti-patterns DIVA, RSQ07/RSQ08 jointures -- detail dans [reference/recordsql-anti-patterns.md](reference/recordsql-anti-patterns.md)) :
 
 | Regle | Severite | Quoi |
 |-------|----------|------|
-| R01 | error | Filtre multi-dossier `Dos = MZ.Dos` |
-| R02 | warning | `OverWrittenBy` present |
-| R03 | warning | Nom RecordSql coherent avec tokens |
-| R04 | error | Sections `<SELECT>` et `<FROM>` presentes |
-| R05 | warning | `DefaultDictionary` coherent |
-| R06 | error | Encodage ISO-8859-1 + CRLF |
-| R07 | warning | Chaque table implicite dans `<FROM>` apparait dans `<WHERE>` (jointures G-021) |
-| R08 | warning | Syntaxe `LEFT JOIN <table> [alias] ON <condition>` bien formee |
+| RSQ01 | error | Filtre multi-dossier `Dos = MZ.Dos` |
+| RSQ02 | warning | `OverWrittenBy` present |
+| RSQ03 | warning | Nom RecordSql coherent avec tokens |
+| RSQ04 | error | Sections `<SELECT>` et `<FROM>` presentes |
+| RSQ05 | warning | `DefaultDictionary` coherent |
+| RSQ06 | error | Encodage ISO-8859-1 + CRLF |
+| RSQ07 | warning | Chaque table implicite dans `<FROM>` apparait dans `<WHERE>` (jointures) |
+| RSQ08 | warning | Syntaxe `LEFT JOIN <table> [alias] ON <condition>` bien formee |
 
-Avec `--tokens`, des verifications croisees supplementaires sont effectuees (R03, R05).
+Avec `--tokens`, des verifications croisees supplementaires sont effectuees (RSQ03, RSQ05).
 
 ---
 
@@ -169,19 +169,19 @@ Avec `--tokens`, des verifications croisees supplementaires sont effectuees (R03
 | Script | Role | Entree | Sortie |
 |--------|------|--------|--------|
 | `scripts/generate_rsql.py` | Genere le fichier .dhsq | `--params` (autonome) ou JSON tokens (stdin/fichier) + optionnel `--skeleton` + --output | JSON rapport + fichier .dhsq |
-| `scripts/validate_rsql.py` | Valide un .dhsq existant (R01-R08) | --path fichier [+ --tokens JSON] | JSON rapport (errors/warnings) |
+| `scripts/validate_rsql.py` | Valide un .dhsq existant (RSQ01-RSQ08) | --path fichier [+ --tokens JSON] | JSON rapport (errors/warnings) |
 | `scripts/templates/recordsql.dhsq.j2` | Template Jinja2 (multi-table) | (utilise par generate_rsql.py) | — |
 | `scripts/_naming.py` | Calcul des tokens de nommage (vendored) | (utilise par generate_rsql.py en mode --params) | — |
-| `reference/skeletons/*.skel.json` | Bibliotheque G-022 : 8 super-patterns pre-configures | (charge par generate_rsql.py via --skeleton) | — |
+| `reference/skeletons/*.skel.json` | Bibliotheque de squelettes : 8 super-patterns pre-configures | (charge par generate_rsql.py via --skeleton) | — |
 
 ---
 
 ## References
 
 - **Structure complete d'un RecordSql** : Voir [reference/recordsql-structure.md](reference/recordsql-structure.md)
-- **Regles R01-R06 avec exemples** : Voir [reference/recordsql-anti-patterns.md](reference/recordsql-anti-patterns.md)
+- **Regles RSQ01-RSQ08 avec exemples** : Voir [reference/recordsql-anti-patterns.md](reference/recordsql-anti-patterns.md)
 - **Surcharge .dhsq (delta strict, groupe `[communs]`)** : Voir [reference/dhsq-overwrite-pattern.md](reference/dhsq-overwrite-pattern.md) — entetes overwrite/overwrittenby, les 9 interdits empiriques, convention de rattachement
 - **Arbitrage downgrade RecordSQL (migration de SP)** : Voir [reference/recordsql-downgrade-arbitration.md](reference/recordsql-downgrade-arbitration.md) — diff texte trompeur (SELECT * couple a la structure dico), collapse de chaine OverWrite, regle des 3 conditions. Complete `migrating-erp-downgrade`.
 - **Callbacks, MandatoryColumns, jointures avancees** : Voir [reference/recordsql-api-reference.md](reference/recordsql-api-reference.md)
 - **Patterns observes dans le corpus (advisory, snapshot de fraicheur inconnue)** : Voir [reference/corpus-patterns.md](reference/corpus-patterns.md) — signatures de jointure, super-patterns, angles morts du generateur. **Croiser avec le filesystem X.13 avant decision.**
-- **Bibliotheque de squelettes G-022** : Voir [reference/skeletons-catalogue.md](reference/skeletons-catalogue.md) — 8 super-patterns pre-configures (fichiers .skel.json dans `reference/skeletons/`).
+- **Bibliotheque de squelettes** : Voir [reference/skeletons-catalogue.md](reference/skeletons-catalogue.md) — 8 super-patterns pre-configures (fichiers .skel.json dans `reference/skeletons/`).

@@ -1,11 +1,11 @@
 # Patterns observes dans le corpus Module Check (mchk)
 
-> **Note** : les chiffres ci-dessous proviennent d'une extraction du graphe `diva-mcp` en date du **2026-04-17** (snapshot alors X.12). Depuis le 2026-04-24 le graphe est passe X.13 ; les volumes ont peu evolue (+3-6 % en moyenne, cf le référentiel du graphe diva-mcp (interne)). Les pourcentages et conclusions ci-dessous restent significatifs, mais n'ont pas ete re-executes sur X.13.
+> **Note** : les chiffres ci-dessous proviennent d'une extraction du graphe `diva-mcp` en date du **2026-04-17** (snapshot alors X.12). Depuis le 2026-04-24 le graphe est passe X.13 ; les volumes ont peu evolue (+3-6 % en moyenne, mesure sur le graphe). Les pourcentages et conclusions ci-dessous restent significatifs, mais n'ont pas ete re-executes sur X.13.
 
 ## Contenu
 
 - Vue d'ensemble
-- 1. Taux de presence des 22 fonctions canoniques du pattern STRUCT
+- 1. Taux de presence des 22 fonctions canoniques du pattern MCHK06
 - 2. Distribution du nombre total de fonctions par mchk
 - 3. Architecture mixte Function / Procedure / DObj
 - 4. Implications pour le generateur `generating-objet-metier`
@@ -48,7 +48,7 @@
 
 ---
 
-## 1. Taux de presence des 22 fonctions canoniques du pattern STRUCT
+## 1. Taux de presence des 22 fonctions canoniques du pattern MCHK06
 
 Presence mesuree sur les 1 244 mchk, en unifiant la typologie graphe `Function` + `Procedure` + `DObj` (le template mixe les trois).
 

@@ -150,11 +150,35 @@ Cle d'index : lettre `A` + `Errnum` cadre a droite sur 5 (ex. `A 9129`). Detail 
 
 ---
 
+## Le code `9999` -- les messages libres du journal
+
+Les fonctions d'ecriture au livre de bord (`G3_Log_Ano`, `A5_Log_Ano`, `C3_Log_Ano`,
+`R3_Log_Ano`) prennent en **premier parametre un code de ce fichier**, pas une donnee metier.
+Pour un texte libre, la convention est le code **`9999`** -- et le mecanisme est ici : son
+libelle vaut **`$1`**, un pur passe-plat, donc le message affiche est le parametre lui-meme.
+
+Deux points mesures le 2026-08-30 sur les **13** `XXferr` d'un pack standard recent :
+
+| Constat | Consequence |
+|---|---|
+| **11** portent `9999`, dont **10** avec exactement `$1` | la convention est large, pas universelle |
+| **`a5ferr`** fait exception : `Erreur $1` | `A5_Log_Ano(9999, 'texte')` ecrit **`Erreur texte`** |
+| **2** ne portent pas `9999` du tout | verifier avant d'ecrire, avec `--check 9999` |
+
+C'est exactement ce que `--check` sert a savoir : il rend `found` **et** le libelle, donc ce
+que l'appel produira reellement.
+
+> La signature de ces fonctions et leur usage cote code vivent dans `coding-diva-advanced`
+> (`reference/log-anomalies.md`) -- ce skill-ci ne possede que les **codes**.
+
+---
+
 ## Voir aussi
 
 - `reading-isam-files` -- lecture ISAM des `XXferr` (ce skill l'invoque)
 - `understanding-integrator-workspace` -- localiser les `XXferr` (chemins de recherche)
 - `writing-isam-files` -- garde-fou taille (pourquoi on n'ecrit pas le binaire)
 - `generating-objet-metier` -- genere les appels `GererErreurCheck(NNN)` (consommateur des codes)
+- `coding-diva-advanced` -- `reference/log-anomalies.md` : les fonctions `*_Log_Ano` qui consomment ces codes (dont `9999`, le message libre)
 - `migrating-erp-downgrade` -- arbitrage downgrade (meme logique que `--diff`)
 - [reference/error-message-files.md](reference/error-message-files.md) -- structure, cle, format `.dhfd`, lecons RETEX

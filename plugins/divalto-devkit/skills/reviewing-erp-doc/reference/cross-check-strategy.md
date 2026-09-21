@@ -1,6 +1,6 @@
 # Strategie de cross-check par categorie
 
-Comment chaque detecteur confronte le livrable UC-200 aux sources de verite.
+Comment chaque detecteur confronte le livrable de documentation aux sources de verite.
 
 ## Sommaire
 
@@ -20,7 +20,7 @@ Comment chaque detecteur confronte le livrable UC-200 aux sources de verite.
 | E1 | Livrable lui-meme (auto-verification) | Regex sur les YAML d'entite |
 | E2 | Sources X.13 autour des citations | Extraction contexte 20 lignes + jugement LLM |
 | E3 | Dictionnaires `.dhsd`, masques `.dhsf`, schema SQL | Re-parsing complet + diff structurel |
-| E4 | Referentiel `docs/` du workspace | Corpus cible (voir docs-corpus.md) + heuristiques regex |
+| E4 | Taxonomie des suffixes + table des prefixes de domaine, **livrees** | 2 heuristiques regex (voir referentiel-e4.md) |
 
 Principe commun : **chaque detection doit etre ancree**. Un item remonte porte systematiquement :
 
@@ -52,7 +52,7 @@ Pour chaque entite :
 ([A-Za-z0-9_./\\-]+\.(dhsp|dhsq|dhsd|dhsf|dhop|sql|dll|py|js)):(\d+)
 ```
 
-Note : les citations vers `docs/*.md` sont aussi acceptees (via extension `.md`), meme si moins frequentes dans un livrable UC-200.
+Note : les citations vers `docs/*.md` sont aussi acceptees (via extension `.md`), meme si moins frequentes dans un livrable de documentation.
 
 ### Limites
 
@@ -139,33 +139,31 @@ Pour chaque element present en source mais pas en livrable :
 ### Inputs
 
 - IR du livrable
-- Racine `docs/` du workspace (`{RACINE_DOCS}`)
+- Rien d'autre : les deux tables de reference sont livrees avec le skill
 
 ### Algorithme
 
-Etape 1 : charger le corpus cible (voir [docs-corpus.md](docs-corpus.md)). Liste fixe de fichiers et de sections avec heuristiques associees.
+Etape 1 : charger la table des prefixes de domaine depuis [prefixes-domaine.md](prefixes-domaine.md). La taxonomie des suffixes est dans le script (voir [referentiel-e4.md](referentiel-e4.md) pour le pourquoi).
 
 Etape 2 : pour chaque entite, appliquer les heuristiques :
 
 | Heuristique | Verification | Source referentiel |
 |-------------|--------------|---------------------|
-| Nature d'un champ coherente avec son suffixe | Le suffixe du nom YAML declare doit cadrer avec la Nature declaree | le référentiel interne dictionnaire (table des suffixes) |
-| Prefixe d'entite coherent avec son domaine | Le prefixe du fichier source (Gtt*, Gfc*, Gab*) doit cadrer avec le domaine declare | le référentiel interne des modules ERP (section 4) |
-| Pattern 3 fichiers respecte | Si `.dhop` cite, verifier le naming `Gttmchk*.dhop` ou equivalent | le référentiel architecture d'entité (interne) |
-| Anti-patterns connus | Chercher les patterns listes `Z01`-`Z20` dans le livrable | le référentiel anti-patterns (interne) |
+| Nature d'un champ coherente avec son suffixe | Le suffixe du nom YAML declare doit cadrer avec la Nature declaree | `managing-diva-dictionaries`, page `reference/taxonomie-suffixes.md` |
+| Prefixe d'entite coherent avec son domaine | Le prefixe du fichier source (gtt*, cct*, gat*...) doit cadrer avec le domaine declare | [prefixes-domaine.md](prefixes-domaine.md) |
 
-Etape 3 : si la racine `docs/` est absente (`--docs-root skip`), ecrire un `.detect_e4.json` avec `items: []` + `warning_global: "docs-root skip"` et continuer.
+Etape 3 : si la table des prefixes est illisible, H5 se tait et un `warning_global` le dit. La page est livree avec le skill : son absence signale une installation incomplete, pas un environnement normal.
 
 ### Regles strictes
 
-- **Jamais de modification de `docs/`** : seulement lecture + signalement
+- **Jamais de modification d'une page de reference** : seulement lecture + signalement
 - **Toujours severite `warning`** : le referentiel peut etre obsolete, un ecart n'est pas automatiquement une erreur
 - **Citation des deux cotes** dans le rapport : extrait livrable + extrait referentiel (`fichier:ligne` ou `fichier:section`)
 
 ### Limites
 
 - Le corpus est **fige** : les heuristiques sont codees en dur dans le script. Enrichissement manuel requis a chaque ajout de regle dans le referentiel.
-- **Dependance au format** des fichiers `docs/` : si le format d'une table de Natures change, l'heuristique peut casser silencieusement. Prevoir des tests de non-regression sur le corpus (couverts par `evals.json`).
+- **Dependance au format** de [prefixes-domaine.md](prefixes-domaine.md) : si la table change de colonnes, H5 se tait au lieu de crier. Prevoir des tests de non-regression sur le corpus (couverts par `evals.json`).
 
 ---
 
@@ -176,6 +174,6 @@ Sequence dans le SKILL.md : E1 -> E3 -> E4 -> E2 (etapes 2 a 6).
 Rationale :
 - E1, E3, E4 sont deterministes et peu couteux -> les passer en premier
 - E2 est LLM-driven et le plus couteux -> en dernier
-- Si le livrable est massivement non source (scenario 3 UC-201), E1 remonte beaucoup d'erreurs et E2 a peu de citations a evaluer : bon ordre
+- Si le livrable est massivement non source (scenario 3 de la recette), E1 remonte beaucoup d'erreurs et E2 a peu de citations a evaluer : bon ordre
 
 Parallelisation possible entre E1 / E3 / E4 (detecteurs independants), mais hors scope v1 (sequence simple, plus facile a debuguer).

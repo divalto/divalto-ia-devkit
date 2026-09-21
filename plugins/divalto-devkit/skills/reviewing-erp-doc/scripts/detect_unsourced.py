@@ -6,7 +6,7 @@ Lit l'IR produit par ingest_deliverable.py et remonte les affirmations qui ne so
 - ni marquees litteralement `[A VERIFIER]` / `[A ENRICHIR]`,
 - ni couvertes par un item de `meta.a_verifier` (matching sur yaml_path ou dernier segment).
 
-Severite : erreur. Viole CA4 de UC-200.
+Severite : erreur. Viole la regle de citation stricte de `documenting-erp`.
 
 Usage :
   py detect_unsourced.py --ir ir.json --out detect_e1.json
@@ -62,7 +62,7 @@ def detect(ir: dict) -> dict:
                 "challenge": (
                     "Aucune citation fichier:ligne dans l'affirmation, aucun marquage "
                     "[A VERIFIER] inline, aucun item meta.a_verifier couvrant le champ. "
-                    "Viole CA4 de UC-200 (regle de citation stricte)."
+                    "Viole la regle de citation stricte."
                 ),
             })
     items.sort(key=lambda x: (x["entity"], x["yaml_path"]))

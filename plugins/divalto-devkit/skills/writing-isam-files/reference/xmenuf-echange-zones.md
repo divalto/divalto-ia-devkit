@@ -32,7 +32,7 @@ de programme, Confidentialite, Modele d'imprimante, Mnemonique (pour tunnel).
 
 ---
 
-## Piege : Echange vide = erreur runtime (R-008)
+## Piege : Echange vide = erreur runtime
 
 **Inserer une entree M2 avec `Echange` vide** (600 octets a `0x00` ou `0x20`) casse
 l'interpretation des sous-champs par l'ERP : l'ERP echoue au clic sur l'entree avec
@@ -123,9 +123,9 @@ decalage **casse** l'execution. Ne pas compter sur cette tolerance.
 
 ## Limitation : expose les sous-champs comme virtual fields (chantier)
 
-Item BACKLOG : exposer les sous-champs connus (Masque ecran, Module traitement,
+Reste a faire : exposer les sous-champs connus (Masque ecran, Module traitement,
 Titre, Aide, Type tiers) comme **virtual fields** dans `structure_xmenuf_m2.json`
 avec une cle `"ParentField": "Echange"` et `"ParentOffset": N`, et adapter
 `read_isam.py` / `write_isam.py` pour les serialiser / deserialiser. Permettrait
 un clone bytes-correct et une lecture intelligible des sous-champs sans manipulation
-manuelle d'offsets. Chantier BACKLOG MNU-01.
+manuelle d'offsets. Chantier ouvert, non traite a ce jour.

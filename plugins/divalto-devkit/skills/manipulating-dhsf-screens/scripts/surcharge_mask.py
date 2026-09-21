@@ -23,16 +23,16 @@ Si une propriete existe deja avec une valeur differente (cas surcharge
 preexistante), elle est mise a jour. Si elle est absente, elle est ajoutee
 en tete du bloc `[masque]` (apres la ligne `[masque]`).
 
-Migration `[diva]` -> `[diva_base]` (R-002 du batch 2026-05-27) :
+Migration `[diva]` -> `[diva_base]` (2026-05-27) :
 - L'ancien bloc `[diva]...[/diva]` du standard est renomme en `[diva_base]...[/diva]`
 - Un nouveau bloc `[diva]...[/diva]` est insere AVANT, contenant la **derivation
   lowercase** des records depuis la section `[enregistrements]` du masque
   (extensions `.dhsd` -> `Public Record`, `.dhoq`/`.dhsq` -> `Public RecordSql`).
 - Sans cette migration, la compilation echoue avec erreur 210 sur les
   `Public Procedure` du `[diva]` standard preserve dans le masque user
-  (cf. RETEX R-002 + biais R-031 invalide par R-033).
+  (biais invalide par un constat ulterieur).
 
-Ergonomie sortie AGL -- aspects cosmetiques DIFFERES (R-002 validation empirique) :
+Ergonomie sortie AGL -- aspects cosmetiques DIFFERES (validation empirique attendue) :
 La comparaison bit-a-bit avec la sortie AGL revele 5 divergences cosmetiques,
 fonctionnellement equivalentes mais source de bruit SVN au premier `Save` AGL :
 1. `;>xwin4obj <ver> <timestamp>` -- la sortie AGL met la date de la modif vs
@@ -146,7 +146,7 @@ _ENR_LINE_RE = re.compile(
 
 
 def derive_diva_from_enregistrements(content: str) -> list[str]:
-    """R-002 / R-033 -- derive le bloc `[diva]` user depuis `[enregistrements]`.
+    """ -- derive le bloc `[diva]` user depuis `[enregistrements]`.
 
     Pour chaque ligne valide de `[enregistrements]` :
       - Extension `.dhsd` -> `Public Record "<file>" <rec> <alias>`
@@ -226,7 +226,7 @@ def _strip_empty_diva_base(lines: list[str]) -> tuple[list[str], int]:
 
 
 def migrate_diva_to_base(content: str, derived_block: list[str]) -> tuple[str, dict]:
-    """R-002 / R-033 -- migre `[diva]` -> `[diva_base]` et insere un nouveau `[diva]`.
+    """ -- migre `[diva]` -> `[diva_base]` et insere un nouveau `[diva]`.
 
     Mecanique :
     1. Repere le bloc `[diva]...[/diva]` existant (= standard preserve par la copie)
@@ -436,7 +436,7 @@ def main() -> None:
         print(f"ERREUR : {e}", file=sys.stderr)
         sys.exit(1)
 
-    # Migration [diva] -> [diva_base] + derivation [diva] user (R-002)
+    # Migration [diva] -> [diva_base] + derivation [diva] user
     derived_block = derive_diva_from_enregistrements(content_user)
     content_user, diva_migration = migrate_diva_to_base(content_user, derived_block)
 
@@ -445,9 +445,9 @@ def main() -> None:
     rappels = [
         "Le compagnon _base.dhsf est gere par l'outillage : ne pas l'editer manuellement.",
         "Le masque user doit etre reference dans [fichiers] d'un .dhps de surcharge (xwin-s-sprojet).",
-        "NE PAS lister le masque dans [sousprojets] du .dhpt parent (P17 de managing-diva-projects).",
+        "NE PAS lister le masque dans [sousprojets] du .dhpt parent (PROJ17 de managing-diva-projects).",
     ]
-    # Rappel diva selon resultat de la migration (R-002 + R-006)
+    # Rappel diva selon resultat de la migration
     if diva_migration.get("migrated"):
         rappels.append(
             f"[INFO] Migration [diva] -> [diva_base] effectuee et [diva] user derive "
@@ -458,8 +458,8 @@ def main() -> None:
     else:
         rappels.append(
             "[WARNING] Section [diva] standard non trouvee dans le masque -- migration NON effectuee. "
-            "Verifier manuellement la structure [diva]/[diva_base] avant compilation. Cf. RETEX R-002 "
-            "(erreur 210 systematique sur Public Procedure si la migration n'est pas faite)."
+            "Verifier manuellement la structure [diva]/[diva_base] avant compilation. "
+            "Erreur 210 systematique sur Public Procedure si la migration n'est pas faite."
         )
 
     result = {

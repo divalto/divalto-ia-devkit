@@ -66,6 +66,27 @@
         "programs_count": 0,
         "disclaimers_contain": "Neo4j inaccessible"
       }
+    },
+    {
+      "id": "pitfall-get-schema-props",
+      "type": "knowledge",
+      "description": "get_schema annonce props:[] sur Function/Procedure/Const/Variable/Record",
+      "query": "get_schema me renvoie props:[] pour Function ; je ne peux donc rien filtrer ni projeter ?",
+      "expected_behavior": "Le skill sait que c'est un artefact ArcadeDB (props portees par le supertype DObj, pas par les sous-types logiques) : Function/Procedure/Const/Variable/Record ont 17 props dont body (le code source). Il lance une requete de decouverte 'MATCH (n:Function) WITH n LIMIT 1 RETURN keys(n)' avant d'ecrire du Cypher, au lieu de conclure a l'absence de proprietes. Cf. reference/mcp-query-pitfalls.md."
+    },
+    {
+      "id": "pitfall-body-protege",
+      "type": "knowledge",
+      "description": "body vide (Programme protege) sur les programmes xxpm/xxpp",
+      "query": "Le body de gtpm000.soc_bp_valider_auto_horsstock vaut 'Programme protege, non livre.' -- lacune d'indexation ?",
+      "expected_behavior": "Le skill sait que les programmes proteges xxpm*/xxpp* n'ont pas de body livre (chaine 'Programme protege, non livre.'), alors que les ouvertures xxtt*/xxtm* le sont. Il n'envoie pas chercher les sources sur disque/SVN ; il analyse via les ouvertures xxtt/xxtm et exploite pour les xxpp/xxpm ce qui reste (routines, lines_length, tables accedees, graphe d'appels). Cf. reference/mcp-query-pitfalls.md."
+    },
+    {
+      "id": "pitfall-table-schema-nomodbc",
+      "type": "knowledge",
+      "description": "get_table_schema n'expose pas le NomOdbc local (champs generiques CEx)",
+      "query": "get_table_schema('C8') me donne juste 'Code enregistrement 4' pour CE4 -- quel est le vrai sens ?",
+      "expected_behavior": "Le skill sait que get_table_schema ne renvoie pas le NomOdbc local ([PROPLOC]) : pour un champ generique CEx il n'y a que le libelle 'Code enregistrement N'. Il oriente vers le [PROPLOC] du dico (colonne 'Nom ODBC local' de l'IDE) ou le module check cctmchk* pour le sens reel (le code fait foi), sans conclure du seul get_table_schema ni pretendre que le dico est faux. Cf. reference/mcp-query-pitfalls.md."
     }
   ],
   "execution": {

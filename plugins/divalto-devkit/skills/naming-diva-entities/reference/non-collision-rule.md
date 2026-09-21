@@ -1,6 +1,6 @@
 # Regle de non-collision RecordSql / Record
 
-Source : référentiel interne -- conventions de nommage (règle de non-collision RecordSql / Record).
+Règle de non-collision RecordSql / Record : le digest livré avec ce skill.
 
 ---
 
@@ -48,7 +48,7 @@ Si une collision est detectee (erreur V01 dans validate_names.py) :
    - Tables a nom court → nom long descriptif (ex: `CLI` → `Client`, `ART` → `Article`)
    - Tables a nom deja long → nom metier different (ex: `SITE` → `SiteCea`)
 
-### Mecanisme anti-collision automatique (R-002)
+### Mecanisme anti-collision automatique
 
 Quand le collaborateur fournit un `--nomrecordsql` identique a la table SQL,
 le script **ajoute le prefixe base (3 lettres domaine)** comme suffixe pour

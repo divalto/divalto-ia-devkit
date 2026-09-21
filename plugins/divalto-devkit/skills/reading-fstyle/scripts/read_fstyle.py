@@ -28,7 +28,66 @@ import os
 import sys
 from collections import OrderedDict, Counter
 
-DLL_PATH = r"C:\divalto\sys\DhxIsam64.dll"
+DLL_NAME = "DhxIsam64.dll"
+DEFAULT_SYS_DIR = r"C:\divalto\sys"
+
+# --- Resolution du repertoire sys/ de Divalto (emplacement de DhxIsam64.dll + fstyle*.dhfi)
+# Vendoring (copie autonome identique dans chaque skill ISAM) : ne PAS importer le
+# resolveur d'un autre skill. Ordre : --dll-path / --sys-dir (CLI, strict) > env
+# DIVALTO_SYS_DIR > registre Divalto (HKLM\SOFTWARE\[WOW6432Node\]Divalto\divalto.ini\System
+# -> CheminUl1, puis \sys) > fallback C:\divalto\sys. Le chemin en dur sur C: cassait
+# toute operation ISAM sur un poste ou Divalto est installe ailleurs (ex. K:\).
+# Discipline registre P-C : on lit UNIQUEMENT la valeur CheminUl1 sous les cles documentees.
+_DIVA_REG_SUBKEYS = [
+    r"SOFTWARE\WOW6432Node\Divalto\divalto.ini\System",
+    r"SOFTWARE\Divalto\divalto.ini\System",
+]
+
+
+def _sys_dir_from_registry():
+    """Renvoie <CheminUl1>\\sys via le registre Windows, ou None si indisponible."""
+    try:
+        import winreg
+    except ImportError:
+        return None
+    for subkey in _DIVA_REG_SUBKEYS:
+        try:
+            with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, subkey) as key:
+                root, _ = winreg.QueryValueEx(key, "CheminUl1")
+        except (FileNotFoundError, OSError):
+            continue
+        if root:
+            return os.path.join(root, "sys")
+    return None
+
+
+def resolve_sys_dir(explicit_sys_dir=None):
+    """Repertoire sys/ de Divalto. Override CLI (--sys-dir) honore STRICTEMENT ; sinon
+    auto-resolution best-effort : env DIVALTO_SYS_DIR > registre > fallback, en prenant
+    le 1er repertoire ou DhxIsam64.dll existe reellement."""
+    if explicit_sys_dir:
+        return explicit_sys_dir
+    dirs = []
+    env_dir = os.environ.get("DIVALTO_SYS_DIR")
+    if env_dir:
+        dirs.append(env_dir)
+    reg_dir = _sys_dir_from_registry()
+    if reg_dir:
+        dirs.append(reg_dir)
+    dirs.append(DEFAULT_SYS_DIR)
+    for d in dirs:
+        if os.path.isfile(os.path.join(d, DLL_NAME)):
+            return d
+    return dirs[-1]  # aucun existant : fallback (message d'erreur clair a l'appelant)
+
+
+def resolve_dll_path(explicit_dll=None, explicit_sys_dir=None):
+    """Chemin complet de DhxIsam64.dll. --dll-path est honore strictement."""
+    if explicit_dll:
+        return explicit_dll
+    return os.path.join(resolve_sys_dir(explicit_sys_dir), DLL_NAME)
+
+
 ENCODING = "windows-1252"
 RECORD_SIZE = 1024
 
@@ -39,21 +98,21 @@ OFF_NOM = 2
 NOM_LEN = 32
 FIELD_LEN = 32
 
-# Variantes connues sous C:\divalto\sys\
+# Variantes connues (noms de fichiers sous le repertoire sys/ resolu de Divalto)
 VARIANTS = {
-    "wpf":    r"C:\divalto\sys\fstylewpf.dhfi",
-    "legacy": r"C:\divalto\sys\fstyle.dhfi",
-    "imp":    r"C:\divalto\sys\fstyleimp.dhfi",
-    "web":    r"C:\divalto\sys\fstyleweb.dhfi",
+    "wpf":    "fstylewpf.dhfi",
+    "legacy": "fstyle.dhfi",
+    "imp":    "fstyleimp.dhfi",
+    "web":    "fstyleweb.dhfi",
 }
 
 # Ordre de resolution par defaut (wpf d'abord car le plus riche en TBL*)
 DEFAULT_RESOLVE_ORDER = ["wpf", "legacy", "imp"]
 
 
-def load_dll():
+def load_dll(dll_path):
     try:
-        dll = ctypes.WinDLL(DLL_PATH)
+        dll = ctypes.WinDLL(dll_path)
     except OSError:
         return None
     dll.xisam_begin.argtypes = [ctypes.c_ushort]
@@ -131,8 +190,37 @@ def tokens_after_nom(raw):
     return tail.split()
 
 
+# Couleur du texte d'un Type 1 : 4 composantes de 3 caracteres, cadrees a droite,
+# a offset fixe. MESURE le 2026-08-30 sur fstylewpf.dhfi : 142 Type 1 sur 142 y portent
+# 4 valeurs numeriques dans 0-255. Corroboree par les noms -- DATA_8_FONCE vaut
+# 128/128/128 (gris), DATA_16 vaut 255/255/255 (blanc), DATA_10 vaut 255/0/0 (rouge).
+# Meme decoupage 3+3+3+3 que le Type 2, dont c'est la grammaire documentee.
+OFF_COULEUR_T1 = 109
+LEN_COMPOSANTE = 3
+NB_COMPOSANTES_T1 = 4
+
+
+def _decode_couleur_type1(raw):
+    """Les 4 composantes de couleur d'un Type 1, ou None si la zone n'a pas le format."""
+    zone = raw[OFF_COULEUR_T1:
+               OFF_COULEUR_T1 + LEN_COMPOSANTE * NB_COMPOSANTES_T1].decode(ENCODING,
+                                                                          errors="replace")
+    brut = [zone[i * LEN_COMPOSANTE:(i + 1) * LEN_COMPOSANTE]
+            for i in range(NB_COMPOSANTES_T1)]
+    valeurs = []
+    for champ in brut:
+        s = champ.strip().replace("\x00", "")
+        if s == "":
+            valeurs.append(0)
+        elif s.isdigit() and 0 <= int(s) <= 255:
+            valeurs.append(int(s))
+        else:
+            return None, zone
+    return valeurs, zone
+
+
 def _decode_type1(raw):
-    """Police : <taille> 0 0 0 <poids> ... <famille>."""
+    """Police : <taille> 0 0 0 <poids> ... <famille>, plus la couleur du texte."""
     t = tokens_after_nom(raw)
     d = {}
     if t:
@@ -149,6 +237,28 @@ def _decode_type1(raw):
         while fam and fam[0].isdigit():
             fam = fam[1:]
         d["famille"] = fam
+
+    # Couleur du texte : SANS elle, les styles d'une meme famille sont indistinguables.
+    # Mesure : 64 des 142 Type 1 de fstylewpf (45 %) decodaient a l'identique -- dont
+    # 24 sur le seul {8, 400000, Tahoma}. C'est ce qui rendait impossible de repondre a
+    # « de quelle couleur est ce marquage ? ».
+    valeurs, zone = _decode_couleur_type1(raw)
+    if valeurs is None:
+        d["couleur_texte_brut"] = zone
+        d["attributs_non_decodes"] = ["couleur_texte"]
+    else:
+        r, g, b, quatrieme = valeurs
+        d["couleur_texte"] = {"r": r, "g": g, "b": b}
+        # La 4e composante vaut 0 sur les 142 Type 1 mesures : sa semantique n'est PAS
+        # etablie. On l'expose sans la nommer « alpha », ce qui serait une supposition.
+        d["couleur_texte_composante_4"] = quatrieme
+        d["couleur_texte_brut"] = zone
+
+    # Le reste de l'enregistrement n'est PAS interprete : le dire plutot que de laisser
+    # croire a un decodage complet (c'est la demande du retour terrain a l'origine).
+    d.setdefault("attributs_non_decodes", [])
+    d["attributs_non_decodes"] = d["attributs_non_decodes"] + [
+        "semantique_composante_4", "drapeaux_apres_famille"]
     return d
 
 
@@ -264,17 +374,17 @@ def decode_record(raw):
     return result
 
 
-def _resolve_file(args):
+def _resolve_file(args, sys_dir):
     """Determine le chemin du fichier fstyle a ouvrir a partir de --variant ou --file."""
     if args.file:
         return args.file
     if args.variant:
-        path = VARIANTS.get(args.variant)
-        if not path:
+        name = VARIANTS.get(args.variant)
+        if not name:
             print(f"Erreur : variant inconnue '{args.variant}'. Valeurs : {', '.join(VARIANTS)}",
                   file=sys.stderr)
             sys.exit(2)
-        return path
+        return os.path.join(sys_dir, name)
     print("Erreur : specifier --variant OU --file", file=sys.stderr)
     sys.exit(2)
 
@@ -302,11 +412,47 @@ def cmd_stats(by_nom):
     return {"total_nc": total, "by_type": by_type}
 
 
+# Type 7 : les trois slots sont POSITIONNELS. Le premier vise une police dans 235 cas
+# sur 235 (mesure du 2026-08-30 sur fstylewpf), mais les deux autres ne tiennent pas leur
+# nom : le 2e vise un cadre 165 fois sur 235 (une couleur 59 fois, une police 11 fois) et
+# le 3e une couleur 222 fois sur 235 (une police 13 fois). Nommer les slots « cadre » et
+# « couleur » affirme donc une semantique que la donnee ne porte pas dans ~25 % des cas.
+# Aucune reference n'est PENDANTE : les 705 pointent sur un nom present dans le fichier.
+TYPE_ATTENDU_PAR_SLOT = {"police_ref": "1", "cadre_ref": "6", "couleur_ref": "2"}
+
+
+def annoter_refs_type7(decoded, by_nom):
+    """Ajoute a un Type 7 le type REEL de chaque reference, et signale les ecarts."""
+    if decoded.get("type") != "7":
+        return decoded
+    reels, ecarts = {}, []
+    for slot, attendu in TYPE_ATTENDU_PAR_SLOT.items():
+        nom = decoded.get(slot)
+        if not nom:
+            continue
+        cible = by_nom.get(nom.upper())
+        if cible is None:
+            reels[slot] = None
+            ecarts.append("%s -> %s : nom ABSENT du fichier" % (slot, nom))
+            continue
+        reel = decode_record(cible).get("type")
+        reels[slot] = reel
+        if reel != attendu:
+            ecarts.append("%s -> %s est un Type %s, pas un Type %s"
+                          % (slot, nom, reel, attendu))
+    decoded["refs_types_reels"] = reels
+    if ecarts:
+        # Le slot ne vise pas ce que son nom annonce : le dire, plutot que de laisser
+        # le consommateur deduire une semantique fausse du nom de la cle.
+        decoded["refs_hors_type_attendu"] = ecarts
+    return decoded
+
+
 def cmd_detail(by_nom, nom_target):
     key = nom_target.upper()
     if key not in by_nom:
         return {"nom": nom_target, "found": False}
-    decoded = decode_record(by_nom[key])
+    decoded = annoter_refs_type7(decode_record(by_nom[key]), by_nom)
     decoded["found"] = True
     return decoded
 
@@ -314,17 +460,20 @@ def cmd_detail(by_nom, nom_target):
 def cmd_all_details(by_nom):
     out = {}
     for nom, raw in by_nom.items():
-        out[nom] = decode_record(raw)
+        out[nom] = annoter_refs_type7(decode_record(raw), by_nom)
     return {"total": len(out), "styles": out}
 
 
-def cmd_resolve(dll, nom_target, variant_order):
+def cmd_resolve(dll, nom_target, variant_order, sys_dir):
     """Cherche un style dans les variantes dans l'ordre, retourne la premiere correspondance."""
     key = nom_target.upper()
     tried = []
     for variant in variant_order:
-        path = VARIANTS.get(variant)
-        if not path or not os.path.isfile(path):
+        name = VARIANTS.get(variant)
+        if not name:
+            continue
+        path = os.path.join(sys_dir, name)
+        if not os.path.isfile(path):
             continue
         tried.append(variant)
         by_nom, err = read_all_records(dll, path)
@@ -356,9 +505,13 @@ def main():
     )
     parser.add_argument("--file", help="Chemin complet d'un fichier fstyle*.dhfi (alternative a --variant)")
     parser.add_argument("--variant", choices=list(VARIANTS.keys()),
-                        help=f"Variante par defaut : wpf / legacy / imp / web -> C:\\divalto\\sys\\fstyle*.dhfi")
+                        help="Variante fstyle : wpf / legacy / imp / web (cherchee sous le repertoire sys/ resolu)")
     parser.add_argument("--variant-order", dest="variant_order", default=",".join(DEFAULT_RESOLVE_ORDER),
                         help="Ordre de resolution pour --resolve (defaut : wpf,legacy,imp)")
+    parser.add_argument("--dll-path", default=None,
+                        help="Chemin explicite de DhxIsam64.dll (sinon : --sys-dir, env DIVALTO_SYS_DIR, registre Divalto, puis C:\\divalto\\sys)")
+    parser.add_argument("--sys-dir", default=None,
+                        help="Repertoire sys/ de Divalto (DhxIsam64.dll + fstyle*.dhfi ; override du registre)")
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--list", action="store_true", help="Liste tous les styles (nom, type)")
     group.add_argument("--stats", action="store_true", help="Distribution par Type")
@@ -369,22 +522,24 @@ def main():
                        help="Resout un style dans les variantes (wpf -> legacy -> imp)")
     args = parser.parse_args()
 
-    dll = load_dll()
+    sys_dir = resolve_sys_dir(args.sys_dir)
+    dll_path = resolve_dll_path(args.dll_path, args.sys_dir)
+    dll = load_dll(dll_path)
     if dll is None:
-        print(f"Erreur : DLL introuvable : {DLL_PATH}", file=sys.stderr)
+        print(f"Erreur : DLL introuvable : {dll_path}", file=sys.stderr)
         sys.exit(2)
 
     # Mode resolve : gere son propre fichier, pas de --file/--variant requis
     if args.resolve:
         order = [v.strip() for v in args.variant_order.split(",") if v.strip()]
-        payload = cmd_resolve(dll, args.resolve, order)
+        payload = cmd_resolve(dll, args.resolve, order, sys_dir)
         success = payload.get("resolved", False)
         result = {"success": success, **payload}
         json.dump(result, sys.stdout, indent=2, ensure_ascii=False)
         sys.stdout.write("\n")
         sys.exit(0 if success else 1)
 
-    file_path = _resolve_file(args)
+    file_path = _resolve_file(args, sys_dir)
     if not os.path.isfile(file_path):
         print(f"Erreur : fichier introuvable : {file_path}", file=sys.stderr)
         sys.exit(2)

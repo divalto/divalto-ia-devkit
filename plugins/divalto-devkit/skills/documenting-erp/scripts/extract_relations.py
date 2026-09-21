@@ -6,7 +6,7 @@ Strategies disponibles :
 - neo4j    : requete diva-mcp (non implemente MVP, renvoie liste vide)
 - code     : scan du code X.13 pour Zoom/OverWrittenBy (non implemente MVP)
 
-Pour le MVP : strategie heuristic uniquement, a completer au CP3 par le collaborateur
+Pour le MVP : strategie heuristic uniquement, a completer par le collaborateur
 en consultant les f8= et table_associee des masques .dhsf X.13.
 
 Usage :

@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""Valide un fichier RecordSql (.dhsq) contre les regles R01-R08.
+"""Valide un fichier RecordSql (.dhsq) contre les regles RSQ01-RSQ08.
 
-R01 (error)   : filtre multi-dossier '.Dos = MZ.Dos' dans WHERE
-R02 (warning) : OverWrittenBy present dans DictionarySql
-R03           : nom RecordSql coherent (error si vide, warning si divergent des tokens)
-R04 (error)   : sections SELECT et FROM presentes
-R05 (warning) : DefaultDictionary present et coherent
-R06 (error)   : encodage ISO-8859-1 + CRLF
-R07 (warning) : coherence FROM/WHERE -- chaque table implicite dans FROM doit avoir une ref dans WHERE (G-021)
-R08 (warning) : syntaxe LEFT JOIN bien formee -- 'LEFT JOIN <table> [alias] ON <condition>' (G-021)
+RSQ01 (error)   : filtre multi-dossier '.Dos = MZ.Dos' dans WHERE
+RSQ02 (warning) : OverWrittenBy present dans DictionarySql
+RSQ03           : nom RecordSql coherent (error si vide, warning si divergent des tokens)
+RSQ04 (error)   : sections SELECT et FROM presentes
+RSQ05 (warning) : DefaultDictionary present et coherent
+RSQ06 (error)   : encodage ISO-8859-1 + CRLF
+RSQ07 (warning) : coherence FROM/WHERE -- chaque table implicite dans FROM doit avoir une ref dans WHERE
+RSQ08 (warning) : syntaxe LEFT JOIN bien formee -- 'LEFT JOIN <table> [alias] ON <condition>'
 
 Usage:
     py .claude/skills/generating-recordsql/scripts/validate_rsql.py --path "chemin/fichier.dhsq"
@@ -40,7 +40,7 @@ def read_file(path):
 
 
 def check_r01_filtre_dos(content, lines):
-    """R01: Le WHERE doit contenir Dos = MZ.Dos (ERREUR)."""
+    """RSQ01: Le WHERE doit contenir Dos = MZ.Dos (ERREUR)."""
     findings = []
 
     # Trouver toutes les sections <WHERE>
@@ -60,7 +60,7 @@ def check_r01_filtre_dos(content, lines):
         if in_where and (stripped.startswith('<ORDERBY>') or stripped.startswith('<') and '>' in stripped and not stripped.startswith('<WHERE')):
             if not has_dos_filter:
                 findings.append({
-                    "rule": "R01",
+                    "rule": "RSQ01",
                     "severity": "error",
                     "line": where_start,
                     "message": "Filtre multi-dossier absent: pas de '.Dos = MZ.Dos' dans la section WHERE",
@@ -77,7 +77,7 @@ def check_r01_filtre_dos(content, lines):
     # Fin de fichier avec WHERE encore ouvert
     if in_where and not has_dos_filter:
         findings.append({
-            "rule": "R01",
+            "rule": "RSQ01",
             "severity": "error",
             "line": where_start,
             "message": "Filtre multi-dossier absent: pas de '.Dos = MZ.Dos' dans la section WHERE",
@@ -88,7 +88,7 @@ def check_r01_filtre_dos(content, lines):
 
 
 def check_r02_overwrittenby(content, lines):
-    """R02: OverWrittenBy doit etre present dans le DictionarySql (WARNING)."""
+    """RSQ02: OverWrittenBy doit etre present dans le DictionarySql (WARNING)."""
     findings = []
 
     has_overwrittenby = False
@@ -99,7 +99,7 @@ def check_r02_overwrittenby(content, lines):
 
     if not has_overwrittenby:
         findings.append({
-            "rule": "R02",
+            "rule": "RSQ02",
             "severity": "warning",
             "line": 1,
             "message": "OverWrittenBy absent: la surcharge utilisateur est impossible",
@@ -110,17 +110,19 @@ def check_r02_overwrittenby(content, lines):
 
 
 def check_r03_recordsql_name(content, lines, tokens=None):
-    """R03: Verifications sur les noms RecordSql (WARNING/ERREUR selon contexte)."""
+    """RSQ03: Verifications sur les noms RecordSql (WARNING/ERREUR selon contexte)."""
     findings = []
 
     # Extraire tous les Name= du fichier
-    names = re.findall(r'<RecordSql\s+Name=(\S+)', content)
+    # `\S*` et non `\S+` : avec `+`, un `Name=` reellement vide ne matchait pas du
+    # tout et la regle restait muette sur le cas qu'elle annonce.
+    names = re.findall(r'<RecordSql\s+Name=(\S*)', content)
 
     for name in names:
         # Verifier que le nom n'est pas vide
         if not name or name == '""':
             findings.append({
-                "rule": "R03",
+                "rule": "RSQ03",
                 "severity": "error",
                 "line": 1,
                 "message": "Nom du RecordSql vide",
@@ -132,7 +134,7 @@ def check_r03_recordsql_name(content, lines, tokens=None):
         expected_name = tokens.get("NomVue")
         if expected_name and names and names[0] != expected_name:
             findings.append({
-                "rule": "R03",
+                "rule": "RSQ03",
                 "severity": "warning",
                 "line": 1,
                 "message": f"Nom RecordSql '{names[0]}' ne correspond pas au NomVue attendu '{expected_name}'",
@@ -143,7 +145,7 @@ def check_r03_recordsql_name(content, lines, tokens=None):
 
 
 def check_r04_select_from(content, lines):
-    """R04: Les sections SELECT et FROM doivent etre presentes (ERREUR)."""
+    """RSQ04: Les sections SELECT et FROM doivent etre presentes (ERREUR)."""
     findings = []
 
     has_select = any('<SELECT>' in line or '<SELECT ' in line for line in lines)
@@ -151,7 +153,7 @@ def check_r04_select_from(content, lines):
 
     if not has_select:
         findings.append({
-            "rule": "R04",
+            "rule": "RSQ04",
             "severity": "error",
             "line": 1,
             "message": "Section <SELECT> manquante",
@@ -160,7 +162,7 @@ def check_r04_select_from(content, lines):
 
     if not has_from:
         findings.append({
-            "rule": "R04",
+            "rule": "RSQ04",
             "severity": "error",
             "line": 1,
             "message": "Section <FROM> manquante",
@@ -171,13 +173,13 @@ def check_r04_select_from(content, lines):
 
 
 def check_r05_dictionary(content, lines, tokens=None):
-    """R05: DefaultDictionary doit etre present et correct (WARNING)."""
+    """RSQ05: DefaultDictionary doit etre present et correct (WARNING)."""
     findings = []
 
     match = re.search(r'DefaultDictionary=(\S+)', content)
     if not match:
         findings.append({
-            "rule": "R05",
+            "rule": "RSQ05",
             "severity": "warning",
             "line": 1,
             "message": "DefaultDictionary absent dans <DictionarySql>",
@@ -188,7 +190,7 @@ def check_r05_dictionary(content, lines, tokens=None):
         actual_dict = match.group(1)
         if actual_dict.lower() != expected_dict.lower():
             findings.append({
-                "rule": "R05",
+                "rule": "RSQ05",
                 "severity": "warning",
                 "line": 1,
                 "message": f"DefaultDictionary '{actual_dict}' ne correspond pas au dictionnaire attendu '{expected_dict}'",
@@ -199,7 +201,7 @@ def check_r05_dictionary(content, lines, tokens=None):
 
 
 def check_r06_encoding(path):
-    """R06: Le fichier doit etre en ISO-8859-1 + CRLF (ERREUR)."""
+    """RSQ06: Le fichier doit etre en ISO-8859-1 + CRLF (ERREUR)."""
     findings = []
 
     with open(path, 'rb') as f:
@@ -211,7 +213,7 @@ def check_r06_encoding(path):
 
     if has_lf_only:
         findings.append({
-            "rule": "R06",
+            "rule": "RSQ06",
             "severity": "error",
             "line": 0,
             "message": "Fins de ligne LF detectees (attendu: CRLF)",
@@ -219,7 +221,7 @@ def check_r06_encoding(path):
         })
     elif has_mixed:
         findings.append({
-            "rule": "R06",
+            "rule": "RSQ06",
             "severity": "error",
             "line": 0,
             "message": "Fins de ligne mixtes LF/CRLF detectees (attendu: CRLF uniquement)",
@@ -229,7 +231,7 @@ def check_r06_encoding(path):
     # Verifier pas de BOM UTF-8
     if raw.startswith(b'\xef\xbb\xbf'):
         findings.append({
-            "rule": "R06",
+            "rule": "RSQ06",
             "severity": "error",
             "line": 0,
             "message": "BOM UTF-8 detecte (le fichier doit etre en ISO-8859-1)",
@@ -243,7 +245,7 @@ def check_r06_encoding(path):
         b = raw[i]
         if 0xC0 <= b <= 0xDF and i + 1 < len(raw) and 0x80 <= raw[i + 1] <= 0xBF:
             findings.append({
-                "rule": "R06",
+                "rule": "RSQ06",
                 "severity": "error",
                 "line": 0,
                 "message": f"Sequence UTF-8 multi-octets detectee a l'offset {i} (attendu: ISO-8859-1)",
@@ -256,7 +258,7 @@ def check_r06_encoding(path):
 
 
 def check_r07_from_where_coherence(content, lines):
-    """R07: Chaque table implicite dans <FROM> doit apparaitre dans <WHERE> (warning).
+    """RSQ07: Chaque table implicite dans <FROM> doit apparaitre dans <WHERE> (warning).
 
     Heuristique : on extrait les noms de tables declarees dans FROM (hors LEFT JOIN),
     on saute la table principale (premiere), puis on verifie que chaque autre apparait
@@ -294,7 +296,7 @@ def check_r07_from_where_coherence(content, lines):
     for table in tables[1:]:
         if not re.search(r'\b' + re.escape(table) + r'\.', where_body):
             findings.append({
-                "rule": "R07",
+                "rule": "RSQ07",
                 "severity": "warning",
                 "line": 1,
                 "message": f"Table '{table}' declaree dans <FROM> sans condition de jointure dans <WHERE>",
@@ -305,7 +307,7 @@ def check_r07_from_where_coherence(content, lines):
 
 
 def check_r08_left_join_syntax(content, lines):
-    """R08: LEFT JOIN bien forme -- 'LEFT JOIN <table> [alias] ON <condition>' (warning)."""
+    """RSQ08: LEFT JOIN bien forme -- 'LEFT JOIN <table> [alias] ON <condition>' (warning)."""
     findings = []
 
     for i, line in enumerate(lines, 1):
@@ -317,7 +319,7 @@ def check_r08_left_join_syntax(content, lines):
             stripped, re.IGNORECASE,
         ):
             findings.append({
-                "rule": "R08",
+                "rule": "RSQ08",
                 "severity": "warning",
                 "line": i,
                 "message": "LEFT JOIN mal forme : attendu 'LEFT JOIN <table> [alias] ON <condition>'",
@@ -338,7 +340,7 @@ def check_public_record_mz(content, lines):
 
     if not has_mz:
         findings.append({
-            "rule": "R01",
+            "rule": "RSQ01",
             "severity": "warning",
             "line": 1,
             "message": "Public Record A5DD.dhsd MZ absent (necessaire pour MZ.Dos dans le filtre WHERE)",
@@ -392,7 +394,7 @@ def validate_rsql(path, tokens=None):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Valide un fichier RecordSql (.dhsq) contre les regles R01-R06"
+        description="Valide un fichier RecordSql (.dhsq) contre les regles RSQ01-RSQ08"
     )
     parser.add_argument("--path", required=True,
                         help="Chemin du fichier .dhsq a valider")

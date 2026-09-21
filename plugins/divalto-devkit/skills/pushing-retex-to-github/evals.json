@@ -40,5 +40,41 @@
     "query": "J'ai edite RETEX-skills.md mais rien n'apparait sur GitHub et aucune erreur.",
     "files": ["retex/RETEX-skills.md"],
     "expected_behavior": "Diagnostic 'Symptomes courants' : verifier l'existence de .retex-github.json (local ou ~/.claude/ via la cascade). Si absent -> push non configure -> message clair 'RETEX push NON CONFIGURE' (lancer init_config.py, --global pour partager). Aucun RETEX perdu (ils restent dans RETEX-skills.md ; --backfill pour les rattraper)."
+  },
+  {
+    "skills": ["pushing-retex-to-github"],
+    "query": "Une entree RETEX contient des accents (é è à ç) et un caractere colle depuis Word. L'issue GitHub doit-elle etre lisible ?",
+    "files": ["retex/RETEX-skills.md"],
+    "expected_behavior": "Aucun mojibake : push_new_entries.py capture le stdout des scripts enfants avec encoding='utf-8' (parse_entries / push_one / _safe_run), et push_entry.py envoie le corps via un fichier temporaire UTF-8 (gh --body-file) au lieu de --body en argv. L'issue affiche 'é', pas 'Ã©'. Un caractere zone-privee ne fait plus crasher le pipeline (stdout enfant deja force en UTF-8)."
+  },
+  {
+    "skills": ["pushing-retex-to-github"],
+    "query": "J'ai reformule le champ '- **Résultat** :' (accentue) d'une entree deja poussee. Va-t-elle etre recommentee a tort ?",
+    "files": ["retex/RETEX-skills.md", "retex/.retex-pushed.json"],
+    "expected_behavior": "Non : parse_retex_entries.py tolere l'accent sur le NOM de champ Résultat (comme Catégorie/Sévérité) -> la valeur est extraite de la meme facon a chaque execution -> le hash est stable -> pas de faux 'update' ni de commentaire indesirable sur l'issue existante."
+  },
+  {
+    "skills": ["pushing-retex-to-github"],
+    "query": "Plusieurs entrees ont Categorie=OK. Que se passe-t-il au push ?",
+    "files": ["retex/RETEX-skills.md"],
+    "expected_behavior": "push_new_entries.py filtre les entrees Categorie=OK AVANT tout appel gh et les met dans skipped avec reason='categorie-ok-non-poussable' (y compris 'OK (note)' apres retrait de la parenthese). Plus d'echec 'label categorie:ok not found'. Les entrees OK ne deviennent pas des issues."
+  },
+  {
+    "skills": ["pushing-retex-to-github"],
+    "query": "Je pousse depuis un compte qui n'a que la lecture sur le repo. Les labels sont-ils poses ?",
+    "files": ["retex/RETEX-skills.md"],
+    "expected_behavior": "GitHub ignore silencieusement les labels a la creation sans droit triage/push. push_entry.py relit les labels reels (gh issue view --json labels) et renvoie 'labels' = labels REELLEMENT poses, plus 'labels_requested' et un 'warning' explicite en cas d'ecart, au lieu d'affirmer des labels non appliques."
+  },
+  {
+    "skills": ["pushing-retex-to-github"],
+    "query": "Pousse uniquement R-021, sans toucher aux autres entrees non trackees.",
+    "files": ["retex/RETEX-skills.md"],
+    "expected_behavior": "push_new_entries.py --ids 'R-021' ne traite que R-021 ; les autres entrees non trackees apparaissent en skipped (reason 'hors-filtre-ids') et restent NON trackees (elles partiront a un prochain appel sans --ids). Le filtre accepte 'R-021,R-022', '21 22', etc. (partie numerique)."
+  },
+  {
+    "skills": ["pushing-retex-to-github"],
+    "query": "J'ecris un RETEX dans un nouveau projet qui n'a pas de .retex-github.json. Suis-je prevenu ?",
+    "files": ["retex/RETEX-skills.md"],
+    "expected_behavior": "Oui : le hook push_retex_to_github.py fait un pre-check synchrone de la config (locale a cote du RETEX, ou globale ~/.claude/). Si absente, il emet un systemMessage non bloquant ('RETEX ecrit mais push non configure -> init_config.py') et ne lance pas de push inutile. Fini l'accumulation silencieuse ; les entrees restent dans le fichier (rien perdu)."
   }
 ]

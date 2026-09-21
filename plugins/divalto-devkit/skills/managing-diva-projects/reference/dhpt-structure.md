@@ -4,7 +4,7 @@
 
 - En-tete -- variantes standard et surcharge
 - Sections (dans l'ordre)
-- Sections obligatoires meme si vides (P13)
+- Sections obligatoires meme si vides (PROJ13)
 - Arborescence type
 
 ---
@@ -20,7 +20,7 @@ Deux variantes valides selon le contexte du projet :
 | **Surcharge** | `xwin-s-projet      2.0` | .dhpt qui surcharge un projet du standard livre (nom `<base>u.dhpt`) |
 
 Anti-patterns associes :
-- `xwin-sprojet` (sans tiret entre `s` et `projet`) dans un .dhpt -> anti-pattern P05 (interdit)
+- `xwin-sprojet` ou `xwin-s-sprojet` dans un .dhpt -> anti-pattern **PROJ05** (un code par extension : PROJ05 pour le `.dhpt`, PROJ04 pour le `.dhps`)
 - `xwin-projet` (standard) dans un projet de surcharge -> xwin7 ne reconnait pas la surcharge (script `add_to_project.py` refuse ce header dans le contexte surcharge)
 
 ### Quand utiliser la variante surcharge
@@ -38,7 +38,7 @@ Un projet de surcharge contient typiquement deux types de `.dhps` :
 | Type | Convention | En-tete .dhps | Reference dans `[sousprojets]` du .dhpt |
 |------|------------|---------------|-----------------------------------------|
 | Sous-projet **standard** | `<base>.dhps` (pas de suffixe `u`) | `xwin-sprojet 2.0` | **Oui** -- declare dans `[sousprojets]` |
-| Sous-projet **de surcharge** | `<base>u.dhps` (suffixe `u`) | `xwin-s-sprojet 2.0` | **Non** -- xwin7 l'auto-detecte via `cheminbases` (cf. P17) |
+| Sous-projet **de surcharge** | `<base>u.dhps` (suffixe `u`) | `xwin-s-sprojet 2.0` | **Non** -- xwin7 l'auto-detecte via `cheminbases` (cf. PROJ17) |
 
 Voir [dhps-structure.md](dhps-structure.md) pour le detail des conventions .dhps.
 
@@ -46,7 +46,7 @@ Voir [dhps-structure.md](dhps-structure.md) pour le detail des conventions .dhps
 
 1. Ouvrir le `.dhpt` de surcharge (header `xwin-s-projet`) du workspace integrateur
 2. Identifier le `.dhpt` standard correspondant (meme nom sans le `u` final) -- typiquement dans `<DIVA_ROOT>/projets/` ou repertoire equivalent du pack standard
-3. Pour ajouter une nouvelle entite custom : creer une `.dhps` de surcharge `<base>u.dhps` (header `xwin-s-sprojet`), **ne pas** la lister dans `[sousprojets]` (P17 -- xwin7 l'auto-detecte)
+3. Pour ajouter une nouvelle entite custom : creer une `.dhps` de surcharge `<base>u.dhps` (header `xwin-s-sprojet`), **ne pas** la lister dans `[sousprojets]` (PROJ17 -- xwin7 l'auto-detecte)
 4. Pour modifier un parametre du projet (filtres, profils, communs) : editer directement le `.dhpt` de surcharge
 
 ---
@@ -147,7 +147,7 @@ Conventions appliquees :
 - `cheminbases` relatif vers les **sources** standard (`/sources/v.../`, pas `/objets/v.../`)
 - `flagrelatif=1`, `f5compile=1`, `typetransport=3` -- les 3 cles `[general]` souvent oubliees a la generation
 - Noms de version en lowercase (`v2026_erpx13_p223a`)
-- Pas de `.dhps` de surcharge dans `[sousprojets]` -- ils sont auto-detectes via `cheminbases` (cf. P17)
+- Pas de `.dhps` de surcharge dans `[sousprojets]` -- ils sont auto-detectes via `cheminbases` (cf. PROJ17)
 
 ### [profildefaut] (OBLIGATOIRE, peut etre vide)
 
@@ -174,7 +174,7 @@ versioncible="X.45"
 | implicites | Fichier d'implicites (attention accent) |
 | versioncible | Version cible de compilation |
 
-**Attention encodage** : `développement` contient `\xe9` (e accent aigu en ISO-8859-1). Ne pas ecrire `developpement` sans accent (P14, P15).
+**Attention encodage** : `développement` contient `\xe9` (e accent aigu en ISO-8859-1). Ne pas ecrire `developpement` sans accent (PROJ14, PROJ15).
 
 Plusieurs sections `[profil]` possibles dans un meme fichier.
 
@@ -206,7 +206,7 @@ fic="gt_zoom client.dhps"," "
 fic="cc_dashboard.dhps"," "
 ```
 
-- Chaque sous-projet .dhps doit y etre declare (sinon P08)
+- Chaque sous-projet .dhps doit y etre declare (sinon PROJ08)
 - Syntaxe : `fic="nom.dhps"," "` (avec `," "`)
 - Variante : `fic="nom.dhps","<priv>1"` pour fichier prive
 
@@ -244,7 +244,7 @@ Fichiers divers : .dhfd, .dhfi, .dhop, .config, images. Vide si aucun.
 
 ---
 
-## Sections obligatoires meme si vides (P13)
+## Sections obligatoires meme si vides (PROJ13)
 
 Les 3 sections suivantes doivent toujours etre presentes, meme vides :
 - `[projetsfusion]`

@@ -6,7 +6,7 @@ description: >
   avec `Module "Gttmchk<cible>.dhop"` + procedures `Check_<SRC>_Field_<CHAMP>(+_Lib)`,
   puis enrichit le masque (.dhsf) avec `f8=<zoom>`, `table_associee`, `diva_apres`,
   bouton zoom + procedure callback dans `[diva]`. A utiliser pour reproduire le
-  workflow RETEX R-003 (ajout post-hoc de binding zoom pays/devise/... sur une
+  workflow RETEX (ajout post-hoc de binding zoom pays/devise/... sur une
   entite deja creee). Pattern documente dans reference/fk-pattern.md.
 ---
 
@@ -15,13 +15,13 @@ description: >
 Skill post-creation pour ajouter des **foreign keys par zoom standard** aux
 entites metier existantes. Complete le trio de skills createurs :
 
-- **Creation** : `creating-diva-entity` (FK-04 : CP1bis + --fk aux etapes 3 et 5ter)
-- **Generateurs** : `generating-objet-metier --fk` (FK-02) + `manipulating-dhsf-screens/dhsf_add_fk.py` (FK-03)
-- **Post-creation** : **ce skill** (FK-05) -- inject les FK dans des fichiers deja existants
+- **Creation** : `creating-diva-entity` (FK-03 : son etape CP1bis + `--fk` aux etapes 3 et 5ter)
+- **Generateurs** : `generating-objet-metier --fk` (FK-01) + `manipulating-dhsf-screens/dhsf_add_fk.py` (FK-02)
+- **Post-creation** : **ce skill** (FK-04) -- inject les FK dans des fichiers deja existants
 
 ## Quand utiliser ce skill
 
-- Le **cas RETEX R-003** : une entite est deja en production (RACECHIEN), on
+- Le **cas RETEX** : une entite est deja en production (RACECHIEN), on
   souhaite brancher un zoom standard (ex pays 9053) sur un champ existant
   (RacPays) sans regenerer tout le Module Check
 - **Evolution d'entite** : ajout d'une FK oubliee lors de la creation initiale
@@ -43,7 +43,7 @@ Via `scripts/dhsp_add_fk.py` :
 
 ### Couche 2 + 3 -- Masque (.dhsf)
 
-Via `manipulating-dhsf-screens/scripts/dhsf_add_fk.py` (FK-03) :
+Via `manipulating-dhsf-screens/scripts/dhsf_add_fk.py` (FK-02) :
 - Enrichit le bloc `[champ]` dont `donnee=...,<champ>,...`
 - Injecte `[param_saisie] table_associee=oui`, `[touches] f8=<zoom>`, `[traitements] diva_apres`, `[boutons] "zoom"`
 - Ajoute la procedure callback `Champ_<CHAMP>_<id>_Ap` dans `[diva]` (compteur sequentiel global)
@@ -57,7 +57,7 @@ Via `manipulating-dhsf-screens/scripts/dhsf_add_fk.py` (FK-03) :
 
 ## Utilisation
 
-### Reproduire le cas RETEX R-003
+### Reproduire le cas RETEX
 
 ```
 # Couche 1 : Module Check
@@ -117,7 +117,7 @@ py .claude/skills/manipulating-dhsf-screens/scripts/dhsf_add_fk.py \
 
 ## Tests
 
-### Scenario minimal (cas RETEX R-003)
+### Scenario minimal (cas RETEX)
 
 Prerequis : une copie de `gttmchkracechien.dhsp` + `gtezracechien_sql.dhsf` dans
 un repertoire de test.
@@ -125,12 +125,12 @@ un repertoire de test.
 Attendu apres appel :
 - `.dhsp` : `Module "Gttmchkt013.dhop"` present, `Check_RACECHIEN_Field_RacPays` et `_Lib` en fin de fichier
 - `.dhsf` : `[champ] donnee=...,RacPays,...` enrichi avec `f8=9053`, procedure `Champ_RacPays_<id>_Ap` dans `[diva]`
-- Lint : 0 erreur, 0 warning Z15
+- Lint : 0 erreur, 0 warning `Z15` (regle de `linting-diva-code`)
 - Compilation : 0 erreur
 
 ## References
 
 - [reference/fk-pattern.md](reference/fk-pattern.md) : pattern A (3 couches FK structurelle) + pattern B (controle d'existence en surcharge de masque) + cardinalites + mapping cible/module + taxonomie suffixes
-- [generating-objet-metier](../generating-objet-metier/SKILL.md) : version creation (FK-02)
-- [manipulating-dhsf-screens](../manipulating-dhsf-screens/SKILL.md) : script `dhsf_add_fk.py` partage (FK-03)
-- [linting-diva-code](../linting-diva-code/SKILL.md) : regles Z14/Z15 (FK-06) pour verifier l'absence d'orphelins
+- [generating-objet-metier](../generating-objet-metier/SKILL.md) : version creation (FK-01)
+- [manipulating-dhsf-screens](../manipulating-dhsf-screens/SKILL.md) : script `dhsf_add_fk.py` partage (FK-02)
+- [linting-diva-code](../linting-diva-code/SKILL.md) : regles Z14/Z15 (FK-05) pour verifier l'absence d'orphelins

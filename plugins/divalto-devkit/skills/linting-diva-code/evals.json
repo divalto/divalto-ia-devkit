@@ -111,6 +111,81 @@
         "NE detecte PAS S10 si la ligne OverWrittenBy est en commentaire (`;` ou `//`)",
         "Regle scopee aux .dhsp : ne flague pas les .dhsq (qui utilisent legitimement .dhoq) ni les .dhsj"
       ]
+    },
+    {
+      "id": "case-10-p04-entete-surcharge",
+      "skills": [
+        "linting-diva-code",
+        "managing-diva-projects"
+      ],
+      "query": "lint_diva.py remonte P04 sur un .dhps dont la premiere ligne est 'xwin-s-sprojet 2.0'. Est-ce un vrai defaut ?",
+      "files": [],
+      "expected_behavior": [
+        "NON : `xwin-s-sprojet` est l'en-tete LEGITIME d'un sous-projet de SURCHARGE (idem `xwin-s-projet` pour un .dhpt de surcharge) -- c'etait un faux positif (#293/#307)",
+        "Les 4 formes sont reconnues a leur place : `xwin-projet` / `xwin-s-projet` pour un .dhpt, `xwin-sprojet` / `xwin-s-sprojet` pour un .dhps",
+        "Le controle est ANCRE en debut de ligne : l'ancien test de sous-chaine echouait car `xwin-s-projet` ne contient pas `xwin-projet`",
+        "NE casse PAS les detections legitimes : un .dhpt portant un en-tete de sous-projet reste signale, un en-tete absent ou invalide aussi",
+        "UN code par extension : P04 pour le .dhps, P05 pour le .dhpt -- un .dhpt mal en-tete ne doit PAS remonter les deux codes pour un seul defaut",
+        "Coherent avec `managing-diva-projects` (P08 exemptee / P17) qui reconnait deja ces en-tetes de surcharge"
+      ]
+    },
+    {
+      "id": "case-11-ci01-convention-hors-defaut",
+      "skills": [
+        "linting-diva-code"
+      ],
+      "query": "Le lint ne remonte plus rien sur SetModuleInfo alors que mes sources n'en ont pas. Et avant, il criait sur tous mes masques d'impression. Que s'est-il passe ?",
+      "files": [],
+      "expected_behavior": [
+        "Explique que `SetModuleInfo` n'est PAS obligatoire : son absence ne provoque aucune erreur de compilation -- mais l'information est lue a l'execution par `ModuleInfo`, et Divalto s'en sert pour afficher la version du module. Le mot-cle d'un gestionnaire de sources n'est qu'un contenu possible de cette information, pas sa raison d'etre. Ancien libelle : « tracer les releases SVN dans le source",
+        "En deduit que CI01 est un AUDIT DE CONVENTION et non un controle de defaut : le standard la pose systematiquement, en specifique c'est un choix du partenaire -> la regle est HORS du jeu par defaut",
+        "Donne le moyen de l'activer si la politique du projet est de tracer les releases : `--rules CI01` (severite `info`)",
+        "N'invente PAS une exclusion par type de fichier : les masques restent dans le perimetre de la regle quand elle est activee",
+        "Sur le bruit d'avant (#243) : la cause etait la FENETRE des 100 premieres lignes, pas le type de fichier -- un masque decrit d'abord [masque]/[enregistrements]/[bloc], son bloc [diva] (et donc SetModuleInfo) arrive bien au-dela (lignes 334, 379, 1586 constatees)",
+        "Mesure a l'appui : 2431/2438 .dhsf et 798/811 .dhsi du standard portent la directive APRES la ligne 100, et 100 % des masques du standard la portent (2438/2438, 811/811) -- les exclure aurait supprime une detection legitime",
+        "Ne conseille PAS d'ajouter SetModuleInfo pour faire taire le lint : c'est une decision de convention de projet, pas une correction de defaut"
+      ]
+    },
+    {
+      "id": "case-12-p09-zdiva-convention",
+      "skills": [
+        "linting-diva-code",
+        "managing-diva-projects"
+      ],
+      "query": "J'ai linte un .dhps du standard pour m'en servir de modele, et avant il me sortait « zdiva.dhsp absent de [includes] ». Faut-il l'ajouter dans mon sous-projet ?",
+      "files": [],
+      "expected_behavior": [
+        "Repond que P09 audite une CONVENTION de projet, pas un defaut : ne conseille pas d'ajouter `zdiva.dhsp` dans le seul but de faire taire le lint",
+        "Mesure a l'appui : le standard X.13 livre ne met JAMAIS `zdiva.dhsp` dans les [includes] de ses sous-projets (0 / 2304 `.dhps`), alors qu'un specifique partenaire mesure le fait a 80-98 %",
+        "En deduit pourquoi la regle est HORS du jeu par defaut : activee, elle remonterait 100 % des sous-projets du standard -- exactement le cas decrit, ou l'on linte un fichier standard comme modele de reference",
+        "Donne le moyen de l'activer si la convention du projet est d'inclure `zdiva.dhsp` : `--rules P09` (severite `info`)",
+        "Ne conclut PAS que les 2304 `.dhps` du standard sont en defaut",
+        "Renvoie a `managing-diva-projects` pour la structure attendue d'un `.dhps` si la question porte sur les sections obligatoires (P12, [autres])"
+      ]
+    },
+    {
+      "id": "case-13-s11-proto",
+      "skills": ["linting-diva-code", "coding-diva-advanced"],
+      "query": "Le lint me sort S11 : ma procedure Calculer_Marge est appelee ligne 120 et definie ligne 300. Je dois deplacer la definition ?",
+      "expected_behavior": [
+        "Explique la contrainte : une procedure/fonction locale doit etre DECLAREE avant son premier appel, le compilateur DIVA resolvant les appels au fil du module",
+        "Donne les DEUX solutions, pas une seule : deplacer la definition plus haut, OU declarer un prototype `Proto Procedure Calculer_Marge(...) ... EndProto` en tete de fichier",
+        "Cite le prototype comme la solution prevue par le langage pour ce cas precis (Manuel de reference, Les prototypes) -- c'est ce que fait le standard : 37 appels anticipes, tous prototypes",
+        "Ne conseille PAS de rendre la procedure Public ou de la deplacer dans un autre module",
+        "Sait que la regle ne se declenche pas si un `Proto` precede deja l'appel"
+      ]
+    },
+    {
+      "id": "case-14-s12-251-caracteres",
+      "skills": ["linting-diva-code", "writing-diva-files"],
+      "query": "S12 signale une ligne de 280 caracteres dans mon .dhsp, mais ca compile sans erreur. Pourquoi corriger ?",
+      "expected_behavior": [
+        "Explique que la compilation passe mais que l'editeur XWin REFUSE d'ouvrir le fichier (« Edition du fichier impossible : une ligne depasse 251 caracteres ») -- le source devient non modifiable dans l'IDE, ce qui est plus penalisant qu'une erreur de compilation",
+        "Propose de couper la ligne LOGIQUE avec le caractere de continuation DIVA : chaque ligne PHYSIQUE doit rester sous la limite",
+        "Ne propose pas de supprimer du code ou de raccourcir des noms pour gagner des caracteres",
+        "Sait que la meme regle vit dans `writing-diva-files` (verify_encoding.py) sur le chemin d'ecriture -- les deux sont complementaires",
+        "Si la question porte sur un .dhpt : sait que la limite ne s'y applique PAS (le standard livre contient une ligne `filtres=` de 282 caracteres dans un .dhpt qui fonctionne)"
+      ]
     }
   ]
 }

@@ -60,7 +60,8 @@ Le resultat final est un markdown dans `output/preaction-<slug>-<YYYYMMDD>.md` +
   - `searching-erp-sources`
   - `building-preaction-report`
 - **MCP** : `diva-mcp` (Neo4j X.12 advisory) -- optionnel, degradation gracieuse si indispo
-- **Chemin ERP** : `{CHEMIN_ERP_STANDARD}` (par defaut `C:/Developpements harmony/Standard/Version X.13`)
+- **Chemin ERP** : `{CHEMIN_ERP_STANDARD}` -- racine des sources standard livrees, a
+  demander au collaborateur (aucune valeur par defaut)
 - **Python** : launcher `py`, Jinja2 3.1+
 
 ---
@@ -121,6 +122,8 @@ Ne jamais sauter un checkpoint, meme trivial.
 
 Le developpeur colle le texte de la demande dans la conversation.
 
+> **Sources de la demande (ADO / PDF) -- fallbacks d'environnement** : PAT ADO expire (procedure de renouvellement `ADO_PAT`) et PDF illisible (fallback `pypdf` -> `.txt` UTF-8, jamais de `print()` direct) -- detail dans [reference/workflow.md](reference/workflow.md).
+
 ```
 echo "<texte colle par le developpeur>" | \
   py .claude/skills/parsing-diva-request/scripts/parse_request.py \
@@ -153,6 +156,7 @@ L'edition manuelle du `request.json` au CP1 est acceptee -- c'est meme le role d
 > - Keywords techniques et metier extraits
 > - CA detectes (si feature) ou message d'erreur (si ticket)
 > - Flag `needs_clarification` si leve
+> - **Version ERP CIBLE du projet** : etablir des maintenant contre quelle version le projet compile -- lire le `.dhpt` (profil `versioncible` / segment versionne du `repobjet`), cf. **R-17** de `understanding-integrator-workspace`. Le defaut `{CHEMIN_ERP_STANDARD}` (X.13) n'est PAS forcement la cible (un projet peut compiler contre X.12) ; utiliser cette version comme `--erp-root` pour toute la suite.
 >
 > Question : **Ma comprehension est-elle correcte ? Des precisions a ajouter ?**
 >
@@ -173,13 +177,13 @@ py .claude/skills/querying-diva-graph/scripts/query_neo4j.py \
 
 Lire `queries.json` pour obtenir la liste des requetes a executer.
 
-**Pour chaque requete**, invoquer l'outil MCP :
+**Pour chaque requete**, invoquer l'outil MCP d'execution Cypher :
 
 ```
-mcp__2e56c8ef-7b33-4e7d-9991-3a50dc1e7f1b__read_neo4j_cypher(query=<cypher>)
+mcp__plugin_divalto-devkit_diva-mcp__query_cypher(query=<cypher>)
 ```
 
-(Le prefixe `mcp__2e56c8ef-...` est l'identifiant dynamique du MCP `diva-mcp` dans la session.)
+> **Nom d'outil stable** : c'est bien `mcp__plugin_divalto-devkit_diva-mcp__query_cypher` -- **PAS** un prefixe UUID dynamique (`mcp__<uuid>__...`) ni l'ancien nom `read_neo4j_cypher`. Appeler un nom inexistant fait echouer l'appel et bascule a tort en « mode direct » degrade (grep aveugle) alors que le graphe repond. Autres outils diva-mcp utiles : `get_schema`, `get_program_overview`, `get_program_dependencies`, `get_call_graph`, `get_table_schema`.
 
 Collecter les resultats bruts dans un dict Python dont les cles sont `<template>:<parameter>` et les valeurs sont les listes de rows retournees. Ecrire dans `output/raw_results.json`.
 
@@ -326,7 +330,7 @@ statut X.12/X.13, `foo.dhsp:123` -- tout cela reste dans le facts.json. Le dev
 qui veut auditer une affirmation ouvre le facts.json ou lance le skill
 `reviewing-preaction-facts` (optionnel).
 
-**Enrichissement LLM marginal** (contrairement a V1) : le script amorce **deterministiquement** la matiere de chaque type retenu. Le LLM intervient au CP5 uniquement pour :
+**Enrichissement LLM marginal** (contrairement a V1) : le script amorce **deterministiquement** la matiere de chaque type retenu. Le LLM intervient avant la validation de la forme (CP5b) uniquement pour :
 
 1. **Preciser l'hypothese** dans les propositions de la section "Endroit ou agir" (type 4) -- 1 ligne par proposition.
 2. **Ajouter le "pourquoi"** sur 1 ligne par exemple de la section "Exemples" (type 1) si le symbole cible ne suffit pas.
@@ -335,9 +339,9 @@ qui veut auditer une affirmation ouvre le facts.json ou lance le skill
 
 Utiliser l'outil `Edit` pour modifier le markdown. Ne **pas** reecrire le rapport entier -- modifications chirurgicales (principe 3 de `4PRINCIPLES.md`).
 
-**Etape obligatoire avant CP5 -- Auto-reception dev persona + scoring grille** (RETEX 2026-04-18)
+**Etape obligatoire avant CP5b -- Auto-reception dev persona + scoring grille** (RETEX 2026-04-18)
 
-Avant de presenter le rapport au developpeur, Claude doit appliquer **3 rituels** (memoire `feedback_uc100_rituals.md`) + un **scoring structure** :
+Avant de presenter le rapport au developpeur, Claude doit appliquer les **3 rituels** ci-dessous + un **scoring structure** :
 
 **Rituel R1 -- Red team (3 questions)** lues sur le markdown final :
 1. Si j'etais le collaborateur sans contexte, qu'est-ce qui me sauterait aux yeux comme bizarre ?
@@ -360,7 +364,7 @@ Avant de presenter le rapport au developpeur, Claude doit appliquer **3 rituels*
 | 6. Densite / signal | Taille < 200L (cf `metrics.report_size_lines`) ? Signal/bruit eleve ? |
 
 **Seuils** :
-- Score moyen **>= 2.8/3** : presenter au CP5 (CA12 "tres satisfaisant").
+- Score moyen **>= 2.8/3** : presenter au CP5b (palier "tres satisfaisant").
 - Score moyen **2.3-2.8** : corriger chirurgicalement (`Edit`) puis re-scorer. NE PAS presenter tel quel.
 - Score moyen **< 2.3** : le probleme est amont (pipeline, inputs). Ne pas bricoler le rapport -- remonter au CP2/CP3/CP4 pour ajuster la source.
 
@@ -373,7 +377,7 @@ Avant de presenter le rapport au developpeur, Claude doit appliquer **3 rituels*
 
 **Verification automatique** : le script `build_report.py` lance `validate_report()` a la fin et echoue (exit 4) si un pattern interdit est detecte. Si `validate_report()` echoue, ne **pas** corriger superficiellement le markdown : corriger le fragment Jinja ou la logique amont et relancer les tests (`py -m unittest tests.test_fragments`).
 
-Livrer au CP5 **uniquement** le rapport qui :
+Livrer au CP5b **uniquement** le rapport qui :
 1. Passe `validate_report()` (exit 0)
 2. Score >= 2.8/3 sur la grille dev persona
 3. Ne contient aucune violation bloquante ci-dessus
@@ -405,7 +409,7 @@ Livrer au CP5 **uniquement** le rapport qui :
 
 Si `diva-mcp` est inaccessible (erreur reseau, token expire, timeout global) :
 
-1. A la phase 2, `mcp__...__read_neo4j_cypher` echoue
+1. A la phase 2, `mcp__plugin_divalto-devkit_diva-mcp__query_cypher` echoue **reellement** (reseau / token expire / timeout) -- et NON parce que le nom d'outil est faux. Ne basculer en mode direct que sur un echec reel, pas sur un « outil inconnu ».
 2. Invoquer la consolidation en mode unavailable :
    ```
    py .claude/skills/querying-diva-graph/scripts/query_neo4j.py \
@@ -421,7 +425,7 @@ Le workflow ne plante jamais.
 
 ---
 
-## Mode plan / lecture seule (R-011)
+## Mode plan / lecture seule
 
 Ce skill est un **orchestrateur qui ecrit sur disque** a chaque phase (`output/request.json`,
 `output/queries.json`, `output/evidence_x13.json`, `output/*.facts.json`, livrable `.md`) et
@@ -470,7 +474,7 @@ Claude enchaine :
 1. **Phase 1** : parse_request.py -> CP1 "Ma comprehension..."
 2. **Phase 2** : query_neo4j.py generate + MCP -> consolidate -> CP3 "Candidats pertinents..."
 3. **Phase 3** : verify_x13.py -> CP4 "Pistes confirmees..."
-4. **Phase 4** : build_report.py + enrichissements LLM -> CP5 "Rapport final..."
+4. **Phase 4** : build_report.py + enrichissements LLM -> CP5a puis CP5b "Rapport final..."
 
 Livrable : `output/preaction-famille-reglement-fiche-client-YYYYMMDD.md` (prefixe fichier defini par `build_report.py`).
 

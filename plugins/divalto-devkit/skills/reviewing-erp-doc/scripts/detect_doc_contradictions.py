@@ -1,22 +1,22 @@
 #!/usr/bin/env python3
-"""detect_doc_contradictions.py -- Categorie E4 : contradictions avec le referentiel DIVA.
+"""detect_doc_contradictions.py -- Categorie E4 : contradictions avec le referentiel.
 
-MVP v1 : 2 heuristiques deterministes sur le corpus `docs/` du workspace.
+Deux heuristiques deterministes, dont les deux sources sont LIVREES avec le devkit.
+Aucune n'exige un document que le partenaire n'aurait pas : E4 tourne toujours.
 
-- H1 : Nature d'un champ coherente avec son suffixe typee
-       Source : taxonomie consolidee dans managing-diva-dictionaries/scripts/suggest_nature.py,
-       documentee dans docs/DICTIONNAIRE-DHSD.md section 2.
-- H5 : Domaine coherent avec prefixe de fichier source
-       Source : docs/MODULES-ERP.md section 4 "Prefixes domaine complets".
+- H1 : Nature d'un champ coherente avec son suffixe type.
+       Table ci-dessous. Elle ne garde que les suffixes dont la correlation est forte
+       (>= 85 %) selon `managing-diva-dictionaries` --
+       `reference/taxonomie-suffixes.md` et `scripts/suggest_nature.py`.
+- H5 : Prefixe du fichier cite coherent avec le domaine declare.
+       Table dans `reference/prefixes-domaine.md`, copie locale de la page
+       `naming-diva-entities/reference/domain-prefixes.md` (regle de vendoring : un
+       script ne lit pas la page d'un autre skill).
 
-Modes :
-- `--docs-root <path>` : charge les heuristiques dependantes de docs/
-- `--docs-root skip` : skip H5 + marque H1 comme "taxonomie hardcodee" (H1 reste actif)
-
-Severite : toujours `warning` (le referentiel peut etre en retard).
+Severite : toujours `warning`. Une correlation statistique n'est pas une regle.
 
 Usage :
-  py detect_doc_contradictions.py --ir ir.json --docs-root docs/ --out detect_e4.json
+  py detect_doc_contradictions.py --ir ir.json --out detect_e4.json
 """
 import argparse
 import json
@@ -26,35 +26,37 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 
-# H1 : table suffixe -> Nature attendue (extract de SUFFIX_TAXONOMY,
-# managing-diva-dictionaries/scripts/suggest_nature.py, confidence >= 0.9).
-# Subset MVP : les suffixes les plus fiables et les plus frequents.
+# H1 : table suffixe -> Nature attendue. Seuls les suffixes de la bande « correlation
+# forte » (>= 85 %) de `managing-diva-dictionaries/reference/taxonomie-suffixes.md`, qui
+# concorde avec `SUFFIX_TAXONOMY` de son `scripts/suggest_nature.py`.
+#
+# `Mt` et `Qte` ont ete RETIRES. Cette table affirmait `8,N` pour les deux, alors que
+# les deux sources donnent `Mt` -> `16,D0` a 65 % et `Qte` -> `12,D2` a 72 % : la bande
+# « proposer + demander confirmation », pas celle qu'on affirme. E4 signalait donc comme
+# contradiction un livrable declarant la bonne Nature.
 SUFFIX_TO_NATURE = {
-    "Dh":  {"nature": "DH", "note": "Datetime 14 octets"},
-    "Dt":  {"nature": "D8", "note": "Date 8 octets"},
-    "Fl":  {"nature_starts": "1,", "note": "Flottant (1,0 ou 1,N)"},
-    "Mt":  {"nature_starts": "8,", "note": "Montant financier (8,N)"},
-    "Qte": {"nature_starts": "8,", "note": "Quantite (8,N)"},
+    "Dh":  {"nature": "DH", "note": "Timestamp 14 octets (98 %)"},
+    "Fl":  {"nature_starts": "1,", "note": "Flag booleen, 1,0 (95 %)"},
+    "Dt":  {"nature": "D8", "note": "Date AAAAMMJJ (93 %)"},
 }
 
 
-def parse_domain_prefixes(modules_erp_md: Path) -> dict:
-    """Extrait le mapping code_domaine -> prefixe_fichier depuis MODULES-ERP.md section 4.
+def parse_domain_prefixes(page: Path) -> dict:
+    """{domaine: prefixe_module} depuis `reference/prefixes-domaine.md`.
 
-    Regex sur les lignes de tableau Markdown :
-        | Achat-Vente (DAV) | `GT_` | ...
+    Lignes de tableau : `| DAV | \u0060GT_\u0060 | \u0060gtt\u0060 |`. On prend la
+    TROISIEME colonne, « Prefixe module », parce que c'est elle qui prefixe les noms de
+    fichiers (`gttcli.dhop`). L'ancienne version lisait `GT_` et le comparait a
+    `gttcli` : ca ne concordait que par accident de troncature.
     """
-    if not modules_erp_md.is_file():
+    if not page.is_file():
         return {}
-    content = modules_erp_md.read_text(encoding="utf-8")
-    pattern = re.compile(r"\|[^|]*\(([A-Z]+)\)\s*\|\s*`([A-Za-z_]+)`", re.MULTILINE)
-    out: dict[str, str] = {}
-    for match in pattern.finditer(content):
-        domain = match.group(1)
-        prefix = match.group(2).rstrip("_").rstrip("t").rstrip("T")  # "GT_" -> "G" ou "Gt"
-        # Preserver le vrai prefixe DIVA standard (Gtt/Gfc/...) -- garder les 3 premieres lettres
-        out[domain] = match.group(2).rstrip("_")
-    return out
+    content = page.read_text(encoding="utf-8")
+    pattern = re.compile(
+        r"^\|\s*([A-Za-z][\w\- ]*?)\s*\|\s*`[^`]+`\s*\|\s*`([^`]+)`\s*\|",
+        re.MULTILINE)
+    return {m.group(1).strip(): m.group(2).strip()
+            for m in pattern.finditer(content)}
 
 
 def check_h1_suffix_nature(entity: dict) -> list[dict]:
@@ -96,7 +98,7 @@ def _build_h1_item(code: str, name: str, nature: str, suffix: str, expected: dic
         "yaml_path": f"technical.fields[{name}].nature",
         "excerpt_deliverable": f"{name} = {nature}",
         "excerpt_source": f"suffixe {suffix} attendu en Nature {expected_str} ({expected['note']})",
-        "source_ref": "DICTIONNAIRE-DHSD.md:section 2 (+ managing-diva-dictionaries/scripts/suggest_nature.py)",
+        "source_ref": "taxonomie des suffixes -- skill `managing-diva-dictionaries`, page `reference/taxonomie-suffixes.md`",
         "challenge": (
             f"Le champ '{name}' porte le suffixe typee '{suffix}' (Nature attendue : {expected_str}, "
             f"{expected['note']}), mais le livrable declare Nature '{nature}'. "
@@ -118,7 +120,7 @@ def check_h5_domain_prefix(entity: dict, domain_prefixes: dict, ir_module_code: 
             fname = citation.split(":", 1)[0]
             fname_basename = fname.rsplit("/", 1)[-1].rsplit("\\", 1)[-1]
             # Les fichiers DIVA utilisent souvent 2-3 lettres de prefixe (Gtt, Gfc, Gab...).
-            # On compare le prefixe attendu (de MODULES-ERP.md) avec le debut du fichier.
+            # On compare le prefixe module attendu, lu dans `reference/prefixes-domaine.md`.
             if not fname_basename.lower().startswith(expected_prefix.lower()):
                 items.append({
                     "entity": code,
@@ -127,7 +129,7 @@ def check_h5_domain_prefix(entity: dict, domain_prefixes: dict, ir_module_code: 
                     "yaml_path": aff.get("yaml_path", ""),
                     "excerpt_deliverable": f"citation : {citation}",
                     "excerpt_source": f"domaine {module} -> prefixe attendu {expected_prefix}",
-                    "source_ref": "MODULES-ERP.md:section 4",
+                    "source_ref": "reference/prefixes-domaine.md",
                     "challenge": (
                         f"L'entite declare module={module} mais cite un fichier '{fname_basename}' "
                         f"dont le prefixe ne matche pas {expected_prefix} attendu pour ce domaine."
@@ -136,19 +138,20 @@ def check_h5_domain_prefix(entity: dict, domain_prefixes: dict, ir_module_code: 
     return items
 
 
-def detect(ir: dict, docs_root: Path | None) -> dict:
+PAGE_PREFIXES = Path(__file__).resolve().parent.parent / "reference" / \
+    "prefixes-domaine.md"
+
+
+def detect(ir: dict) -> dict:
     all_items: list[dict] = []
     warnings_global: list[str] = []
 
-    domain_prefixes: dict[str, str] = {}
-    if docs_root is None:
-        warnings_global.append("E4 partielle : --docs-root skip, seule H1 (taxonomie hardcodee) est active.")
-    else:
-        modules_md = docs_root / "MODULES-ERP.md"
-        if modules_md.is_file():
-            domain_prefixes = parse_domain_prefixes(modules_md)
-        else:
-            warnings_global.append(f"MODULES-ERP.md introuvable sous {docs_root} -- H5 skippee.")
+    domain_prefixes = parse_domain_prefixes(PAGE_PREFIXES)
+    if not domain_prefixes:
+        warnings_global.append(
+            "H5 inactive : %s illisible ou sans table. La page est livree avec le "
+            "skill -- si elle manque, l'installation est incomplete."
+            % PAGE_PREFIXES.name)
 
     ir_module_code = (ir.get("module") or {}).get("code", "")
 
@@ -169,7 +172,6 @@ def detect(ir: dict, docs_root: Path | None) -> dict:
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--ir", required=True)
-    ap.add_argument("--docs-root", required=True, help="Racine docs/ du workspace OU 'skip'")
     ap.add_argument("--out", required=True)
     args = ap.parse_args()
 
@@ -178,16 +180,8 @@ def main():
         print(f"ERREUR : IR introuvable : {ir_path}", file=sys.stderr)
         sys.exit(2)
 
-    if args.docs_root.strip().lower() == "skip":
-        docs_root = None
-    else:
-        docs_root = Path(args.docs_root)
-        if not docs_root.is_dir():
-            print(f"ERREUR : docs-root introuvable : {docs_root} (utiliser 'skip' si pas dispo)", file=sys.stderr)
-            sys.exit(2)
-
     ir = json.loads(ir_path.read_text(encoding="utf-8"))
-    result = detect(ir, docs_root)
+    result = detect(ir)
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -197,7 +191,7 @@ def main():
         "category": "E4",
         "warnings_items": warnings,
         "warnings_global": len(result["warnings_global"]),
-        "domain_prefixes_loaded": len(docs_root and (docs_root / "MODULES-ERP.md").is_file() and [1] or []),
+        "domain_prefixes_loaded": len(parse_domain_prefixes(PAGE_PREFIXES)),
         "out": str(out),
     }
     print(json.dumps(summary, ensure_ascii=False))

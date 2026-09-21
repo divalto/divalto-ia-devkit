@@ -79,7 +79,7 @@ ZOOM_USAGE_PATTERNS = [
         "regex": r"(?i)\b(?:Tnt_)?Zoom_Call\s*\(",
         "confidence": "fort",
         "desc": "Appel Zoom_Call / Tnt_Zoom_Call",
-        "retex": "R-012 (#29)",
+        "retex": "#29",
     },
     {
         "id": "touche_masque",
@@ -87,7 +87,7 @@ ZOOM_USAGE_PATTERNS = [
         "regex": r"(?i)(?:shift_|ctrl_)?f\d+\s*=\s*{N}\b",
         "confidence": "fort",
         "desc": "Binding touche de masque ([touches] fN=<num>)",
-        "retex": "R-012 (#29)",
+        "retex": "#29",
     },
     {
         "id": "affectation",
@@ -98,7 +98,7 @@ ZOOM_USAGE_PATTERNS = [
         "regex": r"(?<![<>=!:])=\s*{N}\b",
         "confidence": "faible",
         "desc": "Affectation '= <num>' (constante ou autre, a juger ; hors comparateurs)",
-        "retex": "R-012 (#29)",
+        "retex": "#29",
     },
 ]
 

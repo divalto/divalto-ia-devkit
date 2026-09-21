@@ -26,9 +26,13 @@
 
 {% set inclus = selection | selectattr("included") | list %}
 {% set omis = selection | rejectattr("included") | list %}
-Types inclus dans l'analyse ({{ inclus | length }}) : {% for s in inclus %}{{ s.slug }}{% if not loop.last %}, {% endif %}{% endfor %}.
+{# Libelle humain, jamais le slug : cette couche s'adresse a un chef de projet, et
+   `endroit_agir` est du jargon de pipeline. Le libelle vient de `facts.selection[].title`,
+   emis par le producteur depuis `content_types.py` -- pas d'une table tenue ici, qui
+   divergerait. Repli sur le slug pour un facts.json anterieur, qui n'a pas ce champ. #}
+Types inclus dans l'analyse ({{ inclus | length }}) : {% for s in inclus %}{{ s.title or s.slug }}{% if not loop.last %}, {% endif %}{% endfor %}.
 {% if omis %}
-Types omis ({{ omis | length }}) : {% for s in omis %}{{ s.slug }}{% if not loop.last %}, {% endif %}{% endfor %}.
+Types omis ({{ omis | length }}) : {% for s in omis %}{{ s.title or s.slug }}{% if not loop.last %}, {% endif %}{% endfor %}.
 {% endif %}
 
 ---

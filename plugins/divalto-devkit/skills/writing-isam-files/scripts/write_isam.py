@@ -43,7 +43,66 @@ import sys
 # Constantes
 # ---------------------------------------------------------------------------
 
-DLL_PATH = r"C:\divalto\sys\DhxIsam64.dll"
+DLL_NAME = "DhxIsam64.dll"
+DEFAULT_SYS_DIR = r"C:\divalto\sys"
+
+# --- Resolution du repertoire sys/ de Divalto (emplacement de DhxIsam64.dll) ---------
+# Vendoring (copie autonome identique dans chaque skill ISAM) : ne PAS importer le
+# resolveur d'un autre skill. Ordre : --dll-path / --sys-dir (CLI, strict) > env
+# DIVALTO_SYS_DIR > registre Divalto (HKLM\SOFTWARE\[WOW6432Node\]Divalto\divalto.ini\System
+# -> CheminUl1, puis \sys) > fallback C:\divalto\sys. Le chemin en dur sur C: cassait
+# toute operation ISAM sur un poste ou Divalto est installe ailleurs (ex. K:\).
+# Discipline registre P-C : on lit UNIQUEMENT la valeur CheminUl1 sous les cles documentees.
+_DIVA_REG_SUBKEYS = [
+    r"SOFTWARE\WOW6432Node\Divalto\divalto.ini\System",
+    r"SOFTWARE\Divalto\divalto.ini\System",
+]
+
+
+def _sys_dir_from_registry():
+    """Renvoie <CheminUl1>\\sys via le registre Windows, ou None si indisponible."""
+    try:
+        import winreg
+    except ImportError:
+        return None
+    for subkey in _DIVA_REG_SUBKEYS:
+        try:
+            with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, subkey) as key:
+                root, _ = winreg.QueryValueEx(key, "CheminUl1")
+        except (FileNotFoundError, OSError):
+            continue
+        if root:
+            return os.path.join(root, "sys")
+    return None
+
+
+def resolve_sys_dir(explicit_sys_dir=None):
+    """Repertoire sys/ de Divalto. Override CLI (--sys-dir) honore STRICTEMENT ; sinon
+    auto-resolution best-effort : env DIVALTO_SYS_DIR > registre > fallback, en prenant
+    le 1er repertoire ou DhxIsam64.dll existe reellement."""
+    if explicit_sys_dir:
+        return explicit_sys_dir
+    dirs = []
+    env_dir = os.environ.get("DIVALTO_SYS_DIR")
+    if env_dir:
+        dirs.append(env_dir)
+    reg_dir = _sys_dir_from_registry()
+    if reg_dir:
+        dirs.append(reg_dir)
+    dirs.append(DEFAULT_SYS_DIR)
+    for d in dirs:
+        if os.path.isfile(os.path.join(d, DLL_NAME)):
+            return d
+    return dirs[-1]  # aucun existant : fallback (message d'erreur clair a l'appelant)
+
+
+def resolve_dll_path(explicit_dll=None, explicit_sys_dir=None):
+    """Chemin complet de DhxIsam64.dll. --dll-path est honore strictement."""
+    if explicit_dll:
+        return explicit_dll
+    return os.path.join(resolve_sys_dir(explicit_sys_dir), DLL_NAME)
+
+
 TASK_ID = 15  # defaut ; acquire_task() essaie 15 puis fallback 2..16
 TDF_SIZE = 1024
 TDF_NAME_OFFSET = 4
@@ -66,13 +125,13 @@ ERROR_MESSAGES = {
 # Chargement DLL
 # ---------------------------------------------------------------------------
 
-def load_dll():
+def load_dll(dll_path):
     """Charge DhxIsam64.dll et configure les signatures ctypes."""
-    if not os.path.isfile(DLL_PATH):
-        print(f"DLL introuvable : {DLL_PATH}", file=sys.stderr)
+    if not os.path.isfile(dll_path):
+        print(f"DLL introuvable : {dll_path}", file=sys.stderr)
         return None
 
-    dll = ctypes.WinDLL(DLL_PATH)
+    dll = ctypes.WinDLL(dll_path)
 
     # xisam_begin(ushort tache) -> short
     dll.xisam_begin.argtypes = [ctypes.c_ushort]
@@ -340,6 +399,78 @@ def _guardrail_or_none(structure, fichier, dico_paths, skip_dict_check):
 # Construction d'enregistrement
 # ---------------------------------------------------------------------------
 
+def encoder_champ(valeur, field):
+    """Encode une valeur a la representation binaire EXACTE du champ.
+
+    **Source unique du cadrage.** Trois endroits ont besoin de cette representation :
+    le contenu de l'enregistrement (`build_record`), la valeur de cle de
+    positionnement (`build_tdf_key`) et la verification post-lecture
+    (`record_matches_key_fields`). Ils divergeaient : seul `build_record` lisait
+    `Justify`, si bien qu'un champ numerique cadre a DROITE (`"     131"`) partait
+    dans la cle cadre a GAUCHE (`"131     "`) -- une cle totalement differente en tri
+    octet par octet, qui positionnait sur un enregistrement voisin (#334).
+
+    Deux types :
+      - `"B"` (binaire) : la valeur fournie est de l'**hexadecimal** (symetrique de
+        la lecture, qui rend `raw.hex().upper()` -- cf. reading-isam-files). Seul
+        moyen d'exprimer un octet arbitraire : le pipeline texte passe par cp1252,
+        qui n'est pas bijectif sur 0x80-0x9F (#290).
+      - tout le reste : texte cp1252, cadre selon `Justify` (`right` = padding
+        espaces a gauche, defaut `left`).
+
+    Returns:
+        bytes de longueur EXACTEMENT field["Taille"].
+
+    Raises:
+        ValueError: hexadecimal invalide ou de longueur incompatible -- on refuse
+            plutot que de tronquer en silence, une troncature muette produisant une
+            valeur binaire plausible mais fausse.
+    """
+    taille = field["Taille"]
+    nom = field.get("Nom", "?")
+
+    if field.get("Type") == "B":
+        brut = str(valeur).strip().replace(" ", "")
+        try:
+            octets = bytes.fromhex(brut)
+        except ValueError:
+            raise ValueError(
+                f"Champ binaire '{nom}' : '{valeur}' n'est pas de l'hexadecimal valide. "
+                f"Attendu {taille * 2} caracteres hex (ex: '01D9EF910F1F5C9D').")
+        if len(octets) != taille:
+            raise ValueError(
+                f"Champ binaire '{nom}' : {len(octets)} octet(s) fournis pour un champ "
+                f"de {taille}. Attendu exactement {taille * 2} caracteres hex -- refuse "
+                f"plutot que tronque.")
+        return octets
+
+    val_str = str(valeur)
+    justify = field.get("Justify", "left")
+    if justify == "right":
+        # Idempotent : accepte "131" comme "      131", meme resultat.
+        val_str = val_str.strip()
+    val_bytes = val_str.encode(ENCODING)
+    if justify == "right":
+        if len(val_bytes) > taille:
+            val_bytes = val_bytes[-taille:]          # troncature cote gauche
+        return b" " * (taille - len(val_bytes)) + val_bytes
+    return val_bytes[:taille].ljust(taille, b" ")
+
+
+def valeur_canonique(octets, field):
+    """Forme comparable d'une valeur, insensible au cadrage.
+
+    Sert a comparer ce qu'on a LU dans le fichier avec ce qu'on ATTEND, sans que le
+    cadrage n'entre en jeu : `b"     131"` et `b"131     "` donnent tous deux `b"131"`.
+    La version precedente ne faisait qu'un `rstrip`, ce qui laissait les espaces de
+    TETE d'un champ cadre a droite -- la comparaison echouait donc systematiquement
+    sur ces champs, avec le meme symptome que #334 mais une cause distincte.
+    """
+    if field.get("Type") == "B":
+        return octets.hex().upper()
+    return octets.strip(b" \x00")
+
+
 def build_record(donnees, structure_fields, record_size):
     """Construit un buffer binaire a partir des donnees et de la structure.
 
@@ -367,34 +498,29 @@ def build_record(donnees, structure_fields, record_size):
 
         field = field_map[nom]
         offset = field["Offset"]
-        taille = field["Taille"]
-        justify = field.get("Justify", "left")  # defaut : left-aligned (texte)
-
-        # Encoder la valeur en Windows-1252
-        val_str = str(valeur)
-        if justify == "right":
-            # Champs numeriques : strip + re-pad a gauche sur la taille du champ.
-            # Idempotent : accepte "51" comme "      51" -- resultat identique.
-            val_str = val_str.strip()
         try:
-            val_bytes = val_str.encode(ENCODING)
+            val_bytes = encoder_champ(valeur, field)
         except UnicodeEncodeError:
             warnings.append(f"Champ {nom} : valeur non encodable en {ENCODING}")
             continue
+        except ValueError as e:
+            warnings.append(str(e))
+            continue
 
-        if justify == "right":
-            # Cadrage a droite : padding espaces a gauche
-            if len(val_bytes) > taille:
-                val_bytes = val_bytes[-taille:]  # troncature cote gauche
-            else:
-                val_bytes = b" " * (taille - len(val_bytes)) + val_bytes
-            for j in range(taille):
-                rec[offset + j] = val_bytes[j]
-        else:
-            # Cadrage a gauche (defaut texte) : copier depuis offset, padding droit implicite (buffer init a 0x20)
-            copy_len = min(len(val_bytes), taille)
-            for j in range(copy_len):
-                rec[offset + j] = val_bytes[j]
+        for j in range(len(val_bytes)):
+            rec[offset + j] = val_bytes[j]
+
+    # Champs binaires NON fournis : le buffer les laisse a 0x20 (espaces), ce qui
+    # n'est jamais une valeur binaire legitime. On ne devine PAS de valeur -- la
+    # mesure montre que le standard lui-meme livre des champs binaires a espaces
+    # (cf. reference/champs-binaires.md) -- mais on ne se tait pas non plus.
+    for nom, field in field_map.items():
+        if field.get("Type") == "B" and nom not in donnees:
+            warnings.append(
+                f"Champ binaire '{nom}' non fourni : reste rempli d'espaces (0x20), "
+                f"ce qui n'est pas une valeur binaire legitime. Fournir sa valeur en "
+                f"hexadecimal ({field['Taille'] * 2} caracteres) si l'outil qui relira "
+                f"cet enregistrement en depend.")
 
     return rec, warnings
 
@@ -402,6 +528,65 @@ def build_record(donnees, structure_fields, record_size):
 # ---------------------------------------------------------------------------
 # Ecriture ISAM
 # ---------------------------------------------------------------------------
+
+# Fichiers deja sauvegardes dans CETTE execution : un seul .bak par fichier, meme
+# pour un batch de 200 enregistrements (sinon le 2e enregistrement ecraserait la
+# sauvegarde par un etat deja modifie -- le filet ne servirait plus a rien).
+_DEJA_SAUVEGARDES = set()
+
+
+# Fichiers standard qui possedent un OVERLAY de surcharge `<nom>u.dhfi` (#228).
+# Liste volontairement COURTE et explicite : ne pas deduire l'existence d'un overlay
+# du seul nom d'un fichier. Les deux mecanismes connus et confirmes :
+#   a5f  -> a5fu  (zooms, visibilite F7)   -- confirme par mesure et par #250
+#   g3f  -> g3fu  (choix de menu)          -- confirme par le distributeur
+# Pour les AUTRES fichiers standard il n'y a PAS d'overlay : le partenaire gere son
+# PROPRE fichier (ex. un XXfdmc de multichoix). Ce sont deux regles differentes, et les
+# confondre produirait un mauvais conseil.
+FICHIERS_AVEC_OVERLAY = {"a5f": "a5fu", "g3f": "g3fu"}
+
+
+def avertissement_overlay(fichier_dhfi):
+    """Message si la cible est un fichier standard qui possede un overlay, sinon None."""
+    base = os.path.splitext(os.path.basename(fichier_dhfi))[0].lower()
+    overlay = FICHIERS_AVEC_OVERLAY.get(base)
+    if not overlay:
+        return None
+    return (
+        "CIBLE STANDARD : '%s.dhfi' est le fichier livre par Divalto. Une ecriture custom "
+        "doit viser son overlay '%s.dhfi' dans l'arborescence SPECIFIQUE -- une entree "
+        "dans l'overlay est prioritaire sur celle du standard, et le standard n'est jamais "
+        "modifie. Ecrire ici expose la modification a etre ECRASEE a la prochaine montee "
+        "de version ou au prochain patch ERP. Si l'ecriture dans le standard est "
+        "intentionnelle, ignorer cet avertissement." % (base, overlay))
+
+
+def sauvegarder_isam(fichier_dhfi):
+    """Copie de securite avant ecriture. Retourne la liste des `.bak` crees.
+
+    **Les DEUX fichiers de la paire.** Un ISAM Divalto est un couple : `.dhfi`
+    (donnees) et `.dhfd` (index). Sauvegarder le seul `.dhfi` ne permet PAS de
+    revenir en arriere -- le skill de LECTURE le documente deja (« toute copie ou
+    backup doit embarquer les deux fichiers »), l'ecriture l'ignorait. Le RETEX
+    #290 ne demandait que le `.dhfi` : sa suggestion etait incomplete.
+
+    Convention alignee sur `writing-diva-files/scripts/patch_file.py` : un seul
+    `.bak` par fichier, **glissant** (chaque execution ecrase le precedent).
+    """
+    import shutil
+    cle = os.path.abspath(fichier_dhfi).lower()
+    if cle in _DEJA_SAUVEGARDES:
+        return []
+    crees = []
+    base, _ext = os.path.splitext(fichier_dhfi)
+    for chemin in (fichier_dhfi, base + ".dhfd"):
+        if os.path.isfile(chemin):
+            cible = chemin + ".bak"
+            shutil.copy2(chemin, cible)
+            crees.append(cible)
+    _DEJA_SAUVEGARDES.add(cle)
+    return crees
+
 
 def make_tdf(fichier_path):
     """Cree un buffer TDF avec le chemin du fichier."""
@@ -411,6 +596,21 @@ def make_tdf(fichier_path):
     for i in range(copy_len):
         tdf[TDF_NAME_OFFSET + i] = name_bytes[i]
     return tdf
+
+
+# Message d'echec du positionnement. Il DOIT nommer la cause la plus probable :
+# une cle declaree qui n'est pas la cle physique de l'index. Le message precedent
+# ("match approximatif refuse") envoyait chercher du cote de l'enregistrement, alors
+# que le probleme est dans la declaration -- cas reel : un `Ce` en tete des champs de
+# cle rendait le positionnement inefficace (#291).
+MSG_CLE_REFUSEE = (
+    "Enreg cible introuvable : le positionnement a atterri sur un AUTRE enregistrement, "
+    "l'operation est refusee (aucune ecriture). Cause la plus frequente : la cle declaree "
+    "dans le bloc Keys de la structure n'est pas la cle PHYSIQUE de l'index -- typiquement "
+    "un champ CE inclus a tort (86 % des index du standard n'en ont aucun dans leur cle). "
+    "Verifier avec : validate_structure.py --path <structure> --probe-key <index> "
+    "--file <copie.dhfi>"
+)
 
 
 def record_matches_key_fields(record_buf, donnees, key_fields, structure_fields):
@@ -426,9 +626,13 @@ def record_matches_key_fields(record_buf, donnees, key_fields, structure_fields)
         field = field_map[field_name]
         offset = field["Offset"]
         size = field["Taille"]
-        actual = bytes(record_buf[offset:offset + size]).rstrip(b" ")
-        expected = str(donnees.get(field_name, "")).encode(ENCODING).rstrip(b" ")
-        if actual != expected:
+        lu = bytes(record_buf[offset:offset + size])
+        try:
+            attendu = encoder_champ(donnees.get(field_name, ""), field)
+        except ValueError:
+            return False
+        # Comparaison sur la forme CANONIQUE : insensible au cadrage des deux cotes.
+        if valeur_canonique(lu, field) != valeur_canonique(attendu, field):
             return False
     return True
 
@@ -465,12 +669,12 @@ def build_tdf_key(tdf, key, key_fields, donnees, structure_fields):
         if field_name not in field_map:
             raise ValueError(f"Champ cle inconnu : {field_name}")
         field = field_map[field_name]
-        taille = field["Taille"]
-        val_str = str(donnees.get(field_name, ""))
-        val_bytes = val_str.encode(ENCODING).ljust(taille, b" ")[:taille]
+        # Meme cadrage que dans l'enregistrement (#334) : un `ljust`
+        # inconditionnel envoyait un champ `Justify=right` cadre a gauche.
+        val_bytes = encoder_champ(donnees.get(field_name, ""), field)
         for j in range(len(val_bytes)):
             tdf[value_offset + j] = val_bytes[j]
-        value_offset += taille
+        value_offset += field["Taille"]
 
 
 def resolve_key(structure, key, key_fields):
@@ -500,7 +704,7 @@ def update_single(dll, tache, entry, structure_dir, dry_run, dico_paths=None, sk
     """Modifie un enregistrement existant.
 
     Sequence : open -> tpreadlong R (reserve) -> verification exacte -> trewritelong -> close.
-    Revision R-014 (2026-04-22) : unifie avec delete_single sur tpreadlong mode R.
+    Revision 2026-04-22 : unifie avec delete_single sur tpreadlong mode R.
     """
     fichier = entry["Fichier"]
     struct_ref = entry["Structure"]
@@ -555,7 +759,7 @@ def update_single(dll, tache, entry, structure_dir, dry_run, dico_paths=None, sk
 
     # Positionner + reserver via tpreadlong mode R (Reserve) : acquiert un lock
     # record-by-record. Le positionnement est porte par TDF.KEY (Greater-or-Equal implicite).
-    # Revision R-014 (2026-04-22) : remplace l'usage historique de treadlong mode G
+    # Revision 2026-04-22 : remplace l'usage historique de treadlong mode G
     # (G etait un code invalide interprete comme alias de R par effet de bord).
     current_rec = (ctypes.c_ubyte * record_size)()
     mode_read = (ctypes.c_ubyte * 1)(ord("R"))
@@ -575,7 +779,7 @@ def update_single(dll, tache, entry, structure_dir, dry_run, dico_paths=None, sk
     if not record_matches_key_fields(current_rec, donnees, key_fields, fields):
         dll.xisam_tcloselong(ctypes.c_ushort(tache), tdf)
         return {"written": False, "skipped": False, "error_code": 2,
-                "message": "Enreg cible introuvable (match approximatif refuse)"}
+                "message": MSG_CLE_REFUSEE}
 
     # Reecrire avec les nouvelles valeurs
     ret = dll.xisam_trewritelong(
@@ -594,7 +798,7 @@ def delete_single(dll, tache, entry, structure_dir, dry_run, dico_paths=None, sk
     """Supprime un enregistrement existant.
 
     Sequence : open -> tpreadlong R (reserve) -> verification exacte -> tdeletelong -> close.
-    Revision R-014 (2026-04-22) : unifie avec update_single sur tpreadlong mode R.
+    Revision 2026-04-22 : unifie avec update_single sur tpreadlong mode R.
     Remplace l'usage historique de tpreadlong mode F (tolerant = risque corruption).
     """
     fichier = entry["Fichier"]
@@ -645,7 +849,7 @@ def delete_single(dll, tache, entry, structure_dir, dry_run, dico_paths=None, sk
 
     # Positionner + reserver via tpreadlong mode R (Reserve) : acquiert un lock
     # record-by-record. Le positionnement est porte par TDF.KEY (Greater-or-Equal implicite).
-    # Revision R-014 (2026-04-22) : remplace l'usage historique de tpreadlong mode F
+    # Revision 2026-04-22 : remplace l'usage historique de tpreadlong mode F
     # (F = "Forcee" = tolerant, positionne sur l'enreg le plus proche = risque corruption).
     current_rec = (ctypes.c_ubyte * record_size)()
     mode_read = (ctypes.c_ubyte * 1)(ord("R"))
@@ -665,7 +869,7 @@ def delete_single(dll, tache, entry, structure_dir, dry_run, dico_paths=None, sk
     if not record_matches_key_fields(current_rec, donnees, key_fields, fields):
         dll.xisam_tcloselong(ctypes.c_ushort(tache), tdf)
         return {"written": False, "skipped": False, "error_code": 2,
-                "message": "Enreg cible introuvable (match approximatif refuse)"}
+                "message": MSG_CLE_REFUSEE}
 
     # Supprimer
     ret = dll.xisam_tdeletelong(
@@ -777,10 +981,21 @@ def main():
              "est deporte (ex. fichiers d'erreur dans objets/, dico dans fichiers/)."
     )
     parser.add_argument(
+        "--no-backup", action="store_true",
+        help="Ne PAS creer de copie .bak avant ecriture. Par defaut le script sauvegarde "
+             "les DEUX fichiers de la paire ISAM (.dhfi ET .dhfd) avant la premiere "
+             "ecriture -- un .dhfi seul ne permet pas de revenir en arriere. Un seul .bak "
+             "par fichier et par execution, glissant."
+    )
+    parser.add_argument(
         "--skip-dict-check", action="store_true",
         help="Desactive le garde-fou structure<->dictionnaire (verification de la taille "
              "d'enregistrement). A n'utiliser qu'en connaissance de cause."
     )
+    parser.add_argument("--dll-path", default=None,
+                        help="Chemin explicite de DhxIsam64.dll (sinon : --sys-dir, env DIVALTO_SYS_DIR, registre Divalto, puis C:\\divalto\\sys)")
+    parser.add_argument("--sys-dir", default=None,
+                        help="Repertoire sys/ de Divalto contenant DhxIsam64.dll (override du registre)")
     args = parser.parse_args()
 
     # Resoudre structure-dir
@@ -808,6 +1023,7 @@ def main():
         sys.exit(2)
 
     total = len(entries)
+    avertissements = []
     written = 0
     skipped = 0
     errors = []
@@ -816,7 +1032,7 @@ def main():
     dll = None
     task_id = TASK_ID
     if not args.dry_run:
-        dll = load_dll()
+        dll = load_dll(resolve_dll_path(args.dll_path, args.sys_dir))
         if dll is None:
             sys.exit(2)
 
@@ -840,8 +1056,31 @@ def main():
     }
     op_fn = op_funcs[args.op]
 
+    backups = []
+    overlay_avertis = set()
     try:
         for i, entry in enumerate(entries):
+            # Cible standard alors qu'un overlay existe : le dire AVANT d'ecrire, et
+            # une seule fois par fichier (un lot de 200 entrees ne doit pas produire
+            # 200 fois le meme avertissement). Emis aussi en --dry-run : c'est
+            # precisement le moment ou l'on veut l'entendre.
+            msg_overlay = avertissement_overlay(entry["Fichier"])
+            if msg_overlay and entry["Fichier"] not in overlay_avertis:
+                overlay_avertis.add(entry["Fichier"])
+                avertissements.append({"file": entry["Fichier"], "message": msg_overlay})
+                print("  AVERTISSEMENT: %s" % msg_overlay, file=sys.stderr)
+
+            # Filet de securite AVANT toute ecriture reelle : une fois l'ecriture
+            # faite dans un .dhfi il n'existe aucun retour arriere integre.
+            if not args.dry_run and not args.no_backup:
+                try:
+                    backups.extend(sauvegarder_isam(entry["Fichier"]))
+                except OSError as e:
+                    errors.append({"index": i, "file": entry["Fichier"],
+                                   "error_code": -1,
+                                   "message": f"Sauvegarde impossible, ecriture annulee : {e}"})
+                    continue
+
             result = op_fn(dll, task_id, entry, structure_dir, args.dry_run,
                            args.dico_path, args.skip_dict_check)
 
@@ -870,6 +1109,8 @@ def main():
         "total": total,
         "written": written,
         "skipped": skipped,
+        "backups": backups,
+        "avertissements": avertissements,
         "errors": errors,
     }
 

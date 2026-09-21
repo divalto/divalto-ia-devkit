@@ -12,7 +12,7 @@
       "expected_behavior": [
         "Execute find_free_enrno.py avec --file pointant sur g3f.dhfi Achat-Vente et --range custom",
         "Sortie JSON : free=[100000] (plage custom vide en X.13 Achat-Vente standard, max+1 sur plage vide = lo = 100000)",
-        "sources.m2_records = 1367 environ (match RETEX R-006 apres filtre Ce=2, drift possible)",
+        "sources.m2_records = 1367 environ (match RETEX apres filtre Ce=2, drift possible)",
         "sources.used_in_range = 0 (aucun EnrNo custom pre-existant)",
         "Exit code 0"
       ]

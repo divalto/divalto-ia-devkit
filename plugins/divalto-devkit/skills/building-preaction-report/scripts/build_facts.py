@@ -1,5 +1,5 @@
 """
-build_facts.py -- Construit le FOND (facts.json) d'une analyse pre-action UC-100.
+build_facts.py -- Construit le FOND (facts.json) d'une analyse pre-action.
 
 Entree : request.json + candidates_x12.json + evidence_x13.json (phases 1-3).
 Sortie : preaction-<slug>-<YYYYMMDD>.facts.json (machine-lisible, refs absolues)
@@ -255,7 +255,7 @@ def _seeds_to_claims_t3(
             )
         )
         if not looks_absolute:
-            file_path = erp_root or "C:/Developpements harmony/Standard/Version X.13"
+            file_path = erp_root
             line = 0
         claims.append(Claim(
             id=_make_id(counter),
@@ -414,7 +414,7 @@ def _seeds_to_claims_t5(seeds: dict, erp_root: str, counter: list[int]) -> list[
             claim=claim_text,
             sources=[Source(
                 status="NOUVEAU_X13",
-                path=erp_root or "C:/Developpements harmony/Standard/Version X.13",
+                path=erp_root,
                 line=1,
                 enclosing=None,
                 snippet="Piste de recherche complementaire (commande a executer sur l'ERP).",
@@ -623,7 +623,7 @@ def build_facts_document(
     cleaned_request["resume"] = _clean_resume(request.get("resume", ""))
     cleaned_request["keywords_metier"] = _filter_keywords(request.get("keywords_metier", []))
     selection_raw = evaluate_catalog(ctx)
-    seeds = build_seeds(ctx, cleaned_request, candidates, evidence)
+    seeds = build_seeds(ctx, cleaned_request, candidates, evidence, erp_root)
     metrics = compute_metrics(cleaned_request, candidates, evidence, selection_raw)
 
     # Generer les claims dans l'ordre du CATALOG (mais T1 d'abord pour faire la resolution
@@ -678,6 +678,9 @@ def build_facts_document(
             included=included,
             layer=_LAYER_BY_CTID.get(s["id"], "technical"),
             reason=reason,
+            # `evaluate_catalog` porte deja le libelle humain : le transmettre plutot
+            # que de laisser le rendu du livrable en inventer un de son cote.
+            title=s.get("title", ""),
         ))
 
     verdict = _build_verdict(cleaned_request, t4_claims, chain_claims)
@@ -715,7 +718,7 @@ def _cli() -> int:
         sys.stdout.reconfigure(encoding="utf-8")
 
     ap = argparse.ArgumentParser(
-        description="Construit le fond (facts.json) d'une analyse pre-action UC-100."
+        description="Construit le fond (facts.json) d'une analyse pre-action."
     )
     ap.add_argument("--request", required=True)
     ap.add_argument("--candidates", required=True)
@@ -725,8 +728,8 @@ def _cli() -> int:
     ap.add_argument("--date", help="Format YYYYMMDD")
     ap.add_argument(
         "--erp-root",
-        default="C:/Developpements harmony/Standard/Version X.13",
-        help="Racine ERP pour reconstruire les chemins absolus.",
+        required=True,
+        help="Racine ERP pour reconstruire les chemins absolus (obligatoire : aucun\n             chemin par defaut, celui de l'editeur ne vaut que chez lui).",
     )
     args = ap.parse_args()
 

@@ -1,0 +1,12 @@
+[TOTAL_ERRORS]0
+[INFO]---------------Compilation. Reconstruction de tout le sous-projet monsousprojet.dhps du projet c:/specifs/monworkspace/projets/monprojet.dhpt (25/08/2026 12:00:00). Profil courant : monprofil---------------
+[INFO]Construction du plan de compilation
+[INFO]Calcul de la liste de compilation des sources
+[INFO]Compilations des sources
+[INFO]Vérification des fonctions
+[INFO]Mise à jour des includes
+[INFO]
+Le projet est à jour, aucune compilation à effectuer
+
+1 ERREUR(S) autre(s) que des erreurs de compilation
+Erreur ouverture du fichier Fichier  /specifs/monworkspace/objets/monentite.dhsp  absent ou inaccessible. Code=0x14  CodeSys=0x0  CodeCompl=65535

@@ -50,8 +50,9 @@ def parse_fk_args(fk_args):
     """Transforme ['RacPays:T013:9053', 'RacDev:T007'] en liste de dicts structures.
 
     Chaque dict contient : champ, target, module_dhop, find_fn, get_lib_fn, zoom_num.
-    Le mapping module / find / get_lib suit la convention empirique (cf.
-    docs/FK-ZOOM-BINDING.md section 6). Pour les exemptions CC (C3/C4/C5/C6/C7/C8/C9),
+    Le mapping module / find / get_lib suit la convention empirique decrite par le
+    skill binding-zoom-to-field (reference/fk-pattern.md). Pour les exemptions CC
+    (C3/C4/C5/C6/C7/C8/C9),
     module_dhop = None (framework Compta indirect).
     """
     CC_EXEMPT = {"C3", "C4", "C5", "C6", "C7", "C8", "C9"}
@@ -170,7 +171,7 @@ def main():
             "Foreign key a generer (repetable) : 'champ:cible' ou 'champ:cible:zoom_num'. "
             "Ex : --fk RacPays:T013:9053 --fk RacDev:T007. "
             "Genere Module import + Check_<SRC>_Field_<Champ>(+_Lib). "
-            "Cf. docs/FK-ZOOM-BINDING.md + docs/ZOOMS-STANDARDS-CATALOGUE.md."
+            "Le pattern complet vit dans le skill binding-zoom-to-field."
         ),
     )
 

@@ -1,0 +1,13 @@
+[TOTAL_ERRORS]0
+[INFO]---------------Compilation. Reconstruction de tout le projet c:/specifs/monworkspace/projets/monprojet.dhpt (25/08/2026 12:00:00). Profil courant : monprofil---------------
+[INFO]Construction du plan de compilation
+[INFO]Création/Effacement des objets
+[INFO]Première passe de compilations
+[INFO]</specifs/monworkspace/sources/masource1.dhsq>  version : 2021-406
+[INFO]</specifs/monworkspace/sources/monmasque.dhsf>  version : 2016-400
+[WARNING]/specifs/monworkspace/sources/monmasque.dhsi Bloc 1. Warning : 8 , Objet en dehors de la clip grille
+[INFO]Vérification des fonctions
+[INFO]Mise à jour des includes
+[INFO]
+========== Erreur(s)=0   Warning(s)=1   Diva=1   Masques=1   Dictionnaires=0   Sql=1 ==========
+Durée=0:0:5

@@ -82,7 +82,7 @@ Structure canonique : 7 sections + annexe (detail dans [reference/report-section
 2. **Exemples de code DIVA similaires** (depuis evidence.confirmed + evidence.new_findings)
 3. **Fonctions du langage DIVA utiles** (deduites des snippets + catalogue statique)
 4. **Etude d'impact** (depuis evidence.impact.callers)
-5. **Endroit ou agir** (propositions generees par le LLM au CP5 -- le template reserve la section)
+5. **Endroit ou agir** (propositions redigees par le LLM a l'etape de redaction finale -- le template reserve la section)
 6. **Pistes de recherche complementaires** (suggestions contextuelles)
 7. **Points d'attention** (surcharges, conventions, disclaimers)
 
@@ -144,7 +144,7 @@ Le renderer Markdown/Mermaid de Claude Desktop est un sous-ensemble restreint. L
 
 - **Jamais** de phrase commencant par un pronom relatif (`qui`, `que`, `dont`, `ou`) apres un label de bullet. Si l'extraction automatique ne reconstitue pas un enonce complet, **ne pas generer la ligne** -- meilleure omission que stub.
 - **Jamais** de placeholder generique inutile (`(cf. ticket d'origine)`, `a completer`, `TODO`). Le validator `validate_report()` les detecte.
-- **Anomalie section** : produire 3 elements structures (contexte declencheur / etat observe / etat attendu) ou echouer et laisser le LLM completer au CP5.
+- **Anomalie section** : produire 3 elements structures (contexte declencheur / etat observe / etat attendu) ou echouer et laisser le LLM completer a la redaction finale.
 
 ### Test battery obligatoire avant merge
 

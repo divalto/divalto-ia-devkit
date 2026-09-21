@@ -11,14 +11,14 @@
 ---
 
 Forme obligatoire de la reponse finale produite par `assisting-functional-question`.
-Contraste avec UC-100 (`analyzing-diva-request`) qui produit un livrable markdown
+Contraste avec `analyzing-diva-request`, qui produit un livrable markdown
 formel a 3 couches.
 
 ---
 
 ## Principes
 
-1. **< 40 lignes au total** (CA1 de UC-110). Si ca ne tient pas, le diagnostic est
+1. **< 40 lignes au total** (critere CA1). Si ca ne tient pas, le diagnostic est
    trop large -- restreindre au plus probable.
 2. **Pas de fichier en sortie**. La reponse est affichee directement dans la conversation.
    Le collaborateur copie / paraphrase pour repondre au demandeur.
@@ -96,7 +96,7 @@ Quand Claude formule la reponse finale, il doit se poser ces 4 questions
 
 ### Bon
 
-> Salut Nicolas, c'est normal : l'option `SOC.EntCodN(24) = 2` active un filtre
+> Salut Alex, c'est normal : l'option `SOC.EntCodN(24) = 2` active un filtre
 > `Client.Etb = etb_courant` sur le zoom (cf. `a5rsrub.dhsq:758`).
 >
 > **1) Tes clients existants disparaissent**

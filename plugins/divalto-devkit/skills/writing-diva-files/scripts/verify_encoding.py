@@ -75,6 +75,32 @@ def detect_line_endings(data):
         return 'mixed'
 
 
+def find_utf8_residue(data):
+    """Compte les sequences UTF-8 residuelles dans un flux cense etre ISO-8859-1.
+
+    Signature d'un mojibake (Latin-1 encode en UTF-8 puis relu en Latin-1) :
+    un octet de tete 0xC2/0xC3 (accents/ponctuation Latin-1 re-encodes) suivi d'un
+    octet de continuation 0x80-0xBF ; ou le caractere de remplacement U+FFFD
+    (0xEF 0xBF 0xBD, marqueur d'echec de decodage). Dans du DIVA reel en ISO-8859-1,
+    ces sequences n'apparaissent quasi jamais legitimement -> presence = corruption.
+    """
+    n = 0
+    i = 0
+    L = len(data)
+    while i < L:
+        b = data[i]
+        if b in (0xC2, 0xC3) and i + 1 < L and 0x80 <= data[i + 1] <= 0xBF:
+            n += 1
+            i += 2
+            continue
+        if b == 0xEF and i + 2 < L and data[i + 1] == 0xBF and data[i + 2] == 0xBD:
+            n += 1
+            i += 3
+            continue
+        i += 1
+    return n
+
+
 def verify_file(path):
     """Verifie l'encodage et les fins de ligne d'un fichier Divalto."""
     issues = []
@@ -117,6 +143,13 @@ def verify_file(path):
     # Verifier l'encodage
     if encoding == 'utf-8':
         issues.append("Encodage UTF-8 detecte — doit etre ISO-8859-1")
+    elif encoding == 'iso-8859-1':
+        residue = find_utf8_residue(data)
+        if residue:
+            issues.append(
+                f"{residue} sequence(s) UTF-8 residuelle(s) detectee(s) (mojibake probable : "
+                f"contenu Latin-1 double-encode) -- le fichier semble corrompu"
+            )
     elif encoding == 'us-ascii':
         pass  # ASCII est un sous-ensemble valide de ISO-8859-1
 
@@ -134,6 +167,19 @@ def verify_file(path):
     if not data.endswith(b'\r\n'):
         issues.append("Pas de CRLF final — risque d'Erreur 135 a la compilation (convert_file.py corrige)")
 
+    # Longueur des lignes PHYSIQUES : XWin refuse d'OUVRIR un source ayant une ligne
+    # physique > 251 caracteres (le '\' de continuation DIVA reste legitime -- il coupe
+    # une ligne logique en plusieurs lignes physiques, chacune devant rester <= 251).
+    MAX_LINE = 251
+    physical = data.replace(b'\r\n', b'\n').split(b'\n')
+    long_lines = [i + 1 for i, ln in enumerate(physical) if len(ln) > MAX_LINE]
+    if long_lines:
+        preview = ", ".join(str(n) for n in long_lines[:5]) + ("..." if len(long_lines) > 5 else "")
+        issues.append(
+            f"{len(long_lines)} ligne(s) physique(s) > {MAX_LINE} caracteres (XWin refuse "
+            f"d'ouvrir le source) : ligne(s) {preview}"
+        )
+
     # Avertissement si extension non-Divalto
     if ext and ext not in DIVA_TEXT_EXTENSIONS and ext not in BINARY_EXTENSIONS:
         issues.append(f"Extension {ext} non reconnue comme fichier Divalto")
@@ -150,6 +196,13 @@ def verify_file(path):
 
 
 def main():
+    # Sortie en UTF-8 (stdout + stderr) : sinon print() encode avec la console (cp1252 sur
+    # Windows) et les caracteres non-ASCII (em-dash...) cassent un json.loads(utf-8) cote
+    # appelant. Meme garde-fou que read_isam.py.
+    for _stream in (sys.stdout, sys.stderr):
+        if hasattr(_stream, "reconfigure") and (_stream.encoding or "").lower() != "utf-8":
+            _stream.reconfigure(encoding="utf-8")
+
     parser = argparse.ArgumentParser(
         description="Verifie l'encodage et les fins de ligne d'un fichier Divalto"
     )

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Ajoute des bindings "FK par zoom standard" a un .dhsf existant (FK-03).
+"""Ajoute des bindings "FK par zoom standard" a un .dhsf existant.
 
 Pour chaque FK declaree :
 - Localise le bloc [champ] dont `donnee=<vue>,<champ>,<vue>` match (case-insensitive)
@@ -321,6 +321,9 @@ def main():
         metavar="CHAMP:TARGET[:ZOOM]",
         help="FK a ajouter, repetable. Ex --fk Pay:T013:9053",
     )
+    ap.add_argument("--no-backup", action="store_true",
+                    help="Ne pas creer de .bak du fichier avant de le reecrire.")
+
     args = ap.parse_args()
 
     path = Path(args.path)
@@ -383,9 +386,10 @@ def main():
 
     # Normaliser CRLF
     text = text.replace("\r\n", "\n").replace("\n", "\r\n")
+    sauvegarder_avant_ecriture(path, not getattr(args, "no_backup", False))
     path.write_bytes(text.encode("iso-8859-1"))
 
-    # Post-modification : valider le layout groupbox / bornes grille (R-007 2026-04-23).
+    # Post-modification : valider le layout groupbox / bornes grille (2026-04-23).
     # Import tardif pour ne pas introduire de dep si le parser est indisponible.
     post_validation = None
     try:

@@ -62,7 +62,7 @@ technical:
 # ───────────────────────────────────────────────────────────────
 field_shape:
   name:           "string, nom du champ, ex: TIERS"
-  nature:         "string, Nature DIVA (cf. docs/DICTIONNAIRE-DHSD.md), ex: C20"
+  nature:         "string, Nature DIVA ; table des Natures : managing-diva-dictionaries, reference/nature-types.md. Ex: C20"
   sql_type:       "string, type SQL, ex: char(20)"
   label:          "string optionnel, libelle fonctionnel"
   nullable:       "bool"
@@ -110,7 +110,7 @@ ce_field_shape:
   mchk_constants:                "list[{name,value,comment,source}], constantes C_*Ce<n>* du mchk"
   description_metier:            "string, role metier (obligatoire si status=actif ; redige par Claude avec citation ; figé par le script si status=reserve)"
   description_metier_source:     "string, 1+ citation(s) fichier:ligne separees par ', ' (ou 'analyse automatique (aucun signal)' pour les reserves)"
-  description_metier_signature:  "string 8-hex, empreinte sha1 stable des signaux bruts -- si inchangee entre 2 runs, Claude conserve description_metier a l'identique (idempotence CA13)"
+  description_metier_signature:  "string 8-hex, empreinte sha1 stable des signaux bruts -- si inchangee entre 2 runs, Claude conserve description_metier a l'identique (idempotence)"
 
 # ───────────────────────────────────────────────────────────────
 # Metadonnees
@@ -118,7 +118,7 @@ ce_field_shape:
 meta:
   last_reviewed:    "date ISO, ex: 2026-04-21"
   reviewed_by:      "string, ex: scastelain"
-  a_verifier:       "list[string], items ouverts (cf. convention docs/A-VERIFIER.md)"
+  a_verifier:       "list[string], items ouverts : ce qui reste a confirmer, une ligne par point"
   source_x12_neo4j: "string optionnel, reference snapshot"
   source_x13_path:  "string optionnel, chemin absolu dans ERP standard"
 

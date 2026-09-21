@@ -4,14 +4,14 @@ Regles strictes d'usage des resultats Neo4j `diva-mcp`. Ces regles sont **obliga
 
 ## Le probleme : X.12 n'est pas X.13
 
-Le graphe est un snapshot de la version X.12 de l'ERP Divalto. La version en production est X.13. Consequences (extrait de le référentiel du graphe diva-mcp (interne)) :
+Le graphe est un snapshot de la version X.12 de l'ERP Divalto. La version en production est X.13. Consequences :
 
 - Une fonction presente dans X.12 peut avoir ete supprimee/renommee en X.13
 - Une table presente en X.12 peut avoir des champs differents en X.13
 - Un pattern detecte a 90 % en X.12 peut etre a 0 % en X.13 (reecriture)
 - Des fonctions/tables X.13 ne figurent pas dans le graphe
 
-## Deuxieme dimension de fraicheur : retard sur les revisions (R-067)
+## Deuxieme dimension de fraicheur : retard sur les revisions
 
 Au-dela de l'ecart de version X.12 / X.13, le graphe indexe une **revision donnee** du standard
 et peut **retarder sur les ouvertures recentes** : une procedure introduite dans un service pack
@@ -77,7 +77,7 @@ Toute requete Cypher executee par `querying-diva-graph` ou par l'orchestrateur L
 
 ## Regle 5 -- Read-only
 
-Ce skill utilise **exclusivement** `mcp__diva-mcp__read_neo4j_cypher`. L'outil d'ecriture `write_neo4j_cypher` est **interdit** -- modifier le graphe depuis un skill de lecture introduirait une inconsistance. Aucune exception.
+Ce skill utilise **exclusivement** l'outil de lecture `mcp__plugin_divalto-devkit_diva-mcp__query_cypher` (nom stable). Le MCP `diva-mcp` est **en lecture seule** : `query_cypher` **rejette toute ecriture** (CREATE/MERGE/SET/DELETE/DROP...) -- modifier le graphe depuis un skill de lecture introduirait de toute facon une inconsistance. Aucune exception.
 
 ## Regle 6 -- Degradation gracieuse obligatoire
 
@@ -103,5 +103,6 @@ Ce skill **est distribue** dans le zip des skills DIVA, mais sa dependance au MC
 
 ## References
 
-- le référentiel du graphe diva-mcp (interne) -- source canonique des regles d'usage, avertissement X.12, limitations APOC
-- la référence recherche ERP (interne) -- workflow hybride, format des disclaimers dans le rapport
+- [cypher-recipes.md](cypher-recipes.md) -- recettes, limites APOC et equivalents sans APOC
+- [mcp-query-pitfalls.md](mcp-query-pitfalls.md) -- pieges de requetage, corps de programme protege
+- skill `searching-erp-sources`, page `reference/search-strategies.md` -- cadrage de la recherche dans les sources

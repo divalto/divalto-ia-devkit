@@ -20,8 +20,8 @@ Deux variantes valides selon le contexte du projet :
 | **Surcharge** | `xwin-s-sprojet     2.0` | .dhps qui surcharge un sous-projet du standard livre (nom `<base>u.dhps`) |
 
 Anti-patterns associes :
-- `xwin-projet` dans un .dhps -> P04 (interdit)
-- `xwin-sprojet` dans une .dhps de surcharge -> xwin7 leve "n'est pas une surcharge de sous projet" (cf. R-006)
+- `xwin-projet` (ou `xwin-s-projet`) dans un .dhps -> PROJ04. Le type attendu vient de l'**extension** du fichier, pas de son en-tete
+- `xwin-sprojet` dans une .dhps de surcharge -> xwin7 leve "n'est pas une surcharge de sous projet"
 
 ### Quand utiliser la variante surcharge
 
@@ -34,11 +34,11 @@ Le script `create_subproject.py` declenche automatiquement le mode surcharge si 
 - Flag `--surcharge` explicite
 - OU `--parent-dhpt <projet.dhpt>` ou le .dhpt parent a un en-tete `xwin-s-projet`
 
-### Regle P17 -- ne PAS lister une .dhps de surcharge dans [sousprojets]
+### Regle PROJ17 -- ne PAS lister une .dhps de surcharge dans [sousprojets]
 
 xwin7 detecte automatiquement les surcharges. Si une `.dhps` de surcharge est listee dans `[sousprojets]` du `.dhpt` parent, xwin7 leve "Le fichier <x>u.dhps est une surcharge. Il ne peut etre charge directement".
 
-Le script `add_to_project.py` refuse desormais l'ajout des `.dhps` de surcharge (cf. R-007, P17).
+Le script `add_to_project.py` refuse desormais l'ajout des `.dhps` de surcharge (PROJ17).
 
 ---
 
@@ -83,7 +83,7 @@ fic="gttq099.dhsq"," "
 ```
 
 - Fichiers sources propres au sous-projet
-- **Syntaxe : `fic="nom"," "`** -- AVEC `," "` (P07 si absent)
+- **Syntaxe : `fic="nom"," "`** -- AVEC `," "` (PROJ07 si absent)
 - Types courants : .dhsf (masques), .dhsp (programmes), .dhsq (RecordSql), .dhsd (dictionnaires)
 - Variante privee : `fic="nom","<priv>1"`
 
@@ -99,16 +99,16 @@ fic="gttcficsql.dhsp"
 ```
 
 - Dependances de compilation
-- **Syntaxe : `fic="nom"`** -- SANS `," "` (P06 si present)
-- `zdiva.dhsp` TOUJOURS present (P09 si absent)
+- **Syntaxe : `fic="nom"`** -- SANS `," "` (PROJ06 si present)
+- `zdiva.dhsp` : **convention de projet**, pas une obligation (PROJ09, hors jeu par defaut -- le standard livre ne le met jamais, 0/2304 `.dhps`)
 - Inclure les .dhsp de framework necessaires
 
 ### Difference critique [fichiers] vs [includes]
 
 | Section | Syntaxe | Role | Erreur si inverse |
 |---------|---------|------|-------------------|
-| `[fichiers]` | `fic="nom"," "` | Fichiers sources propres | P07 |
-| `[includes]` | `fic="nom"` | Dependances compilation | P06 |
+| `[fichiers]` | `fic="nom"," "` | Fichiers sources propres | PROJ07 |
+| `[includes]` | `fic="nom"` | Dependances compilation | PROJ06 |
 
 C'est la difference syntaxique la plus critique. Se tromper provoque des erreurs de compilation.
 
@@ -118,7 +118,7 @@ C'est la difference syntaxique la plus critique. Se tromper provoque des erreurs
 [autres]
 ```
 
-Fichiers divers. **Toujours present**, meme vide (P12 si absent).
+Fichiers divers. **Toujours present**, meme vide (PROJ12 si absent).
 
 ---
 

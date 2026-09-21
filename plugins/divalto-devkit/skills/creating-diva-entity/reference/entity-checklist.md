@@ -1,6 +1,6 @@
 # Checklist creation d'entite DIVA
 
-Source : la référence architecture d'entité (interne)
+Checklist de création d'entité : le digest livré avec ce skill.
 
 ---
 

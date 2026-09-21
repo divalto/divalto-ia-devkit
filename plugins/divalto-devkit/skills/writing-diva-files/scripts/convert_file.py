@@ -35,6 +35,27 @@ def set_hidden_windows(path):
         pass
 
 
+def _utf8_residue_count(data):
+    """Compte les sequences UTF-8 residuelles dans des octets censes etre ISO-8859-1
+    (signature d'un mojibake : Latin-1 double-encode). Copie autonome de la meme
+    heuristique que verify_encoding.find_utf8_residue (vendoring intra-skill)."""
+    n = 0
+    i = 0
+    total = len(data)
+    while i < total:
+        b = data[i]
+        if b in (0xC2, 0xC3) and i + 1 < total and 0x80 <= data[i + 1] <= 0xBF:
+            n += 1
+            i += 2
+            continue
+        if b == 0xEF and i + 2 < total and data[i + 1] == 0xBF and data[i + 2] == 0xBD:
+            n += 1
+            i += 3
+            continue
+        i += 1
+    return n
+
+
 def convert_file(path, create_backup=True):
     """Convertit un fichier vers ISO-8859-1 + CRLF."""
     if not os.path.exists(path):
@@ -55,6 +76,31 @@ def convert_file(path, create_backup=True):
     needs_final_crlf = len(data) > 0 and not data.endswith(b'\r\n')
 
     if not needs_encoding_fix and not needs_line_ending_fix and not has_bom and not needs_final_crlf:
+        # Rien a convertir selon les 4 criteres ci-dessus... mais le fichier peut tout de
+        # meme etre CORROMPU : un mojibake MELANGE a du vrai Latin-1 (ex. 0xE9 reel + 0xC3 0xA9
+        # double-encode) n'est ni de l'UTF-8 valide (donc `needs_encoding_fix` est faux) ni un
+        # probleme de fins de ligne. On rendait alors `verified: true` sur un fichier que
+        # verify_encoding declare invalide -- et le workflow "verify detecte -> convert corrige"
+        # bouclait sans fin. On le DIT, au lieu de certifier a tort.
+        residue = _utf8_residue_count(data)
+        if residue:
+            return {
+                "path": os.path.abspath(path),
+                "backup": None,
+                "original_encoding": original_encoding,
+                "original_line_endings": original_line_endings,
+                "converted": False,
+                "verified": False,
+                "issues": [
+                    "%d sequence(s) UTF-8 residuelle(s) melangee(s) a du Latin-1 valide "
+                    "(mojibake partiel)" % residue
+                ],
+                "hint": "Conversion globale IMPOSSIBLE sans risque : le fichier n'est pas de "
+                        "l'UTF-8 valide (une conversion echouerait) et reecrire les seules "
+                        "sequences suspectes serait une supposition sur du contenu legitime. "
+                        "Localiser les sequences avec verify_encoding.py, puis corriger "
+                        "chirurgicalement avec patch_file.py (ancre unique).",
+            }
         return {
             "path": os.path.abspath(path),
             "backup": None,
@@ -118,9 +164,13 @@ def convert_file(path, create_backup=True):
     result_encoding = detect_encoding(result_data)
     result_line_endings = detect_line_endings(result_data)
     final_crlf_ok = (len(result_data) == 0) or result_data.endswith(b'\r\n')
+    # Le residu mojibake entre dans le verdict : sinon `verified` ne signifie pas la meme
+    # chose que le `valid` de verify_encoding, et le skill se contredit lui-meme.
+    result_residue = _utf8_residue_count(result_data)
     verified = (result_encoding in ('iso-8859-1', 'us-ascii')
                 and result_line_endings in ('CRLF', 'none')
-                and final_crlf_ok)
+                and final_crlf_ok
+                and result_residue == 0)
 
     return {
         "path": os.path.abspath(path),
@@ -133,6 +183,13 @@ def convert_file(path, create_backup=True):
 
 
 def main():
+    # Sortie en UTF-8 (stdout + stderr) : sinon print() encode avec la console (cp1252 sur
+    # Windows) et les caracteres non-ASCII cassent un json.loads(utf-8) cote appelant.
+    # Meme garde-fou que read_isam.py.
+    for _stream in (sys.stdout, sys.stderr):
+        if hasattr(_stream, "reconfigure") and (_stream.encoding or "").lower() != "utf-8":
+            _stream.reconfigure(encoding="utf-8")
+
     parser = argparse.ArgumentParser(
         description="Convertit un fichier vers ISO-8859-1 + CRLF"
     )
@@ -146,6 +203,11 @@ def main():
         sys.exit(1)
 
     print(json.dumps(result, ensure_ascii=False, indent=2))
+
+    # Le code de sortie doit refleter le verdict : sortir 0 sur un fichier encore invalide
+    # laissait l'appelant croire la reparation faite (workflow "verify -> convert" en boucle).
+    if not result.get("verified", False):
+        sys.exit(1)
 
 
 if __name__ == "__main__":

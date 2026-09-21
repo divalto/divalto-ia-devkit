@@ -75,7 +75,7 @@ def discover_diva_root() -> dict:
         return {
             "error": (
                 "Module winreg non disponible (OS non-Windows ou environnement sandboxe). "
-                "P-A : demander au collaborateur la racine d'installation Divalto et "
+                "Demander au collaborateur la racine d'installation Divalto et "
                 "le chemin de fconfig.dhfd."
             )
         }
@@ -106,7 +106,7 @@ def discover_diva_root() -> dict:
     return {
         "error": (
             "Cle de registre Divalto introuvable (essaye sous HKLM/WOW6432Node et "
-            "HKLM racine). P-A : Divalto peut-etre non installe via le standard "
+            "HKLM racine). Divalto peut-etre non installe via le standard "
             "installer, ou install portable. Demander au collaborateur."
         )
     }
@@ -238,7 +238,7 @@ def resolve_harmony_path(
         return {
             "error": (
                 "Alias 'divalto' ne resout pas via divaltopath.cfg ni fconfig (toujours absent). "
-                "Necessite DIVA_ROOT du registre (R-5). P-A : DIVA_ROOT non disponible."
+                "Necessite la racine d'installation Divalto, lue dans le registre -- non disponible ici. Demander le chemin au collaborateur."
             ),
             "alias": alias,
         }
@@ -258,7 +258,7 @@ def resolve_harmony_path(
             return {"resolved": resolved, "alias": alias, "source": "fconfig"}
 
     return {
-        "error": f"Alias '{alias}' non trouve dans divaltopath.cfg ni fconfig. P-A : demander.",
+        "error": f"Alias '{alias}' non trouve dans divaltopath.cfg ni fconfig. Demander le chemin au collaborateur plutot que de le deviner.",
         "alias": alias,
     }
 
@@ -328,18 +328,19 @@ def fconfig_sql_lookup(dhfd_path: Path, server_name: str) -> dict:
 
     Sera implemente quand soit :
     - `structure_fconfig.json` sera fourni pour `reading-isam-files`, OU
-    - le pattern byte-precis du marqueur de la table B sera documente
-      par un RETEX terrain comme R-4 l'a ete pour la table E.
+    - le pattern byte-precis du marqueur de la table cle B de `fconfig.dhfd`
+      sera documente par un retour terrain, comme celui de la table cle E l'a ete.
 
     Retourne {"error": "..."} systematiquement.
     """
     return {
         "error": (
-            f"R-8 non implemente (fallback fconfig cle B pour '{server_name}'). "
+            f"Le repli par la cle B de fconfig.dhfd n'est pas implemente pour "
+            f"'{server_name}'. "
             f"Le marqueur byte de la table serveurs dans fconfig.dhfd n'est pas "
-            f"specifie. P-A : demander au collaborateur le chemin SQL effectif "
+            f"specifie. Demander au collaborateur le chemin SQL effectif "
             f"pour ce serveur, ou inscrire le serveur dans divaltoserver.cfg "
-            f"(qui est la source primaire R-7)."
+            f"(qui est la source primaire)."
         )
     }
 
@@ -406,7 +407,7 @@ def resolve_sql_url(
             }
         return {
             "error": (
-                f"R-7 a trouve '{db}' dans divaltoserver.cfg mais SQLPATH vide "
+                f"'{db}' est declare dans divaltoserver.cfg mais son SQLPATH est vide "
                 f"et DIVA_ROOT non disponible pour le fallback <DIVA_ROOT>/{db}/."
             ),
             "host": host,
@@ -428,8 +429,8 @@ def resolve_sql_url(
 
     return {
         "error": (
-            f"Serveur '{db}' non trouve dans divaltoserver.cfg (R-7) et R-8 (fallback "
-            f"fconfig cle B) non implemente. P-A : verifier que le serveur est "
+            f"Serveur '{db}' non trouve dans divaltoserver.cfg, et le repli par la "
+            f"cle B de fconfig.dhfd n'est pas implemente. Verifier que le serveur est "
             f"declare dans divaltoserver.cfg, ou demander au collaborateur le chemin SQL."
         ),
         "host": host,
@@ -480,7 +481,7 @@ def parse_bconnect_from_fhsql(fhsql_dhfd_path: Path) -> dict:
         return {
             "error": (
                 f"Pattern 'BCONNECT' ou 'CONNECT DSN=' introuvable dans "
-                f"{fhsql_dhfd_path}. P-A : verifier que ce fichier est bien un "
+                f"{fhsql_dhfd_path}. Verifier que ce fichier est bien un "
                 f"fhsql.dhfd Divalto, ou demander au collaborateur."
             )
         }
@@ -558,7 +559,7 @@ def read_odbc_dsn(dsn_name: str) -> dict:
     if not _HAS_WINREG:
         return {
             "error": (
-                "Module winreg non disponible (OS non-Windows). P-A : demander "
+                "Module winreg non disponible (OS non-Windows). Demander "
                 "au collaborateur les valeurs du DSN ODBC."
             )
         }
@@ -595,7 +596,7 @@ def read_odbc_dsn(dsn_name: str) -> dict:
         return {
             "error": (
                 f"DSN '{dsn_name}' introuvable dans le registre (4 emplacements "
-                f"testes : HKLM/HKCU x 32/64). P-A : verifier que le DSN existe."
+                f"testes : HKLM/HKCU x 32/64). Verifier que le DSN existe, ou demander ses valeurs au collaborateur."
             )
         }
 
@@ -631,7 +632,7 @@ def parse_implicit_xml_companion(implicit_path: Path) -> dict:
         return {
             "error": (
                 f"Compagnon XML '{xml_path.name}' introuvable a cote du fichier "
-                f"implicite. Porte ADO.NET non resolue. P-A : verifier."
+                f"implicite. Porte ADO.NET non resolue. Verifier le nom du compagnon avec le collaborateur."
             )
         }
 
@@ -656,7 +657,8 @@ def parse_implicit_xml_companion(implicit_path: Path) -> dict:
         return {
             "error": (
                 f"Aucun mapping <implicite nom=... connexion=... /> trouve dans "
-                f"{xml_path}. Format inattendu ou fichier vide. P-A."
+                f"{xml_path}. Format inattendu ou fichier vide. "
+                f"Demander confirmation au collaborateur."
             ),
             "xml_path": str(xml_path),
         }
@@ -742,7 +744,8 @@ def parse_connexions_xml(connexions_path: Path, target_connexion: str = None) ->
         return {
             "error": (
                 f"Aucune <connexion nom=... > trouvee dans {connexions_path}. "
-                f"Format inattendu ou fichier vide. P-A."
+                f"Format inattendu ou fichier vide. "
+                f"Demander confirmation au collaborateur."
             ),
             "source": str(connexions_path),
         }
@@ -896,7 +899,7 @@ if __name__ == "__main__":
 
     p = argparse.ArgumentParser(description="Test du module de resolution harmony (debug)")
     p.add_argument("--harmony-path", help="Chemin harmony a resoudre (ex: /specifs/X/fichiers/)")
-    p.add_argument("--discover", action="store_true", help="Decouvrir DIVA_ROOT via R-5")
+    p.add_argument("--discover", action="store_true", help="Decouvrir la racine d'installation Divalto dans le registre Windows")
     args = p.parse_args()
 
     if args.discover:

@@ -12,6 +12,10 @@ description: >
 ## Contenu
 
 - Regle fondamentale (dont garde-fou taille d'enregistrement)
+- Sauvegarde automatique avant ecriture (les DEUX fichiers)
+- Champs binaires (`Type: "B"`)
+- Verifier une cle declaree avant tout update / delete
+- Quel fichier viser : overlay `*u` ou fichier propre ?
 - Utilisation rapide
 - Operations (--op insert / update / delete)
 - Workflow complet
@@ -69,7 +73,7 @@ localisable ; les autres passent avec avertissement.
 
 **Desactivation** : `--skip-dict-check` (a n'utiliser qu'en connaissance de cause).
 
-### Identifier le bon chemin du .dhfi cible (R-006)
+### Identifier le bon chemin du .dhfi cible
 
 Le fichier physique peut se trouver dans plusieurs arborescences selon
 l'historique d'installation ERP : `.../versionx9/...`, `.../VersionX13/...`,
@@ -101,6 +105,13 @@ casse le tri.
 dans la structure JSON. L'appelant peut passer la valeur **avec ou sans padding** :
 le script strip puis re-padde a la taille du champ (idempotent).
 
+> **Le cadrage couvre les TROIS usages** : le contenu de l'enregistrement, la **valeur
+> de cle** de positionnement (`update`/`delete`) et la **verification** post-lecture.
+> Il ne couvrait que le premier : un champ `Justify: right` partait dans la cle cadre a
+> gauche, une cle totalement differente en tri octet par octet, d'ou un
+> `Enreg cible introuvable (match approximatif refuse)` sur un enregistrement pourtant
+> present. Les trois passent desormais par la meme fonction d'encodage.
+
 Exemple champ `Ordre` (8 octets) dans `structure_xmenuf_m2.json` :
 
 ```json
@@ -122,6 +133,87 @@ doit continuer a passer la valeur pre-cadree (comportement defaut `"Justify": "l
 En cas de doute sur l'intention d'un champ, relire une entree existante avec
 `read_isam.py` et observer si la valeur est stockee en debut (`"51      "`) ou
 en fin (`"      51"`) des octets.
+
+### Sauvegarde automatique avant ecriture -- les DEUX fichiers
+
+Avant la **premiere** ecriture reelle dans un fichier, le script copie en `.bak` **les deux
+fichiers de la paire ISAM** : le `.dhfi` (donnees) **et** le `.dhfd` (index).
+
+**Sauvegarder le seul `.dhfi` ne permet pas de restaurer** -- un `.dhfi` sans son `.dhfd`
+de meme nom ne s'ouvre meme pas (code 100). C'est deja documente cote lecture ; l'ecriture
+l'ignorait, et n'avait aucune sauvegarde du tout.
+
+- **Un seul `.bak` par fichier et par execution**, meme pour un lot de 200 enregistrements :
+  sinon le 2e enregistrement ecraserait la sauvegarde par un etat **deja modifie**, et le
+  filet ne servirait plus a rien.
+- Sauvegarde **glissante** : chaque execution ecrase la precedente (meme convention que
+  `writing-diva-files/scripts/patch_file.py`).
+- Si la copie echoue, **l'ecriture est annulee** pour cette entree.
+- Les chemins crees sont rapportes dans `backups[]` de la sortie JSON.
+- `--no-backup` pour s'en passer sciemment.
+
+### Champs binaires (`Type: "B"`)
+
+Un champ declare `"Type": "B"` porte des **octets bruts**. Sa valeur se fournit en
+**hexadecimal**, exactement `2 x Taille` caracteres -- symetrique de la lecture, qui rend
+ces champs en hexadecimal majuscule.
+
+```json
+{"Donnees": {"datemc": "01D9EF910F1F5C9D"}}
+```
+
+Hexadecimal invalide ou de mauvaise longueur : **refus**, jamais de troncature. Un champ
+binaire **non fourni** reste rempli d'espaces (`0x20`) -- ce qui n'est pas une valeur
+binaire legitime -- et le script **le signale** dans les warnings sans inventer de valeur.
+
+Detail, et le cas `datemc` mesure de bout en bout :
+[reference/champs-binaires.md](reference/champs-binaires.md).
+
+### Verifier une cle declaree avant tout update / delete
+
+Les blocs `Keys` des structures JSON sont ecrits **a la main**, et rien ne les validait. Une
+cle fausse **ne se voit pas a la lecture** (les scripts parcourent sequentiellement) : elle
+se manifeste au premier `update`/`delete`, par un echec incomprehensible.
+
+```
+py .claude/skills/writing-isam-files/scripts/validate_structure.py \
+    --path <structure.json> --probe-key <NomIndex> --file <copie.dhfi>
+```
+
+La sonde **s'auto-verifie** : elle lit un enregistrement, releve ses **propres** valeurs de
+cle, se repositionne dessus, et verifie qu'elle retombe sur le meme enregistrement. Elle
+n'a donc pas besoin de connaitre la bonne reponse.
+
+| Verdict | Signification |
+|---------|---------------|
+| `CONFIRMEE` | la cle declaree positionne exactement -- `update`/`delete` sont fiables |
+| `REFUTEE` | le positionnement atterrit ailleurs : **la structure est declaree invalide** (exit 1) |
+| `concluant: false` | DLL ou fichier absent : **aucun verdict** n'est rendu (on ne conclut pas sur une absence de mesure) |
+
+> **Le piege est le champ CE.** Il appartient a la cle physique de **certains index
+> seulement** : sur le dictionnaire standard, **822 index sur 959 (86 %) n'en ont aucun**
+> dans leurs champs de cle, mais **137 en ont un**. Cela **se lit dans le dictionnaire,
+> index par index** -- et ne se suppose pas. Les deux structures livrees ici illustrent les
+> deux cas : la cle du menu M2 inclut bien `Ce`, celle du multichoix ne l'incluait qu'a tort.
+
+Travailler sur une **copie** du `.dhfi` si le fichier est en production. La sonde ne fait
+que lire, mais la prudence sur ces fichiers ne coute rien.
+
+### Quel fichier viser : overlay `*u` ou fichier propre ?
+
+Une ecriture custom ne doit **jamais** viser un fichier livre par Divalto -- elle serait
+**ecrasee** a la prochaine montee de version. Mais la bonne cible differe :
+
+| Fichier standard | Cible custom | Mecanisme |
+|---|---|---|
+| `a5f.dhfi` (zooms) / `g3f.dhfi` (menu) | `a5fu.dhfi` / `g3fu.dhfi` | **overlay** : entree prioritaire, union a la lecture |
+| tout autre (ex. un `XXfdmc`) | le fichier **propre** du partenaire | **pas d'overlay** |
+
+`write_isam.py` **avertit** (sans refuser) si la cible porte le nom d'un fichier a
+overlay -- une fois par fichier, y compris en `--dry-run`, et dans `avertissements[]`.
+
+Detail des deux regles, du message et de l'emplacement de l'overlay :
+[reference/cible-overlay.md](reference/cible-overlay.md).
 
 ### Fichiers sensibles ERP -- fermer l'ERP avant ecriture
 
@@ -158,7 +250,7 @@ avant d'executer, et annoncer **avant** l'operation d'insertion initiale ce
 qui est prevu en cas d'echec (strategie de rollback prevue ou non) pour
 permettre un feu vert conditionnel.
 
-Operations sur des fichiers de test isoles (ex : `TestClaude/isam-exercice/*`)
+Operations sur des fichiers de test isoles (une copie de travail hors arbre ERP)
 ne necessitent pas ce checkpoint supplementaire -- seul le perimetre ERP
 standard est concerne.
 
@@ -203,7 +295,7 @@ py .claude/skills/writing-isam-files/scripts/write_isam.py \
 | `update` | Modification d'un enreg existant | Positionnement TDF.KEY + read + verification exacte + `xisam_trewritelong` | `Fichier`, `Structure`, `Key`, `KeyFields`, `Donnees` |
 | `delete` | Suppression d'un enreg existant | Positionnement TDF.KEY + read + verification exacte + `xisam_tdeletelong` | `Fichier`, `Structure`, `Key`, `KeyFields`, `Donnees` (cle uniquement) |
 
-> **Revision 2026-04-22 (R-014 + ISAM-SCRIPT-03)** : la semantique du parametre `mode` de
+> **Revision 2026-04-22 (ISAM-SCRIPT-03)** : la semantique du parametre `mode` de
 > `treadlong`/`tpreadlong` a ete corrigee -- c'est un code de reservation (F/P/R), pas de
 > direction. `update_single` et `delete_single` ont ete unifies sur `tpreadlong` mode `R`
 > (Reserve) + verification exacte champ par champ. La reservation est liberee au
@@ -307,7 +399,7 @@ py .claude/skills/writing-isam-files/scripts/write_isam.py \
 ```
 
 - `written` : enregistrements ecrits avec succes
-- `skipped` : doublons detectes (code 9 = E_EXIST, non bloquant)
+- `skipped` : doublons detectes (code 9 = E_EXIST, non bloquant). **Ne pas s'y fier comme garde-fou d'unicite** : sur un index non unique la DLL accepte le doublon **sans** emettre le code 9 -- mesure a l'appui, deux `insert` identiques produisent deux enregistrements physiques. La deduplication est **applicative** : verifier l'absence par une lecture avant d'ecrire (cf. [reference/isam-api.md](reference/isam-api.md), section 9).
 - `errors` : liste detaillee `[{index, file, error_code, message}]`
 
 ---
@@ -360,7 +452,7 @@ Utile pour verifier le format des JSON sur une machine sans Divalto installe.
 | Script | Role | Entree | Sortie JSON |
 |--------|------|--------|-------------|
 | `scripts/write_isam.py` | Insert / update / delete d'enregistrements ISAM | `--params-file` ou `--stdin` [+ `--op insert\|update\|delete`] [+ `--structure-dir`] [+ `--dico-path`] [+ `--skip-dict-check`] [+ `--dry-run`] | `{success, total, written, skipped, errors[]}` |
-| `scripts/validate_structure.py` | Valide un fichier de structure JSON | `--path` | `{valid, errors[], fields, record_size}` |
+| `scripts/validate_structure.py` | Valide un fichier de structure JSON, et **confronte la cle declaree a la cle physique** de l'index sur un fichier reel | `--path` [+ `--probe-key` `--file`] | `{valid, errors[], fields, record_size, key_probe{verdict, detail}}` |
 
 **Exit codes** :
 
@@ -376,11 +468,11 @@ Utile pour verifier le format des JSON sur une machine sans Divalto installe.
 | Structure | Fichier | Table | Taille |
 |-----------|---------|-------|--------|
 | Zoom des zooms (A5F.dhfi) | `scripts/structures/structure_a5f_m4.json` | M4 | 1000 octets, 46 champs (Ce=4) |
-| Visibilite F7 (A5F.dhfi) | `scripts/structures/structure_a5f_m1.json` | M1 | 50 octets, 6 champs (Ce=5) -- R-002 |
+| Visibilite F7 (A5F.dhfi) | `scripts/structures/structure_a5f_m1.json` | M1 | 50 octets, 6 champs (Ce=5) |
 | Menu domaine choix (Xmenuf .dhfi) | `scripts/structures/structure_xmenuf_m2.json` | M2 | 1000 octets, 21 champs (Ce=2) |
-| Menu domaine header (Xmenuf .dhfi) | `scripts/structures/structure_xmenuf_m0.json` | M0 | 508 octets, 12 champs (Ce=0) -- R-006 |
+| Menu domaine header (Xmenuf .dhfi) | `scripts/structures/structure_xmenuf_m0.json` | M0 | 508 octets, 12 champs (Ce=0) |
 
-Pour allouer un `EnrNo` libre avant d'ecrire un M2 custom, utiliser le skill dedie `allocating-menu-enrno` (plages `standard` < 100000 / `custom` >= 100000, R-005).
+Pour allouer un `EnrNo` libre avant d'ecrire un M2 custom, utiliser le skill dedie `allocating-menu-enrno` (plages `standard` < 100000 / `custom` >= 100000).
 
 ---
 
@@ -388,5 +480,7 @@ Pour allouer un `EnrNo` libre avant d'ecrire un M2 custom, utiliser le skill ded
 
 - [Enregistrer un zoom dans A5F.dhfi](reference/a5f-zoom-record.md) -- champs essentiels, plages moulinette 58, exemple complet, piege ZoomEnr
 - [API DhxIsam64 en Python ctypes](reference/isam-api.md) -- signatures, TDF51, mode=reservation (F/P/R), positionnement, reservations, pieges
+- [Quel fichier viser : overlay `*u` ou fichier propre ?](reference/cible-overlay.md) -- les deux regles distinctes, l'avertissement, l'emplacement de l'overlay
+- [Champs binaires (`Type: "B"`)](reference/champs-binaires.md) -- ecrire des octets bruts, refus explicites, et le cas `datemc` mesure
 - [Specification formats JSON](reference/json-formats.md) -- structure, data unitaire, batch, regles valeurs
 - [Champ Echange du menu Xmenuf](reference/xmenuf-echange-zones.md) -- layout des 600 octets, strategies de clonage pour un insert M2

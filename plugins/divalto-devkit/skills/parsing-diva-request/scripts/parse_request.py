@@ -42,7 +42,7 @@ TICKET_PATTERNS = [
     r'^\s*at\s+\w+\.\w+',  # stack trace Java-like
 ]
 
-# --- Domaines ERP (aligne sur docs/MODULES-ERP.md) -----------------------
+# --- Domaines ERP (cette table est la reference) -------------------------
 
 DOMAINS = [
     ("GT_", "Achat-Vente / Dav", ["gestion commerciale", "facture", "client", "article",

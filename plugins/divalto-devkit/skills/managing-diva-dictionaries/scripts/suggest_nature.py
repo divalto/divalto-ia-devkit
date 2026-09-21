@@ -3,9 +3,9 @@
 [CHAMP], via la taxonomie de suffixes observee dans le corpus X.13.
 
 Sources :
-- Taxonomie Nature : `reference/taxonomie-suffixes.md` + `docs/CONVENTIONS.md` (batch 16, 2026-04-17)
-- Taxonomie FK : `docs/CONVENTIONS.md` section "Suffixes foreign key" + `docs/FK-ZOOM-BINDING.md`
-  + `docs/ZOOMS-STANDARDS-CATALOGUE.md` (batch 18 bis, 2026-04-20)
+- Taxonomie Nature : `reference/taxonomie-suffixes.md`
+- Taxonomie FK : la table `SUFFIX_FK_TARGET` de ce script, mesuree sur le corpus
+  X.13 ; le pattern de liaison vit dans le skill `binding-zoom-to-field`
 
 Usage:
     py scripts/suggest_nature.py --name UserCrDh
@@ -29,8 +29,8 @@ Sortie JSON: { name, nature, confidence, rule, alternatives, note, fk_target }
 - note: message pour le LLM (ex: "taille variable -- demander au collaborateur")
 - fk_target: null si aucune FK detectee, sinon dict avec les 7 champs listes ci-dessus
 
-Seuil d'inclusion FK : suffixes fiables >= 90 % (taxonomie table C de
-ZOOMS-STANDARDS-CATALOGUE.md). Les suffixes ambigus (Cod, Lib, Ref) retournent
+Seuil d'inclusion FK : suffixes fiables >= 90 % dans la table SUFFIX_FK_TARGET
+de ce script. Les suffixes ambigus (Cod, Lib, Ref) retournent
 fk_target=null avec une note d'ambiguite.
 """
 from __future__ import annotations
@@ -42,7 +42,7 @@ import sys
 
 
 # Taxonomie : suffixe -> (nature_default, confidence, alternatives, note)
-# Source : output/dhsd_suffix_nature.json (batch 16, 2026-04-17)
+# Source : output/dhsd_suffix_nature.json (2026-04-17)
 # Les chiffres viennent de la mesure sur 24 196 champs de 21 dicos X.13.
 SUFFIX_TAXONOMY = {
     "Dh": {
@@ -183,7 +183,7 @@ PREFIX_TAXONOMY = {
 
 # Taxonomie FK : suffixe -> cible FK (dominante, fiabilite >= 90 %)
 # Source : output/fk_pattern_stats.json (scan ERP X.13, 2026-04-20)
-# Documente dans docs/ZOOMS-STANDARDS-CATALOGUE.md table C
+# Cette table EST la reference : elle est mesuree, pas derivee d'un document.
 SUFFIX_FK_TARGET = {
     # T-tables parametriques (dict GTFDD, module Gttmchkt<NNN>.dhop)
     "Pay": {"target": "T013", "kind": "t-table", "confidence": 1.00, "zoom_num": 9053},
@@ -349,7 +349,7 @@ def suggest_nature(name: str) -> dict:
     # 4. Fallback
     result["note"] = (
         "Aucun suffixe/prefixe canonique reconnu. DEMANDER la Nature au collaborateur. "
-        "Voir docs/CONVENTIONS.md tableau 'Suffixes typés sur les noms de champ' pour les conventions."
+        "Les suffixes reconnus sont listes dans reference/taxonomie-suffixes.md."
     )
     return result
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Verifie l'integrite des surcharges overWrite apres une migration / rebase de pack.
 
-Bug cible (R-035) : un module `OverWrite base.dhop` fusionne ses procedures DANS
+Bug cible : un module `OverWrite base.dhop` fusionne ses procedures DANS
 `base.dhop` a la compilation. Si on recompile le STANDARD `base` APRES sa surcharge
 (rebase mal ordonne), `base.dhop` est regenere PROPRE et perd les procedures de
 surcharge (symptome runtime : comportement standard / boucle infinie).
@@ -127,7 +127,7 @@ def scan_objets(objets_dir):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Verifie l'integrite des surcharges overWrite apres migration (R-035)")
+        description="Verifie l'integrite des surcharges overWrite apres migration")
     parser.add_argument("--base", help="Objet de base (.dhop)")
     parser.add_argument("--overlay", help="Objet de surcharge overWrite (.dhop)")
     parser.add_argument("--symbols", help="Procedures de surcharge a controler (separees par des virgules)")

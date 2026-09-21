@@ -1,5 +1,5 @@
 """
-render_livrable.py -- Rend le livrable (forme) d'une analyse pre-action UC-100.
+render_livrable.py -- Rend le livrable (forme) d'une analyse pre-action.
 
 Entree : preaction-<slug>-<YYYYMMDD>.facts.json
 Sortie : preaction-<slug>-<YYYYMMDD>.md (UTF-8 + LF, 3 couches)
@@ -52,7 +52,17 @@ _FORBIDDEN_PATTERNS_COMMON: list[tuple[re.Pattern[str], str]] = [
 # besoin de tracer les sources pour audit).
 _FORBIDDEN_PATTERNS_EXTERNE_ONLY: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"[A-Za-z]:[/\\][A-Za-z][A-Za-z0-9 _\-.]*[/\\]"), "chemin absolu dans le livrable externe (doit rester dans facts.json)"),
-    (re.compile(r"\[X\.1[23]\]|\[(?:CONFIRME|DISPARU|NOUVEAU)\s+X\.1[23]\]"), "marqueur de statut X.12/X.13 dans le livrable externe (doit rester dans facts.json)"),
+    # Le numero de version est OPTIONNEL apres le mot de statut, et la version elle-meme
+    # n'est pas bornee a X.12/X.13. Deux raisons :
+    #  - `verify_x13.py` emet desormais des statuts NEUTRES (`[CONFIRME]`, `[DISPARU]`,
+    #    `[NOUVEAU]`) : il lit la racine qu'on lui donne et n'a aucun moyen de savoir
+    #    quelle version elle contient. Un motif exigeant `\s+X\.1[23]` les laissait FUIR
+    #    dans le livrable externe.
+    #  - un partenaire peut travailler contre X.7, X.11... : `[CONFIRME X.7]` fuyait deja.
+    (re.compile(r"\[X\.\d+(?:\.\d+)*\]"
+                r"|\[(?:CONFIRME|DISPARU|NOUVEAU)(?:\s+X\.\d+(?:\.\d+)*)?\]"),
+     "marqueur de statut (X.NN / CONFIRME / DISPARU / NOUVEAU) dans le livrable externe "
+     "(doit rester dans facts.json)"),
     (re.compile(r"\b[a-zA-Z0-9_-]+\.dhs[pqdf]:\d+\b"), "reference fichier:ligne dans le livrable externe (doit rester dans facts.json)"),
 ]
 
@@ -175,7 +185,7 @@ def _cli() -> int:
         sys.stdout.reconfigure(encoding="utf-8")
 
     ap = argparse.ArgumentParser(
-        description="Rend le livrable (forme) d'une analyse pre-action UC-100 depuis un facts.json."
+        description="Rend le livrable (forme) d'une analyse pre-action depuis un facts.json."
     )
     ap.add_argument("--facts", required=True, help="Chemin vers le fichier .facts.json")
     ap.add_argument(

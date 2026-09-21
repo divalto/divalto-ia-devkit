@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Valide les blocs generes ou un fichier .dhsd contre les regles D01-D16.
+"""Valide les blocs generes ou un fichier .dhsd contre les regles DICT01-DICT16.
 
 Usage:
     Valider des blocs generes (JSON) :
@@ -10,7 +10,7 @@ Usage:
     py .claude/skills/managing-diva-dictionaries/scripts/validate_dhsd.py \
         --path "chemin/dictionnaire.dhsd" --table NomTable
 
-    Valider une surcharge contre son .dhsd standard (regles D14/D15/D16) :
+    Valider une surcharge contre son .dhsd standard (regles DICT14/DICT15/DICT16) :
     py .claude/skills/managing-diva-dictionaries/scripts/validate_dhsd.py \
         --path "chemin/<dict>u.dhsd" --dhsd-standard "chemin/<dict>.dhsd"
 
@@ -51,12 +51,12 @@ def validate_blocks(blocks_data, migration=False):
     """Valide les blocs generes (sortie de generate_dhsd_block.py).
 
     Verifie :
-    - D01/D02 : Positions sans trou
-    - D03 : U-field present (warning si migration=True, cf R-041)
-    - D04 : coherence champs declares vs utilises
-    - D07 : Sections fermees dans le bloc table
-    - D10 : CE coherent dans les index
-    - D11 : Prefixe base
+    - DICT01/DICT02 : Positions sans trou
+    - DICT03 : U-field present (warning si migration=True)
+    - DICT04 : coherence champs declares vs utilises
+    - DICT07 : Sections fermees dans le bloc table
+    - DICT10 : CE coherent dans les index
+    - DICT11 : Prefixe base
     """
     errors = []
     warnings = []
@@ -66,7 +66,7 @@ def validate_blocks(blocks_data, migration=False):
     taille = blocks_data.get("taille", 0)
     blocks = blocks_data.get("blocks", {})
 
-    # D01/D02 : Verifier les positions
+    # DICT01/DICT02 : Verifier les positions
     prev_name = None
     prev_end = 0
     for field_name, info in positions.items():
@@ -78,14 +78,14 @@ def validate_blocks(blocks_data, migration=False):
             gap = pos - expected_pos
             if gap > 0:
                 errors.append({
-                    "rule": "D02",
+                    "rule": "DICT02",
                     "severity": "error",
                     "message": f"Trou de {gap} octet(s) avant '{field_name}' "
                                f"(position={pos}, attendu={expected_pos})",
                 })
             else:
                 errors.append({
-                    "rule": "D01",
+                    "rule": "DICT01",
                     "severity": "error",
                     "message": f"Chevauchement au champ '{field_name}' "
                                f"(position={pos}, attendu={expected_pos})",
@@ -97,46 +97,61 @@ def validate_blocks(blocks_data, migration=False):
     # Verifier Taille
     if prev_end != taille:
         errors.append({
-            "rule": "D01",
+            "rule": "DICT01",
             "severity": "error",
             "message": f"Taille declaree ({taille}) != taille calculee ({prev_end})",
         })
 
-    # D03 : U-field present (mode migration : warning, R-041)
+    # DICT03 : U-field present (mode migration : warning)
+    #
+    # Absence DELIBEREE vs ACCIDENTELLE : quand le generateur a tourne sans
+    # container U demande, il l'ecrit dans `summary.u_field = null`. Une absence
+    # choisie n'est pas une perte -- la convention pour une table dont l'integrateur
+    # est proprietaire est justement de ne pas en reserver. DICT03 passe alors en
+    # warning, sinon les blocs generes echoueraient a leur propre validation.
     u_field_name = f"U{table_name}"
+    summary = blocks_data.get("summary") or {}
+    u_field_delibere = "u_field" in summary and summary.get("u_field") is None
     if u_field_name not in positions:
+        souple = migration or u_field_delibere
+        if u_field_delibere:
+            suffixe = (" (absence deliberee : aucun container U demande a la "
+                       "generation -- en ajouter un reste possible)")
+        elif migration:
+            suffixe = " (mode migration : etat preexistant, non bloquant)"
+        else:
+            suffixe = ""
         d03 = {
-            "rule": "D03",
-            "severity": "warning" if migration else "error",
-            "message": f"Champ reserve distributeur '{u_field_name}' absent"
-                       + (" (mode migration : etat preexistant, non bloquant)" if migration else ""),
+            "rule": "DICT03",
+            "severity": "warning" if souple else "error",
+            "message": f"Champ reserve distributeur '{u_field_name}' absent" + suffixe,
         }
-        (warnings if migration else errors).append(d03)
+        (warnings if souple else errors).append(d03)
 
-    # D07 : Verifier que le bloc table contient [/CHAMPS]
+    # DICT07 : Verifier que le bloc table contient [/CHAMPS]
     table_block = blocks.get("table", "")
     if "[CHAMPS]" in table_block and "[/CHAMPS]" not in table_block:
         errors.append({
-            "rule": "D07",
+            "rule": "DICT07",
             "severity": "error",
             "message": "Section [/CHAMPS] manquante dans le bloc [TABLE]",
         })
 
-    # D08 : Verifier que le bloc base contient [/TABLES]
+    # DICT08 : Verifier que le bloc base contient [/TABLES]
     base_block = blocks.get("base", "")
     if "[TABLES]" in base_block and "[/TABLES]" not in base_block:
         errors.append({
-            "rule": "D08",
+            "rule": "DICT08",
             "severity": "error",
             "message": "Section [/TABLES] manquante dans le bloc [BASE]",
         })
 
-    # D09 : Verifier que les blocs index contiennent [/INDEX]
+    # DICT09 : Verifier que les blocs index contiennent [/INDEX]
     for idx_block in blocks.get("indexes", []):
         block_text = idx_block.get("block", "")
         if "[INDEX]" in block_text and "[/INDEX]" not in block_text:
             errors.append({
-                "rule": "D09",
+                "rule": "DICT09",
                 "severity": "error",
                 "message": f"Section [/INDEX] manquante pour l'index '{idx_block.get('name', '?')}'",
             })
@@ -235,25 +250,31 @@ def parse_dhsd_table(content, table_name):
     return table_info
 
 
-def validate_dhsd_file(path, table_name, dict_name=None, migration=False):
+def validate_dhsd_file(path, table_name, dict_name=None, migration=False,
+                       no_u_field=False):
     """Valide une table dans un fichier .dhsd existant.
 
-    migration=True (R-041) : D03 (U-field absent) devient un warning au lieu
+    migration=True : DICT03 (U-field absent) devient un warning au lieu
     d'une erreur. Sur une table legacy en cours d'alignement, l'absence de
     U-field est un etat PREEXISTANT (non introduit par la modif) -- le signal
-    utile reste D01/D02 (chevauchement/trou apres recalcul des positions).
+    utile reste DICT01/DICT02 (chevauchement/trou apres recalcul des positions).
+
+    no_u_field=True : la table a ete concue SANS container U, et c'est
+    assume. Distinct de `migration` : ce n'est pas un etat preexistant subi mais
+    un choix -- la convention pour une table dont l'integrateur est proprietaire.
+    DICT03 passe en warning pour la meme raison, avec un message different.
     """
     errors = []
     warnings = []
 
-    # D05/D06 : Verifier l'encodage
+    # DICT05/DICT06 : Verifier l'encodage
     with open(path, 'rb') as f:
         raw = f.read()
 
     has_lf_only = b'\n' in raw and b'\r\n' not in raw
     if has_lf_only:
         errors.append({
-            "rule": "D06",
+            "rule": "DICT06",
             "severity": "error",
             "message": "Fins de ligne LF detectees (attendu: CRLF)",
         })
@@ -261,14 +282,14 @@ def validate_dhsd_file(path, table_name, dict_name=None, migration=False):
     has_mixed = b'\r\n' in raw and raw.replace(b'\r\n', b'').count(b'\n') > 0
     if has_mixed:
         errors.append({
-            "rule": "D06",
+            "rule": "DICT06",
             "severity": "error",
             "message": "Fins de ligne mixtes LF/CRLF detectees",
         })
 
     if raw.startswith(b'\xef\xbb\xbf'):
         errors.append({
-            "rule": "D05",
+            "rule": "DICT05",
             "severity": "error",
             "message": "BOM UTF-8 detecte (le fichier doit etre en ISO-8859-1)",
         })
@@ -280,7 +301,7 @@ def validate_dhsd_file(path, table_name, dict_name=None, migration=False):
     table_info = parse_dhsd_table(content, table_name)
     if table_info is None:
         errors.append({
-            "rule": "D04",
+            "rule": "DICT04",
             "severity": "error",
             "message": f"Table '{table_name}' non trouvee dans le fichier",
         })
@@ -294,7 +315,7 @@ def validate_dhsd_file(path, table_name, dict_name=None, migration=False):
 
     champs = table_info["champs"]
 
-    # D01/D02 : Verifier les positions
+    # DICT01/DICT02 : Verifier les positions
     # On a besoin des natures pour calculer les tailles
     # Chercher les declarations [CHAMP] pour chaque champ
     champ_natures = {}
@@ -348,7 +369,7 @@ def validate_dhsd_file(path, table_name, dict_name=None, migration=False):
             expected_next = current["position"] + size
             if next_f["position"] != expected_next:
                 gap = next_f["position"] - expected_next
-                rule = "D02" if gap > 0 else "D01"
+                rule = "DICT02" if gap > 0 else "DICT01"
                 msg = "Trou" if gap > 0 else "Chevauchement"
                 errors.append({
                     "rule": rule,
@@ -358,18 +379,25 @@ def validate_dhsd_file(path, table_name, dict_name=None, migration=False):
                                f"(pos={next_f['position']}, attendu={expected_next})",
                 })
 
-    # D03 : U-field present (mode migration : warning, R-041)
+    # DICT03 : U-field present (mode migration : warning)
     u_field_name = f"U{table_name}"
     if not any(c["name"] == u_field_name for c in champs):
+        souple = migration or no_u_field
+        if no_u_field:
+            suffixe = (" (absence assumee : table concue sans container U -- "
+                       "convention pour une table dont l'integrateur est proprietaire)")
+        elif migration:
+            suffixe = " (mode migration : etat preexistant, non bloquant)"
+        else:
+            suffixe = ""
         d03 = {
-            "rule": "D03",
-            "severity": "warning" if migration else "error",
-            "message": f"Champ reserve distributeur '{u_field_name}' absent"
-                       + (" (mode migration : etat preexistant, non bloquant)" if migration else ""),
+            "rule": "DICT03",
+            "severity": "warning" if souple else "error",
+            "message": f"Champ reserve distributeur '{u_field_name}' absent" + suffixe,
         }
-        (warnings if migration else errors).append(d03)
+        (warnings if souple else errors).append(d03)
 
-    # D04 : Verifier que chaque champ non-standard a une declaration
+    # DICT04 : Verifier que chaque champ non-standard a une declaration
     for champ in champs:
         name = champ["name"]
         if name == "Filler":
@@ -380,19 +408,19 @@ def validate_dhsd_file(path, table_name, dict_name=None, migration=False):
             # U-field -- verifier qu'il a une declaration
             if name not in champ_natures:
                 errors.append({
-                    "rule": "D04",
+                    "rule": "DICT04",
                     "severity": "error",
                     "message": f"Champ '{name}' utilise dans [CHAMPS] sans declaration [CHAMP]",
                 })
             continue
         if name not in champ_natures:
             errors.append({
-                "rule": "D04",
+                "rule": "DICT04",
                 "severity": "error",
                 "message": f"Champ '{name}' utilise dans [CHAMPS] sans declaration [CHAMP]",
             })
 
-    # D11 : Prefixe base (si dict_name fourni)
+    # DICT11 : Prefixe base (si dict_name fourni)
     if dict_name:
         dict_key = dict_name.lower().replace(".dhsd", "")
         expected_prefix = BASE_PREFIXES.get(dict_key, "")
@@ -418,7 +446,7 @@ def validate_dhsd_file(path, table_name, dict_name=None, migration=False):
 
 
 # ----------------------------------------------------------------------------
-# Regles de surcharge D14/D15/D16 -- verifications croisees avec le .dhsd standard
+# Regles de surcharge DICT14/DICT15/DICT16 -- verifications croisees avec le .dhsd standard
 # ----------------------------------------------------------------------------
 
 # Detecte une section "Nom=<valeur>,..." (premier sous-element seulement)
@@ -580,9 +608,9 @@ def validate_surcharge_against_standard(surcharge_path, standard_path):
     """Verifie une surcharge .dhsd contre son .dhsd standard.
 
     Regles :
-    - D14 : metadonnees [BASEU]/[TABLEU] divergentes du standard (Version, Nom, DateM)
-    - D15 : [CHAMPR] nom=U<X> sans container U<X> dans la table standard
-    - D16 : [CHAMP] surcharge redeclare un champ global standard avec Nature/Gel/Flags differents
+    - DICT14 : metadonnees [BASEU]/[TABLEU] divergentes du standard (Version, Nom, DateM)
+    - DICT15 : [CHAMPR] nom=U<X> sans container U<X> dans la table standard
+    - DICT16 : [CHAMP] surcharge redeclare un champ global standard avec Nature/Gel/Flags differents
 
     Retourne (errors, warnings).
     """
@@ -594,13 +622,13 @@ def validate_surcharge_against_standard(surcharge_path, standard_path):
         standard = _read_dhsd(standard_path)
     except Exception as e:
         warnings.append({
-            "rule": "D14",
+            "rule": "DICT14",
             "severity": "warning",
             "message": f"Verification croisee impossible (lecture echoue) : {e}",
         })
         return errors, warnings
 
-    # --- D14 : [BASEU] vs [BASE] et [TABLEU] vs [TABLE] ---
+    # --- DICT14 : [BASEU] vs [BASE] et [TABLEU] vs [TABLE] ---
     baseu_blocks = _parse_named_blocks(surcharge, "BASEU")
     base_blocks = _parse_named_blocks(standard, "BASE")
     for base_key, surcharge_block in baseu_blocks.items():
@@ -608,7 +636,7 @@ def validate_surcharge_against_standard(surcharge_path, standard_path):
         std_block = base_blocks.get(base_key)
         if not std_block:
             errors.append({
-                "rule": "D14",
+                "rule": "DICT14",
                 "severity": "error",
                 "message": f"[BASEU] '{display}' : aucune [BASE] standard correspondante.",
             })
@@ -618,7 +646,7 @@ def validate_surcharge_against_standard(surcharge_path, standard_path):
             std_val = _extract_field(std_block["lines"], attr)
             if su_val is not None and std_val is not None and su_val != std_val:
                 errors.append({
-                    "rule": "D14",
+                    "rule": "DICT14",
                     "severity": "error",
                     "message": (
                         f"[BASEU] '{display}' : {attr}= divergent du standard. "
@@ -633,7 +661,7 @@ def validate_surcharge_against_standard(surcharge_path, standard_path):
         std_block = table_blocks.get(table_key)
         if not std_block:
             errors.append({
-                "rule": "D14",
+                "rule": "DICT14",
                 "severity": "error",
                 "message": f"[TABLEU] '{display}' : aucune [TABLE] standard correspondante.",
             })
@@ -643,7 +671,7 @@ def validate_surcharge_against_standard(surcharge_path, standard_path):
             std_val = _extract_field(std_block["lines"], attr)
             if su_val is not None and std_val is not None and su_val != std_val:
                 errors.append({
-                    "rule": "D14",
+                    "rule": "DICT14",
                     "severity": "error",
                     "message": (
                         f"[TABLEU] '{display}' : {attr}= divergent du standard. "
@@ -658,7 +686,7 @@ def validate_surcharge_against_standard(surcharge_path, standard_path):
             std_origin = std_datem.split(",", 1)[0].strip()
             if su_origin != std_origin:
                 errors.append({
-                    "rule": "D14",
+                    "rule": "DICT14",
                     "severity": "error",
                     "message": (
                         f"[TABLEU] '{display}' : 1ere partie de DateM= divergente du standard. "
@@ -666,7 +694,7 @@ def validate_surcharge_against_standard(surcharge_path, standard_path):
                     ),
                 })
 
-    # --- D15 : [CHAMPR] nom=U<X> vs container U<X> dans la table standard ---
+    # --- DICT15 : [CHAMPR] nom=U<X> vs container U<X> dans la table standard ---
     targets = _parse_champr_targets(surcharge)
     table_containers = _parse_table_u_containers(standard)
     for u_target in targets:
@@ -676,7 +704,7 @@ def validate_surcharge_against_standard(surcharge_path, standard_path):
         std_containers = table_containers.get(table_name.lower())
         if std_containers is None:
             errors.append({
-                "rule": "D15",
+                "rule": "DICT15",
                 "severity": "error",
                 "message": (
                     f"[CHAMPR] nom={u_target} : la table '{table_name}' n'existe pas "
@@ -685,7 +713,7 @@ def validate_surcharge_against_standard(surcharge_path, standard_path):
             })
         elif u_target.lower() not in std_containers:
             errors.append({
-                "rule": "D15",
+                "rule": "DICT15",
                 "severity": "error",
                 "message": (
                     f"[CHAMPR] nom={u_target} : la table standard '{table_name}' n'a "
@@ -694,7 +722,7 @@ def validate_surcharge_against_standard(surcharge_path, standard_path):
                 ),
             })
 
-    # --- D16 : [CHAMP] surcharge vs [CHAMP] standard de meme nom ---
+    # --- DICT16 : [CHAMP] surcharge vs [CHAMP] standard de meme nom ---
     surcharge_champs = _parse_named_blocks(surcharge, "CHAMP")
     standard_champs = _parse_named_blocks(standard, "CHAMP")
     for champ_key, su_block in surcharge_champs.items():
@@ -710,7 +738,7 @@ def validate_surcharge_against_standard(surcharge_path, standard_path):
                 divergent.append(f"{k}: surcharge='{su_attrs[k]}' / standard='{std_attrs[k]}'")
         if divergent:
             errors.append({
-                "rule": "D16",
+                "rule": "DICT16",
                 "severity": "error",
                 "message": (
                     f"[CHAMP] '{display}' : redeclaration du champ standard avec "
@@ -724,7 +752,7 @@ def validate_surcharge_against_standard(surcharge_path, standard_path):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Valide les blocs generes ou un fichier .dhsd contre les regles D01-D16"
+        description="Valide les blocs generes ou un fichier .dhsd contre les regles DICT01-DICT16"
     )
     parser.add_argument("--blocks", default=None,
                         help="Chemin vers le JSON des blocs generes (sortie de generate_dhsd_block.py)")
@@ -733,12 +761,17 @@ def main():
     parser.add_argument("--table", default=None,
                         help="Nom de la table a valider dans le .dhsd (requis avec --path sauf si --dhsd-standard)")
     parser.add_argument("--dict-name", default=None,
-                        help="Nom du dictionnaire pour verifier le prefixe base (D11)")
+                        help="Nom du dictionnaire pour verifier le prefixe base")
     parser.add_argument("--dhsd-standard", default=None,
-                        help="Chemin vers le .dhsd standard pour activer les checks de surcharge D14/D15/D16")
+                        help="Chemin vers le .dhsd standard pour activer les checks de surcharge DICT14/DICT15/DICT16")
     parser.add_argument("--migration", action="store_true",
-                        help="Mode migration (R-041) : D03 (U-field absent) devient un warning "
+                        help="Mode migration : DICT03 (U-field absent) devient un warning "
                              "sur tables legacy existantes au lieu d'une erreur")
+    parser.add_argument("--no-u-field", action="store_true",
+                        help="La table est concue SANS container U et c'est assume : "
+                             "DICT03 devient un warning. Distinct de --migration, qui vise un "
+                             "etat preexistant subi. En mode --blocks, inutile : le JSON du "
+                             "generateur porte deja l'information (summary.u_field = null).")
 
     args = parser.parse_args()
 
@@ -757,11 +790,13 @@ def main():
             print(f"Fichier non trouve : {args.path}", file=sys.stderr)
             sys.exit(1)
 
-        # Mode 1 : validation classique d'une table (D01-D11) si --table fourni
+        # Mode 1 : validation classique d'une table (DICT01-DICT11) si --table fourni
         if args.table:
-            report = validate_dhsd_file(args.path, args.table, args.dict_name, migration=args.migration)
+            report = validate_dhsd_file(args.path, args.table, args.dict_name,
+                                        migration=args.migration,
+                                        no_u_field=args.no_u_field)
         else:
-            # Mode 2 : surcharge sans table specifique, on fait D14/D15/D16 sur tout le fichier
+            # Mode 2 : surcharge sans table specifique, on fait DICT14/DICT15/DICT16 sur tout le fichier
             report = {
                 "target": f"{os.path.basename(args.path)} (mode surcharge)",
                 "valid": True,
@@ -770,7 +805,7 @@ def main():
                 "summary": {"total": 0, "errors": 0, "warnings": 0},
             }
 
-        # Verifications croisees surcharge vs standard (D14/D15/D16) si demande
+        # Verifications croisees surcharge vs standard (DICT14/DICT15/DICT16) si demande
         if args.dhsd_standard:
             if not os.path.exists(args.dhsd_standard):
                 print(f"Fichier standard non trouve : {args.dhsd_standard}", file=sys.stderr)

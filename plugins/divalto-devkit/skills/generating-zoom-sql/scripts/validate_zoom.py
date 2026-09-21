@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Valide un fichier Zoom SQL (.dhsp) selon les regles Z01-Z12.
+"""Valide un fichier Zoom SQL (.dhsp) selon les regles ZSQL01-ZSQL11.
 
 Usage:
     py .claude/skills/generating-zoom-sql/scripts/validate_zoom.py --path fichier.dhsp
@@ -63,7 +63,7 @@ MANDATORY_PROCEDURES = [
 
 
 def check_z01(content, tokens=None):
-    """Z01 — 27 procedures obligatoires presentes."""
+    """ZSQL01 — 27 procedures obligatoires presentes."""
     issues = []
     missing = []
     for proc in MANDATORY_PROCEDURES:
@@ -72,7 +72,7 @@ def check_z01(content, tokens=None):
             missing.append(proc)
     if missing:
         issues.append({
-            "rule": "Z01",
+            "rule": "ZSQL01",
             "severity": "error",
             "message": f"Procedures obligatoires manquantes ({len(missing)}/{len(MANDATORY_PROCEDURES)}): {', '.join(missing)}",
         })
@@ -80,7 +80,7 @@ def check_z01(content, tokens=None):
 
 
 def check_z02(content, tokens=None):
-    """Z02 — preturn apres Zoom.OK = 'I' ou 'S' ou 'C'."""
+    """ZSQL02 — preturn apres Zoom.OK = 'I' ou 'S' ou 'C'."""
     issues = []
     # Chercher les patterns Zoom.OK = 'I' ou Zoom.Ok = 'S' sans preturn dans les 2 lignes suivantes
     lines = content.split('\n')
@@ -97,7 +97,7 @@ def check_z02(content, tokens=None):
                 # Verifier si preturn est sur la meme ligne (pattern compact)
                 if not re.search(r'(?i)\bpreturn\b', stripped):
                     issues.append({
-                        "rule": "Z02",
+                        "rule": "ZSQL02",
                         "severity": "warning",
                         "message": f"Ligne {i+1}: Zoom.OK affecte sans preturn dans les lignes suivantes",
                     })
@@ -105,7 +105,7 @@ def check_z02(content, tokens=None):
 
 
 def check_z03(content, tokens=None):
-    """Z03 — Pas de melange de prefixes domaine."""
+    """ZSQL03 — Pas de melange de prefixes domaine."""
     issues = []
     if not tokens:
         return issues
@@ -123,7 +123,7 @@ def check_z03(content, tokens=None):
         pattern = r'(?i)\b' + re.escape(wp) + r'(PreInsert|PostInsert|PreUpdate|PostUpdate|PreDelete|PostDelete)_recordSql\b'
         if re.search(pattern, content):
             issues.append({
-                "rule": "Z03",
+                "rule": "ZSQL03",
                 "severity": "error",
                 "message": f"Prefixe domaine incorrect: {wp} trouve alors que {prefix} est attendu",
             })
@@ -131,11 +131,11 @@ def check_z03(content, tokens=None):
 
 
 def check_z08(content, tokens=None):
-    """Z08 — Module ficsql present."""
+    """ZSQL04 — Module ficsql present."""
     issues = []
     if not re.search(r'(?i)Module\s+[\'"].*pmficsql\.dhop[\'"]', content):
         issues.append({
-            "rule": "Z08",
+            "rule": "ZSQL04",
             "severity": "error",
             "message": "Module pmficsql.dhop absent — les fonctions framework ne seront pas trouvees",
         })
@@ -143,11 +143,11 @@ def check_z08(content, tokens=None):
 
 
 def check_z10(content, tokens=None):
-    """Z10 — Gestion du prefixe '-' dans ZOOM.Scevaleur."""
+    """ZSQL05 — Gestion du prefixe '-' dans ZOOM.Scevaleur."""
     issues = []
     if not re.search(r'(?i)Mid\s*\(\s*ZOOM\.Scevaleur', content):
         issues.append({
-            "rule": "Z10",
+            "rule": "ZSQL05",
             "severity": "warning",
             "message": "Gestion du prefixe '-' dans ZOOM.Scevaleur non detectee (recherche par libelle)",
         })
@@ -160,7 +160,7 @@ def check_overwrittenby(content, tokens=None):
     has_owb = bool(re.search(r'(?i)OverWrittenBy\s+[\'"]', content))
     if not has_owb:
         issues.append({
-            "rule": "OWB",
+            "rule": "ZSQL06",
             "severity": "warning",
             "message": "OverWrittenBy absent du fichier zoom",
         })
@@ -168,7 +168,7 @@ def check_overwrittenby(content, tokens=None):
         expected = tokens.get("overwrittenby_zoom", "")
         if expected and not re.search(re.escape(expected), content, re.IGNORECASE):
             issues.append({
-                "rule": "OWB",
+                "rule": "ZSQL06",
                 "severity": "warning",
                 "message": f"OverWrittenBy ne correspond pas au token attendu: {expected}",
             })
@@ -176,12 +176,12 @@ def check_overwrittenby(content, tokens=None):
 
 
 def check_majuser(content, tokens=None):
-    """Z04/M04 — majuser=true dans PreUpdate."""
+    """ZSQL07 — majuser=true dans PreUpdate."""
     issues = []
     if re.search(r'(?i)PreUpdate_recordSql\s*\(', content):
         if not re.search(r'(?i)PreUpdate_recordSql\s*\([^)]*majuser\s*=\s*true', content):
             issues.append({
-                "rule": "M04",
+                "rule": "ZSQL07",
                 "severity": "error",
                 "message": "PreUpdate_recordSql sans majuser=true — UserMo/UserMoDh ne seront pas mis a jour",
             })
@@ -189,7 +189,7 @@ def check_majuser(content, tokens=None):
 
 
 def check_valretour(content, tokens=None):
-    """S08 — Zoom.Valretour initialise dans ZoomValidation."""
+    """ZSQL08 — Zoom.Valretour initialise dans ZoomValidation."""
     issues = []
     # Trouver la section ZoomValidation
     match = re.search(r'(?i)Procedure\s+ZoomValidation.*?Endp', content, re.DOTALL)
@@ -197,7 +197,7 @@ def check_valretour(content, tokens=None):
         section = match.group()
         if not re.search(r'(?i)Zoom\.Valretour\s*=', section):
             issues.append({
-                "rule": "S08",
+                "rule": "ZSQL08",
                 "severity": "warning",
                 "message": "Zoom.Valretour non initialise dans ZoomValidation",
             })
@@ -218,7 +218,7 @@ def check_encoding(raw_bytes):
 
     if lines_lf_only > 0:
         issues.append({
-            "rule": "ENC",
+            "rule": "ZSQL09",
             "severity": "error",
             "message": f"Fins de ligne LF detectees ({lines_lf_only} occurrences). Attendu: CRLF",
         })
@@ -226,7 +226,7 @@ def check_encoding(raw_bytes):
     # Verifier pas de BOM UTF-8
     if raw_bytes[:3] == b'\xef\xbb\xbf':
         issues.append({
-            "rule": "ENC",
+            "rule": "ZSQL09",
             "severity": "error",
             "message": "BOM UTF-8 detecte. Le fichier doit etre en ISO-8859-1 sans BOM",
         })
@@ -238,7 +238,7 @@ def check_encoding(raw_bytes):
         has_utf8_multibyte = bool(re.search(b'[\xc0-\xdf][\x80-\xbf]|[\xe0-\xef][\x80-\xbf]{2}', raw_bytes))
         if has_utf8_multibyte:
             issues.append({
-                "rule": "ENC",
+                "rule": "ZSQL09",
                 "severity": "error",
                 "message": "Fichier encode en UTF-8 avec caracteres multi-octets. Attendu: ISO-8859-1",
             })
@@ -259,7 +259,7 @@ def check_naming_convention(path):
     if len(name) >= 4 and name[2] == 'e':
         if name[3] != 'z':
             issues.append({
-                "rule": "NAMING_CONV",
+                "rule": "ZSQL10",
                 "severity": "warning",
                 "message": f"La 4e lettre du fichier est '{name[3]}', attendu 'z' pour un zoom (convention: [prefixe]z[id]_sql.dhsp)",
             })
@@ -277,14 +277,14 @@ def check_naming_coherence(content, tokens):
         # RecordSql doit etre declare
         if not re.search(r'(?i)RecordSql\s+.*' + re.escape(nom_vue), content):
             issues.append({
-                "rule": "NAMING",
+                "rule": "ZSQL11",
                 "severity": "warning",
                 "message": f"RecordSql {nom_vue} non declare dans le fichier",
             })
         # Instance _Sel doit exister
         if not re.search(re.escape(nom_vue) + r'_Sel', content):
             issues.append({
-                "rule": "NAMING",
+                "rule": "ZSQL11",
                 "severity": "warning",
                 "message": f"{nom_vue}_Sel non declare dans le fichier",
             })
@@ -294,7 +294,7 @@ def check_naming_coherence(content, tokens):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Valide un fichier Zoom SQL (.dhsp) selon les regles Z01-Z12"
+        description="Valide un fichier Zoom SQL (.dhsp) selon les regles ZSQL01-ZSQL11"
     )
     parser.add_argument("--path", required=True,
                         help="Chemin du fichier .dhsp a valider")

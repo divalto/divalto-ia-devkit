@@ -32,7 +32,9 @@ description: >
 ## Utilisation
 
 Ce skill est une **table des matieres interactive** des skills DIVA installes.
-Il s'appuie sur un `catalog.json` embarque (regenere a chaque build de distribution).
+Il s'appuie sur un `catalog.json` embarque. Ce catalogue est **tenu a la main** : il
+n'existe aucun generateur, et un controle verifie avant chaque export qu'il reflete
+toujours les skills reellement presents, leurs pages de reference et leurs scripts.
 
 **Regle** : ne pas lire directement le catalog.json dans le contexte Claude. Utiliser
 `query_catalog.py` qui extrait uniquement le sous-ensemble pertinent.
@@ -202,7 +204,7 @@ Par defaut la sortie est un texte markdown lisible.
 
 Invoquer `overview`, puis resumer au collaborateur :
 
-> Tu disposes de 31 skills DIVA organises en 8 workflows. Points d'entree principaux :
+> Tu disposes de 40 skills DIVA organises en 9 workflows. Points d'entree principaux :
 > creer une entite metier (`creating-diva-entity`), analyser une demande
 > (`analyzing-diva-request`), modifier une entite (`modifying-diva-entity`),
 > documenter un module (`documenting-erp`). [puis liste par workflow]

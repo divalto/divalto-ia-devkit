@@ -54,11 +54,38 @@ Si les outils `browser_*` ne sont pas disponibles, redemarrer la session Claude 
 
 1. `browser_navigate` vers `http://localhost:8080/LCWeb`
 2. `browser_snapshot` -- verifier la presence de la page de login (champs Identifiant, Mot de passe, Profil)
-3. **Demander a l'utilisateur** de saisir ses identifiants et de choisir le profil (ex: X13)
-4. Attendre la confirmation de l'utilisateur
-5. `browser_snapshot` -- rafraichir les refs (invalidees apres la saisie utilisateur)
-6. `browser_click` sur le bouton "Se connecter"
-7. Verifier : le titre de page doit contenir "Divalto infinity"
+3. **Si le formulaire n'apparait pas** (shell infinity charge, mais ni Identifiant ni Mot de passe) :
+   naviguer **explicitement** sur `http://localhost:8080/LCWeb/login/login.aspx`, puis refaire un
+   `browser_snapshot`. Voir « Le formulaire n'apparait pas » ci-dessous.
+4. **Demander a l'utilisateur** de saisir ses identifiants et de choisir le profil (ex: X13)
+5. Attendre la confirmation de l'utilisateur
+6. `browser_snapshot` -- rafraichir les refs (invalidees apres la saisie utilisateur)
+7. `browser_click` sur le bouton "Se connecter"
+8. Verifier : le titre de page doit contenir "Divalto infinity"
+
+### Le formulaire n'apparait pas
+
+Vecu sur une premiere mise en service : le shell ASP.NET s'affiche, **le moteur Diva ne demarre
+pas**, et le journal repete `Erreur fonction LogonUser sur le compte . | GetLastError=87`.
+
+**C'est la page de login qui alimente le `LogonUser`** -- pas un fichier de configuration.
+Naviguer explicitement sur `/LCWeb/login/login.aspx` a suffi a obtenir le vrai formulaire, et
+`xrtdiva.exe` a demarre sous le bon compte Windows des la saisie faite.
+
+> **Ne PAS partir sur `utilisateurHtml5.txt`.** Ce fichier (`C:\Divalto\sys\`) appartient aux
+> pages generiques ; **le portail infinity l'ignore**. Le remede a ete cherche de ce cote pendant
+> trois sessions avant que la page de login ne resolve le probleme. Le creer ne sert a rien ici,
+> et il contiendrait un mot de passe en clair.
+
+**Non verifie** : on ne sait pas si `/LCWeb` **redirige** de lui-meme vers `login.aspx` sur une
+installation saine. L'observation ci-dessus vient d'une install en cours de mise en service.
+D'ou la forme retenue -- un **repli** quand le formulaire manque, et non un changement d'URL de
+depart.
+
+**Ce qui n'est PAS du ressort de ce skill** : si la page ne repond pas du tout, ou renvoie une
+erreur de configuration serveur (`MachineToApplication`), c'est le **deploiement** qui est en
+cause -- repertoire virtuel non converti en application IIS, pool arrete, compte de service.
+Ces gestes demandent une elevation et se font cote serveur, pas depuis une session Claude.
 
 ### Validation page d'accueil
 
@@ -66,6 +93,12 @@ Apres connexion reussie :
 - Titre : `Divalto infinity - Papyrus (vX.12)`
 - Menu lateral gauche visible (section "Favoris")
 - Barre d'outils en haut droite (Autres actions, Aide, Zoom, Imprimante)
+
+### « Utilisateur inconnu » apres une connexion reussie
+
+Si le formulaire a ete accepte mais que l'ERP repond **utilisateur inconnu**, le lancement web
+**fonctionne** : le probleme est au niveau **Harmony** -- profil, environnement ou identifiant a
+ajuster. Ne pas repartir sur le deploiement web, c'est une autre couche.
 
 > **CHECKPOINT CP1 -- Connexion ERP**
 > Presenter au collaborateur :

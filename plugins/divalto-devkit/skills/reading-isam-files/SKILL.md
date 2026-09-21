@@ -61,7 +61,7 @@ Les modes sont combinables : `--key A4 --filter "ZoomNum=9490" --fields "Lib" --
 
 - Sans `--key-value` : positionne en fin de fichier (KEY charge avec un octet 0xFF apres la lettre d'index) puis remonte
 - Avec `--key-value` : usage non recommande (la verification d'egalite de cle stoppe des le premier enreg qui quitte la plage)
-- Implementation : appel `xisam_tpreadlong` avec mode de reservation `P` (Partage, pas de lock). La direction (remontee) est portee par la cle TDF, pas par le mode. Revision R-014 (2026-04-22) : avant cette date, le script passait des modes `F`/`P`/`S`/`D`/`G` comme codes de direction, ce qui etait une interpretation erronee -- `mode` est un code de reservation uniquement.
+- Implementation : appel `xisam_tpreadlong` avec mode de reservation `P` (Partage, pas de lock). La direction (remontee) est portee par la cle TDF, pas par le mode. Revision 2026-04-22 : avant cette date, le script passait des modes `F`/`P`/`S`/`D`/`G` comme codes de direction, ce qui etait une interpretation erronee -- `mode` est un code de reservation uniquement.
 
 ---
 
@@ -108,7 +108,7 @@ Executer `read_isam.py` avec les parametres choisis. La sortie JSON contient :
 
 | Script | Role | Entree | Sortie JSON |
 |--------|------|--------|-------------|
-| `scripts/read_isam.py` | Lit des enregistrements ISAM | `--file` `--structure` `--key` [+ `--key-value`] [+ `--filter`] [+ `--fields`] [+ `--max`] [+ `--reverse`] | `{success, records[], count}` |
+| `scripts/read_isam.py` | Lit des enregistrements ISAM | `--file` `--structure` `--key` [+ `--key-value`] [+ `--filter`] [+ `--fields`] [+ `--max`] [+ `--reverse`] [+ `--dll-path` / `--sys-dir`] | `{success, records[], count}` |
 | `scripts/validate_structure.py` | Valide un fichier de structure JSON | `--path` | `{valid, errors[], fields, record_size}` |
 
 **Exit codes** :
@@ -132,9 +132,13 @@ Executer `read_isam.py` avec les parametres choisis. La sortie JSON contient :
 
 Pour une lecture **interpretee** du dictionnaire multichoix (liste des Nc, detail par Nc, resolution des 3 Types 1/3/4), utiliser le skill dedie `reading-multichoix` qui orchestre les vues specifiques aux Types.
 
-**Piege multi-structure G3F (R-006, 2026-04-23)** : le fichier `g3f.dhfi` (base Xmenuf) contient **2 tables distinctes** M0 (`Ce=0`, parametres generaux, 1 enreg = header du domaine) et M2 (`Ce=2`, choix du menu, N enregs). Un scan M2 sans filtre `Ce=2` inclut l'enreg M0 decode avec les offsets M2 -> valeurs aberrantes. Toujours **`--filter "Ce=2"`** quand on analyse les choix de menu, **`--filter "Ce=0"`** pour le header. Structure M0 disponible ci-dessus.
+**Piege multi-structure G3F (2026-04-23)** : le fichier `g3f.dhfi` (base Xmenuf) contient **2 tables distinctes** M0 (`Ce=0`, parametres generaux, 1 enreg = header du domaine) et M2 (`Ce=2`, choix du menu, N enregs). Un scan M2 sans filtre `Ce=2` inclut l'enreg M0 decode avec les offsets M2 -> valeurs aberrantes. Toujours **`--filter "Ce=2"`** quand on analyse les choix de menu, **`--filter "Ce=0"`** pour le header. Structure M0 disponible ci-dessus.
 
-**Plage d'allocation EnrNo M2 (R-005, 2026-04-23)** : hypothese empiriquement validee sur Achat-Vente X.13 : `EnrNo < 100000` = zone standard (allouee par l'IHM native), `EnrNo >= 100000` = zone customisation. Skill dedie `allocating-menu-enrno` automatise la selection.
+**Piege compagnon `.dhfd`** : un `.dhfi` (donnees) exige son fichier d'index `.dhfd` de meme nom **a cote**. Ouvrir un `.dhfi` copie ou backupe **sans** son `.dhfd` fait echouer l'ouverture avec le **code 100**. Regle : toute copie/backup/deplacement d'un `.dhfi` doit embarquer le `.dhfd`. Detail : [reference/isam-api.md](reference/isam-api.md) (section « Codes d'erreur »).
+
+**Emplacement de `DhxIsam64.dll`** : le chemin n'est plus code en dur sur `C:`. Il est resolu dans l'ordre `--dll-path` / `--sys-dir` (CLI) > env `DIVALTO_SYS_DIR` > registre Divalto (`CheminUl1` -> `\sys`) > fallback `C:\divalto\sys`. Sur un poste ou Divalto est installe ailleurs (ex. `K:\`), la lecture ISAM fonctionne **sans option** ; forcer via `--sys-dir <dir>` seulement si besoin.
+
+**Plage d'allocation EnrNo M2 (2026-04-23)** : hypothese empiriquement validee sur Achat-Vente X.13 : `EnrNo < 100000` = zone standard (allouee par l'IHM native), `EnrNo >= 100000` = zone customisation. Skill dedie `allocating-menu-enrno` automatise la selection.
 
 ---
 

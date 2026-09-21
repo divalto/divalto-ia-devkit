@@ -162,14 +162,14 @@ def main():
     parser.add_argument(
         "--implicit",
         required=True,
-        help="Chemin du fichier implicite confirme (R-1)",
+        help="Chemin du fichier implicite, deja confirme par le collaborateur",
     )
     parser.add_argument(
         "--confirmed-by-user",
         action="store_true",
         help=(
             "OBLIGATOIRE : confirme que le collaborateur a explicitement valide le "
-            "fichier implicite passe en --implicit (R-1/P-B). Sans ce flag, le script "
+            "fichier implicite passe en --implicit. Sans ce flag, le script "
             "refuse de demarrer (exit 3)."
         ),
     )
@@ -179,7 +179,7 @@ def main():
     if not args.confirmed_by_user:
         print(
             f"WARNING: Selection du fichier implicite '{args.implicit}' non confirmee "
-            f"par l'utilisateur (R-1/P-B). Le skill understanding-integrator-workspace "
+            f"par le collaborateur. Le skill understanding-integrator-workspace "
             f"exige que le fichier implicite soit confirme par le collaborateur avant "
             f"tout audit. Relancer avec --confirmed-by-user apres validation explicite.",
             file=sys.stderr,
@@ -325,10 +325,20 @@ def main():
         ends_with_u = path_name.endswith("u")
         header = d.get("header", "")
         is_surcharge_header = header.startswith("xwin-s-projet")
+        # L'EN-TETE est autoritaire, le suffixe `u` n'est qu'une convention de
+        # nommage -- donc un INDICE FAIBLE. Un nom finissant par la lettre `u` pour
+        # des raisons lexicales suffit a declencher ce constat : mesure sur un
+        # workspace reel, `addon mercure ieu.dhpt` (ie-u) porte l'en-tete
+        # `xwin-projet` PARFAITEMENT correct. C'etait auparavant une `error` qui
+        # conseillait de passer l'en-tete en `xwin-s-projet 2.0` -- suivre ce conseil
+        # transformait un projet standard en surcharge declaree.
         if ends_with_u and not is_surcharge_header:
-            add_finding(findings, "error", "convention-naming",
-                        f".dhpt '{path_name}.dhpt' suffixe 'u' (indique une surcharge) mais "
-                        f"en-tete '{header}' (projet standard). Devrait etre 'xwin-s-projet 2.0'.",
+            add_finding(findings, "warning", "convention-naming",
+                        f".dhpt '{path_name}.dhpt' : le nom finit par 'u' (convention de "
+                        f"surcharge) alors que l'en-tete '{header}' annonce un projet "
+                        f"standard. L'en-tete fait foi : si le projet est bien standard, "
+                        f"il n'y a rien a corriger (un nom peut finir par 'u' sans etre "
+                        f"une surcharge). Ne modifier l'en-tete que s'il est faux.",
                         dhpt=d["path"])
 
     # cheminbases coherent entre .dhpt de surcharge

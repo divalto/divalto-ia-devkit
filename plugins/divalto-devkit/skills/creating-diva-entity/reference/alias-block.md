@@ -1,6 +1,6 @@
 # Bloc d'alias pour *pmficsql.dhsp
 
-Source : les squelettes (interne), la référence architecture d'entité (interne), fichier ERP `rtpmficsql.dhsp`
+Bloc d'alias : le digest livré avec ce skill. Le seul renvoi vérifiable par le partenaire est le fichier ERP `rtpmficsql.dhsp`, qu'il possède.
 
 ---
 

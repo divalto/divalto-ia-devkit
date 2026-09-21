@@ -78,6 +78,170 @@
         "Aucune ecriture effectuee sur le .dhsd",
         "Idem pour .dhsf / .dhsi (manipulating-dhsf-screens)"
       ]
+    },
+    {
+      "id": "case-6-stdin-utf8-mojibake",
+      "skills": [
+        "writing-diva-files"
+      ],
+      "query": "Ecris via --stdin un contenu DIVA avec accents pipe en UTF-8 (heredoc bash / Get-Content).",
+      "files": [],
+      "expected_behavior": [
+        "write_file --stdin lit sys.stdin.buffer et decode explicitement en UTF-8 (PAS l'encodage console cp1252)",
+        "Les accents UTF-8 pipes deviennent des octets ISO-8859-1 corrects (e accent -> 0xE9), PAS du mojibake (0xC3 0xA9)",
+        "Si stdin n'est pas de l'UTF-8 valide : echec BRUYANT (exit 1), aucun fichier ecrit -- pas de corruption silencieuse",
+        "Si le contenu est deja du mojibake (double-encodage, sequences UTF-8 residuelles) : write_file REFUSE d'ecrire (exit != 0)"
+      ]
+    },
+    {
+      "id": "case-7-verify-mojibake-residuel",
+      "skills": [
+        "writing-diva-files"
+      ],
+      "query": "Verifie un .dhsp majoritairement ISO-8859-1 mais contenant quelques sequences UTF-8 residuelles (mojibake).",
+      "files": [
+        "mixte.dhsp"
+      ],
+      "expected_behavior": [
+        "verify_encoding detecte les sequences UTF-8 residuelles (0xC2/0xC3 + octet de continuation, ou U+FFFD) dans un flux classe iso-8859-1",
+        "Retourne valid: false avec une issue 'sequence(s) UTF-8 residuelle(s) ... mojibake probable'",
+        "Un fichier ISO-8859-1 propre (accents 0xE9/0xE0 sans sequence UTF-8) reste valid: true (pas de faux positif)"
+      ]
+    },
+    {
+      "id": "case-8-ligne-trop-longue",
+      "skills": [
+        "writing-diva-files"
+      ],
+      "query": "Verifie un .dhsp dont une ligne physique depasse 251 caracteres.",
+      "files": [
+        "long.dhsp"
+      ],
+      "expected_behavior": [
+        "verify_encoding compte les lignes PHYSIQUES (apres split CRLF/LF) et signale celles > 251 caracteres",
+        "valid=false + issue nommant le nombre et les numeros de ligne concernes",
+        "XWin refuse d'ouvrir un source avec une ligne > 251 -> defaut structurel (pas un style)",
+        "Une ligne de 251 caracteres exactement reste valide (seuil strict > 251) ; le '\\' de continuation coupe en lignes physiques distinctes"
+      ]
+    },
+    {
+      "id": "case-9-content-file",
+      "skills": [
+        "writing-diva-files"
+      ],
+      "query": "Ecris un .dhsp dont le contenu (avec accents) provient d'un fichier temporaire UTF-8, sous PowerShell.",
+      "files": [],
+      "expected_behavior": [
+        "write_file --content-file <fichier UTF-8> lit le contenu en utf-8-sig (BOM eventuel supprime)",
+        "Evite le quoting PowerShell (guillemets absorbes) ET le decodage console -> voie privilegiee sous PowerShell",
+        "Accents corrects en ISO-8859-1 (0xE9), pas de mojibake, pas de BOM en tete du fichier ecrit",
+        "patch_file accepte aussi --content-file pour insert/replace"
+      ]
+    },
+    {
+      "id": "case-10-bom-et-caractere-hors-latin1",
+      "skills": [
+        "writing-diva-files"
+      ],
+      "query": "Un scratchpad UTF-8 avec BOM (ecrit par l'outil Write) est injecte dans un .dhsp via patch_file ; un autre contient un tiret cadratin.",
+      "files": [
+        "scratch_bom.txt"
+      ],
+      "expected_behavior": [
+        "write_file ET patch_file decodent stdin en utf-8-sig -> un BOM de tete pipe (Get-Content, outil Write) est strippe, jamais ecrit dans la cible (#262) ; idem --content-file",
+        "--content-file reste la voie privilegiee sous PowerShell (Get-Content -Raw ajoute sinon un saut de ligne final parasite)",
+        "Un caractere non encodable en ISO-8859-1 (tiret cadratin, guillemet typographique, emoji) -> echec PROPRE (exit 1) AVANT ouverture : la cible reste INTACTE, jamais tronquee",
+        "patch_file encode desormais AVANT d'ouvrir la cible (write_file l'etait deja) -- pas de troncature silencieuse"
+      ]
+    },
+    {
+      "id": "case-11-expect-content-obligatoire",
+      "skills": [
+        "writing-diva-files"
+      ],
+      "query": "Supprime la ligne 18 de gtutrf027.dhsp, ou remplace les lignes 40:45.",
+      "files": [
+        "gtutrf027.dhsp"
+      ],
+      "expected_behavior": [
+        "Le ciblage par NUMERO (--line N ou --line-range A:B) en replace/delete exige --expect-content ou --expect-content-file (sinon exit 2, rien ecrit)",
+        "--expect-content = le contenu ACTUEL attendu aux lignes visees (match EXACT du bloc entier, apres normalisation CRLF/LF)",
+        "L'ancre (--anchor) n'est PAS concernee : elle se verifie deja par le texte cherche (+ --expect count)",
+        "--line N est de nouveau accepte pour delete/replace (equivaut a --line-range N:N) -- #313 -- mais gated par --expect-content"
+      ]
+    },
+    {
+      "id": "case-12-expect-content-numero-perime",
+      "skills": [
+        "writing-diva-files"
+      ],
+      "query": "Remplace les lignes 550:562 dont le contenu attendu ne correspond plus (le fichier a change depuis la lecture).",
+      "files": [
+        "gtutrf027.dhsp"
+      ],
+      "expected_behavior": [
+        "Si le contenu reel des lignes visees differe de --expect-content -> REFUS (exit 1), rien ecrit, cible intacte (#303/#263)",
+        "Le message nomme la 1re ligne divergente (attendu vs trouve) -> l'appelant relit et recalcule, ou passe a --anchor",
+        "Attrape la derive silencieuse : numeros calcules sur une lecture perimee (mon edition anterieure, ou xwin en parallele)",
+        "--dry-run verifie AUSSI --expect-content (le mismatch est detecte avant meme d'ecrire)"
+      ]
+    },
+    {
+      "id": "case-13-expect-content-file-multiligne",
+      "skills": [
+        "writing-diva-files"
+      ],
+      "query": "Remplace un bloc multi-ligne dont le contenu attendu est fourni dans un fichier UTF-8.",
+      "files": [
+        "bloc_attendu.txt"
+      ],
+      "expected_behavior": [
+        "--expect-content-file <fichier UTF-8> lit le bloc attendu en utf-8-sig (BOM eventuel supprime), comme --content-file",
+        "Voie privilegiee pour un bloc multi-ligne (evite le quoting du bloc entier sur la ligne de commande)",
+        "Un nombre de lignes attendu != nombre de lignes visees compte comme un mismatch -> refus",
+        "Scope du garde-fou : replace/delete uniquement ; insert n'est pas concerne (risque de position, pas d'ecrasement)"
+      ]
+    },
+    {
+      "id": "case-14-voie-sanctionnee-pas-de-script-maison",
+      "skills": [
+        "writing-diva-files"
+      ],
+      "query": "Il faut remplacer une fonction dans monprogramme.dhsp. Le hook protect_encoding bloque Edit/Write.",
+      "files": [
+        "monprogramme.dhsp"
+      ],
+      "expected_behavior": [
+        "Utilise patch_file.py --op replace --anchor (voie sanctionnee), JAMAIS un script Python ad-hoc (bytes.replace, .new + os.replace)",
+        "Le hook protect_encoding bloque Edit/Write sur le DIVA mais PAS les scripts du skill -> aucune raison d'ecrire un script raw pour le contourner",
+        "Edit/Write reecrirait le fichier ENTIER en UTF-8 (tous les accents -> U+FFFD), meme pour une modif d'une seule ligne ASCII",
+        "Ne restaure jamais un fichier a l'aveugle (sauver l'etat courant d'abord) ; relit les numeros de ligne juste avant un --line/--line-range"
+      ]
+    },
+    {
+      "name": "ps1-chemin-accentue",
+      "description": "Generer un .ps1 qui doit ecrire dans un repertoire accentue",
+      "prompt": "Genere-moi un script PowerShell qui exporte le resultat dans C:\\Repertoire accentue\\sortie.txt",
+      "expected": {
+        "actions": [
+          "NE code PAS le chemin accentue en dur dans le .ps1",
+          "Passe le chemin en parametre (param([string]$OutPath)) ou ecrit le fichier en ISO-8859-1",
+          "Explique la cause : PowerShell 5.1 lit un .ps1 sans BOM en ANSI/CP1252, donc un litteral accentue est corrompu a l'execution",
+          "Precise que seule l'operation touchant au chemin echoue -- le reste du script s'execute, ce qui rend le diagnostic trompeur"
+        ]
+      }
+    },
+    {
+      "name": "ps1-piege-distinct-xwin7",
+      "description": "Ne pas confondre les deux causes qui imposent l'ISO-8859-1",
+      "prompt": "J'ai deja mis mon .ps1 en ISO-8859-1 pour le profil xwin7, je suis couvert ?",
+      "expected": {
+        "actions": [
+          "Repond que ce sont DEUX causes distinctes : xwin7 compare le nom de profil en ISO-8859-1 (argument transmis), PowerShell 5.1 relit le script en ANSI (script lui-meme)",
+          "Precise que le remede se recoupe mais que corriger l'une ne dispense pas de verifier l'autre",
+          "Renvoie a reference/safe-methods.md"
+        ]
+      }
     }
   ]
 }

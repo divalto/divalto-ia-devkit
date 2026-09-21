@@ -29,6 +29,34 @@
         "Le rendu est avorte avec un exit code != 0 et un message indiquant le claim concerne",
         "Aucun fichier markdown n'est ecrit"
       ]
+    },
+    {
+      "id": "case-3",
+      "skills": [
+        "rendering-preaction-livrable"
+      ],
+      "query": "Le panorama du livrable affiche endroit_agir et verification_prealable, c'est illisible pour le chef de projet",
+      "files": [],
+      "expected_behavior": [
+        "Constate que le panorama doit afficher le LIBELLE humain, pas le slug de pipeline",
+        "Verifie que facts.selection[].title est present dans le facts.json : c'est le producteur (building-preaction-report) qui l'emet depuis content_types.py",
+        "Si le champ manque, conclut que le facts.json est ANTERIEUR au correctif et qu'il faut le regenerer -- le rendu retombe alors sur le slug par conception",
+        "NE cree PAS de table de libelles dans ce skill : une seconde table divergerait de content_types.py",
+        "Ne deplace pas le panorama vers une autre couche : la couche strategique est definie comme synthetisee depuis facts.selection"
+      ]
+    },
+    {
+      "id": "case-4",
+      "skills": [
+        "rendering-preaction-livrable"
+      ],
+      "query": "Peux-tu deplacer le panorama vers la couche technique ?",
+      "files": [],
+      "expected_behavior": [
+        "Rappelle le contrat de decoupage : la couche strategique est SYNTHETISEE depuis verdict, request, coverage et selection -- le panorama en fait partie par conception",
+        "Explique que le probleme d'origine etait le JARGON, pas l'emplacement, et qu'il est traite par le libelle humain",
+        "Demande un arbitrage explicite avant de modifier la structure du livrable"
+      ]
     }
   ]
 }

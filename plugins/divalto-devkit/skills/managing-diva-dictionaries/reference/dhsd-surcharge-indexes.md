@@ -36,7 +36,7 @@ Avant de surcharger un index :
 
 - Les champs cibles doivent etre declares dans le `.dhsd` de surcharge (cf. [dhsd-surcharge-pattern.md](dhsd-surcharge-pattern.md))
 - Le bloc `[CHAMPR]` avec `nom=U<NomTable>` doit etre present
-- La table cible doit etre surchargeable (avoir un container `U<NomTable>` cote standard -- anti-pattern D15)
+- La table cible doit etre surchargeable (avoir un container `U<NomTable>` cote standard -- anti-pattern DICT15)
 
 ---
 
@@ -108,7 +108,7 @@ DateMIndex=<FILETIME courant>        ; nouveau, marque la modif d'index
 
 Conventions :
 
-- `Version=`, `Nom=`, `DateM=` recopies du `[BASE]` standard (anti-pattern D14 sinon)
+- `Version=`, `Nom=`, `DateM=` recopies du `[BASE]` standard (anti-pattern DICT14 sinon)
 - `DateMIndex=` est specifique `[BASEU]`, FILETIME courant
 - `[TABLES]/[/TABLES]` typiquement vide (le merge avec le standard recupere les tables)
 

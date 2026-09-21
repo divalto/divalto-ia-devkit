@@ -32,7 +32,7 @@
         "Resout chaque ligne via R-3 (divaltopath.cfg) puis R-4 (fconfig cle E en fallback) ou R-5 (registre pour /divalto/)",
         "Cherche gtfdd.dhsd dans chaque chemin resolu, dans l'ordre",
         "Retourne le PREMIER hit comme version canonique",
-        "NE FAIT PAS de find aveugle dans C:\\Developpements harmony\\Standard\\Version X.<n>\\ ou autre tree generique",
+        "NE FAIT PAS de find aveugle dans {CHEMIN_ERP_STANDARD} ou autre tree generique",
         "Identifie la version du standard depuis le segment versionne du chemin trouve (ex: v2026_erpX13_p223a -> X.13 patch 223a)",
         "Confirme le chemin trouve au collaborateur avant utilisation (P-B)"
       ]
@@ -45,7 +45,7 @@
       "query": "Je veux creer le compagnon _base.dhsf de ma surcharge gtez077_sqlu.dhsf. Copie le standard.",
       "files": [],
       "expected_behavior": [
-        "REFUSE de faire un find aveugle dans le standard generique C:\\Developpements harmony\\Standard\\Version X.<n>\\",
+        "REFUSE de faire un find aveugle dans le standard generique {CHEMIN_ERP_STANDARD}",
         "Applique R-13 pour trouver la version canonique de gtez077_sql.dhsf via le search path du workspace",
         "Cible la copie depuis le chemin resolu via R-3/R-4 (typiquement /sources/v<version>/...), PAS depuis le tree generique",
         "Nomme le compagnon selon la convention deterministe : <nom_standard>_base.dhsf (PAS <prefixe>_base.dhsf)",
@@ -195,10 +195,72 @@
         "Applique R-7 : parse divaltoserver.cfg et cherche l'entree dont NAME matche 'DIVALTO_DEMO' (insensible a la casse)",
         "Si SQLPATH non vide : retourne ce chemin (source: 'cfg')",
         "Si SQLPATH vide : applique le fallback <DIVA_ROOT>/<db>/ (source: 'fallback_diva_root')",
-        "Si la base n'est pas dans divaltoserver.cfg : tente R-8 (fconfig cle B) -- actuellement stub, retourne P-A 'R-8 non implemente'",
+        "Si la base n'est pas dans divaltoserver.cfg : tente le repli par la cle B de fconfig.dhfd -- actuellement stub, retourne une erreur qui dit que ce repli n'est pas implemente",
         "Verifie que le chemin SQL resolu existe sur disque",
         "Verifie que fhsql.dhfi + fhsql.dhfd sont presents (prerequis pour R-9 -- extraction DSN)",
         "Genere un warning R-9 si fhsql.dhfi ou .dhfd absent"
+      ]
+    },
+    {
+      "id": "case-13-detect-version-for-mcp",
+      "skills": [
+        "understanding-integrator-workspace"
+      ],
+      "query": "On va interroger diva-mcp. Quelle version dois-tu utiliser ?",
+      "files": [],
+      "expected_behavior": [
+        "R-17 : detecte la version depuis le chemin du standard resolu (repobjet du .dhpt / implicite [cheminStd]) -- ne demande PAS la version sans l'avoir cherchee",
+        "Passe la majeure marketing (X.13 / X.12) au parametre version de diva-mcp ; n'utilise PAS versioncible (runtime, ex. 413)",
+        "Ne presume PAS le nommage du segment versionne : v2026_erpX13_p223a n'est qu'un exemple, derive selon la convention du poste (R-16)",
+        "La 1re fois de la session : fait VALIDER la version via AskUserQuestion en pre-remplissant la version detectee comme option recommandee (preuve dans l'intitule, repobjet=...), AVANT tout appel diva-mcp -- PAS un simple 'correct ?' en texte libre (le hook check_mcp_version consomme la reponse AskUserQuestion comme voix utilisateur et debloque la session)",
+        "En migration : propose source ET cible dans l'AskUserQuestion (l'implicite pointe souvent la version source, pas la cible)",
+        "Une fois choisie : reutilise SANS re-demander pour le reste de la session ; optionnellement consignee en poste-conventions.md pour pre-remplir les sessions suivantes",
+        "Ne passe jamais une version a diva-mcp silencieusement (risque de mauvais snapshot sur poste multi-versions)"
+      ]
+    },
+    {
+      "id": "case-14-t000-tabtyp-scope",
+      "skills": [
+        "understanding-integrator-workspace"
+      ],
+      "query": "T021 renvoie 0 ligne pour le dossier 998, donc il n'y a pas de taux de change parametre ?",
+      "files": [],
+      "expected_behavior": [
+        "Ne conclut PAS a l'absence de parametrage sur la seule requete filtree par dossier",
+        "Rappelle le mecanisme T000/TABTYP : lire T000.TABTYP_0021 ; si 2 (commune), les enregistrements vivent sur le dossier commun 999",
+        "Oriente vers une requete sur DOS='999' pour une table commune",
+        "Traite les valeurs T007=2 / T013=2 / T021=2 / T005=1 comme des exemples version/config-specifiques, pas une liste figee -- toujours lire T000 sur la base cible",
+        "L'execution SQL automatisee (check_table_scope.py) est deferee au skill querying-client-sql"
+      ]
+    },
+    {
+      "id": "case-15-no-registry-fallback",
+      "skills": [
+        "understanding-integrator-workspace"
+      ],
+      "query": "_resolver.py --discover echoue : pas de cle registre Divalto sur ce poste portable.",
+      "files": [],
+      "expected_behavior": [
+        "Ne traite pas l'absence de registre comme une impasse : c'est un cas courant (poste portable / install non-standard)",
+        "Deduit <DIVA_ROOT> et les alias depuis la structure physique reelle du disque, jamais un chemin devine",
+        "P-B : presente les valeurs deduites (racine, alias) au collaborateur et attend confirmation avant usage",
+        "Ne presume aucune racine ni convention (la structure varie d'un poste a l'autre)",
+        "Une fois confirmee : capture en R-16 (poste-conventions.md) pour ne pas re-deduire a chaque session"
+      ]
+    },
+    {
+      "id": "case-16-suffixe-u-vs-entete",
+      "skills": [
+        "understanding-integrator-workspace",
+        "managing-diva-projects"
+      ],
+      "query": "L'audit de workspace me signale que 'addon mercure ieu.dhpt' devrait avoir un en-tete xwin-s-projet. Je change ?",
+      "expected_behavior": [
+        "NON : l'EN-TETE fait foi, le suffixe u du nom n'est qu'une convention de nommage -- un nom peut finir par la lettre u pour une raison purement lexicale (ici ie-u)",
+        "Explique que changer l'en-tete transformerait un projet standard en surcharge declaree : le conseil prescriptif d'origine etait activement nuisible, c'est pourquoi le constat est passe en `warning` et ne prescrit plus rien",
+        "Sait comment trancher : c'est l'en-tete qui determine la nature du projet, pas son nom -- si le projet est bien standard, il n'y a rien a corriger",
+        "Ne compte pas ce constat comme une erreur de l'audit (summary.errors)",
+        "Coherent avec `managing-diva-projects`, ou la meme lecon s'applique a PROJ17 et au garde-fou de add_to_project.py : la surcharge d'une .dhps se lit a son en-tete xwin-s-sprojet, jamais a son nom"
       ]
     }
   ]

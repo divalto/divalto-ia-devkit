@@ -1,7 +1,7 @@
 """Consulte le catalog.json des skills DIVA selon plusieurs modes.
 
 Modes :
-  overview               Panorama des 8 workflows avec skills et summaries
+  overview               Panorama des workflows avec skills et summaries
   detail <nom>           Fiche complete d'un skill
   search <mots-cles>     Recherche insensible a la casse
   workflow <id>          Liste les skills d'un workflow
@@ -189,8 +189,11 @@ def main() -> int:
     p_search = sub.add_parser("search", help="Recherche par mot-cle")
     p_search.add_argument("term", help="Terme a chercher")
 
+    # La liste des ids se LIT dans le catalogue. Codee en dur, elle avait omis
+    # `migrate` -- un parcours declare dont le partenaire n'entendait jamais parler.
+    ids_parcours = ", ".join(w["id"] for w in load_catalog().get("workflows") or [])
     p_wf = sub.add_parser("workflow", help="Liste les skills d'un workflow")
-    p_wf.add_argument("id", help="Id du workflow (analyze, create, modify, files, isam, validate, test_doc, reference)")
+    p_wf.add_argument("id", help="Id du workflow (%s)" % ids_parcours)
 
     p_verb = sub.add_parser("verb", help="Liste les skills d'un verbe")
     p_verb.add_argument("verb", help="Verbe (generating, reading, writing, managing, ...)")

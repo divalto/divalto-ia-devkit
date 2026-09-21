@@ -9,7 +9,7 @@ Sources (toutes passees en CLI, aucune ref en dur) :
 - `--dict` : chemin .dhsd (optionnel, pour reference dans meta)
 
 Produit un YAML partiel conforme a schemas/entity.yaml, couche technical renseignee,
-couche business laissee pour enrichissement humain au CP3.
+couche business laissee pour enrichissement humain par le collaborateur.
 
 Usage :
   py extract_entity.py --entity CLI --module DAV --base GTFPCF \\
@@ -30,7 +30,8 @@ except ImportError:
     sys.exit(2)
 
 
-# Audit canonique DIVA (cf. docs/DICTIONNAIRE-DHSD.md) -- detecte dans la liste des champs
+# Audit canonique DIVA (cf. managing-diva-dictionaries, reference/dhsd-5-zones.md)
+# -- detecte dans la liste des champs
 AUDIT_FIELD_NAMES = {
     "Ce1", "Dos", "UserCr", "UserMo", "UserCrDh", "UserMoDh", "Filler",
     # variantes en majuscules utilisees en SQL
@@ -42,7 +43,7 @@ def sql_to_nature(sql_type: str, length) -> str:
     """Devine une Nature DIVA approximative depuis un type SQL.
 
     Imparfait : le .dhsd est la source de verite pour les Natures.
-    Cette heuristique fournit un point de depart a corriger au CP3.
+    Cette heuristique fournit un point de depart, a corriger par le collaborateur lors de l'enrichissement narratif.
     """
     if not sql_type:
         return "?"

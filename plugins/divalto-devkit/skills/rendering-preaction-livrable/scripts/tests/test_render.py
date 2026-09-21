@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import json
+import re
 import sys
 import unittest
 from pathlib import Path
@@ -102,12 +103,43 @@ class TestValidator(unittest.TestCase):
     def test_detects_x12_marker(self):
         md = "Cette piste est [X.12] advisory."
         violations = validate_livrable(md)
-        self.assertTrue(any("X.12" in v for v in violations))
+        self.assertTrue(any("marqueur de statut" in v for v in violations))
 
-    def test_detects_confirme_x13(self):
-        md = "La procedure [CONFIRME X.13] existe."
-        violations = validate_livrable(md)
-        self.assertTrue(any("X.12/X.13" in v for v in violations))
+    def test_detects_status_markers_toutes_formes(self):
+        """Aucun marqueur de statut ne doit fuir dans le livrable externe.
+
+        Le test porte sur le COMPORTEMENT (le marqueur est-il intercepte ?), pas sur le
+        libelle du message -- l'assertion precedente cherchait la chaine "X.12/X.13" dans
+        le message, ce qui la rendait fragile au moindre reformulage.
+
+        Les formes sans numero de version sont les plus importantes : `verify_x13.py` emet
+        desormais des statuts NEUTRES (il lit la racine qu'on lui donne sans savoir quelle
+        version elle contient). Un garde-fou exigeant `X.12`/`X.13` apres le mot de statut
+        les laissait FUIR -- et laissait deja fuir `[CONFIRME X.7]` chez un partenaire
+        travaillant contre une autre version.
+        """
+        formes = [
+            "[X.12]", "[X.13]", "[X.7]", "[X.11]",
+            "[CONFIRME]", "[DISPARU]", "[NOUVEAU]",
+            "[CONFIRME X.13]", "[DISPARU X.12]", "[NOUVEAU X.7]",
+        ]
+        for marqueur in formes:
+            with self.subTest(marqueur=marqueur):
+                violations = validate_livrable(f"La procedure {marqueur} existe.")
+                self.assertTrue(
+                    any("marqueur de statut" in v for v in violations),
+                    f"{marqueur} a fui dans le livrable externe",
+                )
+
+    def test_texte_propre_sans_marqueur_passe(self):
+        """Garde-fou : le motif elargi ne doit pas intercepter du texte legitime."""
+        for md in ("La procedure existe et le comportement est conforme.",
+                   "Voir la section [Analyse] du document.",
+                   "Le tableau [1] recapitule les cas."):
+            with self.subTest(md=md):
+                violations = validate_livrable(md)
+                self.assertFalse([v for v in violations if "marqueur de statut" in v],
+                                 f"faux positif sur : {md}")
 
     def test_detects_todo(self):
         md = "TODO : verifier ce point."
@@ -209,6 +241,94 @@ class TestEmptyLayers(unittest.TestCase):
         # doit etre absente si aucun action_critique ne peut etre determine
         # (le template itere sur action_critique seulement si pose)
         self.assertIn("**Verdict**", rendered)
+
+
+class TestPanoramaLibelles(unittest.TestCase):
+    """Le panorama de la couche strategique ne doit pas exposer le jargon du pipeline.
+
+    Cette couche s'adresse a un **chef de projet** (2 minutes, savoir *quoi*). Un retour
+    terrain a signale qu'elle affichait les slugs bruts -- `endroit_agir`,
+    `verification_prealable` -- et que le lecteur avait du demander ce que ca voulait dire.
+
+    Le libelle vient de `facts.selection[].title`, emis par le skill amont depuis
+    `content_types.py`. **Aucune table de libelles n'est tenue ici** : deux tables
+    finiraient par diverger.
+    """
+
+    TITRES = {
+        4: "Endroit ou agir", 10: "Verification prealable (commandes)",
+        7: "Constantes et conventions metier", 1: "Exemples de code DIVA",
+        3: "Etude d'impact", 8: "Parametrage dossier",
+        5: "Pistes de recherche complementaires", 2: "Fonctions du langage DIVA utiles",
+        6: "Points d'attention",
+    }
+
+    def _panorama(self, facts):
+        lignes = [l for l in _render(facts).split("\n")
+                  if l.startswith("Types inclus") or l.startswith("Types omis")]
+        self.assertTrue(lignes, "le panorama a disparu de la couche strategique")
+        return "\n".join(lignes)
+
+    def _avec_titres(self):
+        facts = copy.deepcopy(_load_fixture())
+        for s in facts["selection"]:
+            s["title"] = self.TITRES[s["id"]]
+        return facts
+
+    def test_panorama_affiche_le_libelle_humain(self):
+        panorama = self._panorama(self._avec_titres())
+        self.assertIn("Endroit ou agir", panorama)
+        self.assertIn("Fonctions du langage DIVA utiles", panorama)
+
+    def test_aucun_slug_de_pipeline_dans_le_panorama(self):
+        """L'invariant : c'est l'ABSENCE des slugs qui prouve l'intention tenue."""
+        panorama = self._panorama(self._avec_titres())
+        for slug in ("endroit_agir", "verification_prealable", "parametrage_dossier",
+                     "constantes_metier", "pistes_recherche", "fonctions_langage"):
+            self.assertNotIn(slug, panorama,
+                             "le slug %r reste visible dans une couche destinee a un "
+                             "chef de projet" % slug)
+
+    def test_repli_sur_le_slug_si_le_libelle_manque(self):
+        """Retrocompatibilite : un facts.json anterieur n'a pas le champ `title`."""
+        facts = copy.deepcopy(_load_fixture())
+        for s in facts["selection"]:
+            s.pop("title", None)
+        panorama = self._panorama(facts)
+        self.assertIn("endroit_agir", panorama,
+                      "sans libelle, le panorama doit retomber sur le slug -- pas se vider")
+
+    def test_libelle_vide_traite_comme_absent(self):
+        facts = copy.deepcopy(_load_fixture())
+        for s in facts["selection"]:
+            s["title"] = ""
+        panorama = self._panorama(facts)
+        self.assertIn("endroit_agir", panorama,
+                      "un libelle vide doit se comporter comme un libelle absent")
+
+    def test_aucune_table_de_libelles_dans_ce_skill(self):
+        """Garde-fou d'architecture : le libelle vient de l'amont, pas d'ici.
+
+        Une seconde table de libelles a cote de `content_types.py` divergerait -- c'est
+        le motif d'asymetrie entre scripts freres que le workspace suit.
+        """
+        # Chercher un USAGE, pas une MENTION : les commentaires citent les slugs pour
+        # expliquer POURQUOI on ne les affiche pas. Ce controle les retire d'abord --
+        # sans quoi il tombe sur l'explication de la regle qu'il fait respecter.
+        # (Il l'a fait au premier lancement.)
+        skill = Path(__file__).resolve().parents[2]
+        for chemin in list(skill.rglob("*.py")) + list(skill.rglob("*.j2")):
+            if "tests" in chemin.parts:
+                continue
+            texte = chemin.read_text(encoding="utf-8")
+            texte = re.sub(r"\{#.*?#\}", "", texte, flags=re.S)          # commentaires Jinja
+            texte = re.sub(r"^\s*#.*$", "", texte, flags=re.M)           # commentaires Python
+            texte = re.sub(r'"""(?:.|\n)*?"""', "", texte)               # docstrings
+            for slug in ("endroit_agir", "verification_prealable", "constantes_metier"):
+                self.assertNotIn(
+                    slug, texte,
+                    "%s cite le slug %r hors commentaire : une table de libelles locale "
+                    "est en train d'apparaitre" % (chemin.name, slug))
 
 
 if __name__ == "__main__":

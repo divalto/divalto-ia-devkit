@@ -26,7 +26,7 @@
       "files": [],
       "expected_behavior": [
         "Parse le rapport avec parse_compilation.py --path",
-        "Extrait les 3 erreurs avec leur contexte (ligne precedente = fichier source)",
+        "Extrait les 3 erreurs avec leur fichier source (cherche sur la ligne d'erreur, sinon sur la continuation 'Fichier:', sinon dans le contexte precedent -- jamais la ligne precedente seule)",
         "Pour chaque erreur : affiche le message, le fichier source, et le contexte",
         "Propose des pistes de correction basees sur le type d'erreur (syntaxe, fichier manquant, encodage)"
       ]
@@ -39,7 +39,7 @@
       "query": "Je veux compiler mais le profil n'est pas trouve. Le message dit 'Profil absent du projet'.",
       "files": [],
       "expected_behavior": [
-        "Identifie le probleme : encodage du nom de profil (P14/P15)",
+        "Identifie le probleme : encodage du nom de profil (PROJ14/PROJ15)",
         "Verifie l'encodage du script .ps1 avec file --mime-encoding",
         "Si UTF-8 : propose la conversion en ISO-8859-1 avec iconv",
         "Explique que l'accent sur developpement doit etre 0xE9 (ISO-8859-1), pas 0xC3A9 (UTF-8)"
@@ -68,9 +68,196 @@
       "files": [],
       "expected_behavior": [
         "Explique que ce n'est PAS un echec : rien a recompiler (build incremental) ou deja compile ailleurs",
-        "Le verdict reste success=true avec up_to_date=true",
-        "Ne confond pas une ligne de detail 'Erreur 152 : ...' avec la ligne de resume 'Erreur(s)=N' : le succes se decide sur 'Erreur(s)=0'",
+        "Le verdict reste success=true avec up_to_date=true -- SEULEMENT si le rapport est propre",
+        "Ne confond pas une ligne de detail 'Erreur 152 : ...' avec le resume : le succes se decide sur la regle de verdict complete ('[TOTAL_ERRORS]0' ou 'Erreur(s)=0', ET aucune [ERROR], ET aucune erreur hors-compilation, ET aucune interruption)",
+        "CAVEAT #310 : si 'a jour' s'accompagne de 'N ERREUR(S) autre(s)' / 'absent ... Code=', c'est un FAUX positif (mauvais implicite) -> success=false (cf. case-7)",
         "Si une recompilation etait attendue, en conclut que la source n'a pas change"
+      ]
+    },
+    {
+      "id": "case-6-format-total-errors",
+      "skills": [
+        "compiling-diva-projects"
+      ],
+      "query": "Le rapport d'un build incremental ne contient pas de ligne 'Erreur(s)=', seulement '[TOTAL_ERRORS]0' et des lignes [INFO]. Est-ce parsable ?",
+      "files": [],
+      "expected_behavior": [
+        "Reconnait que le build INCREMENTAL ne produit PAS de resume francais 'Erreur(s)=' -- seul le buildall en produit un",
+        "Traite '[TOTAL_ERRORS]N' comme resume de 1re classe (source du compte d'erreurs)",
+        "'[TOTAL_ERRORS]0' + aucune [ERROR]/anomalie -> success=true",
+        "Ne conclut PAS 'rapport illisible' faute de ligne 'Erreur(s)='"
+      ]
+    },
+    {
+      "id": "case-7-faux-positif-mauvais-implicite",
+      "skills": [
+        "compiling-diva-projects"
+      ],
+      "query": "Le rapport dit '[TOTAL_ERRORS]0' et 'Le projet est a jour' mais aussi '15 ERREUR(S) autre(s) que des erreurs de compilation' et des lignes 'absent ou inaccessible. Code=0x14'. Compilation reussie ?",
+      "files": [],
+      "expected_behavior": [
+        "NON, ce n'est PAS un succes malgre [TOTAL_ERRORS]0 et 'a jour' (faux positif #310)",
+        "Detecte les erreurs HORS compilation ('N ERREUR(S) autre(s)' / 'absent ou inaccessible. Code=') -> success=false + other_errors",
+        "Diagnostique la cause probable : l'implicite / environnement actif du poste ne correspond pas au workspace du .dhpt (aucune source resolue, rien compile) -- valider via understanding-integrator-workspace",
+        "Oriente vers la verification de l'environnement charge (cf. understanding-integrator-workspace)"
+      ]
+    },
+    {
+      "id": "case-8-build-interrompu",
+      "skills": [
+        "compiling-diva-projects"
+      ],
+      "query": "Le rapport se termine par 'Compilation interrompue. Erreur(s) 0' (ou 'Construction du projet arretee' / 'Fin anormale'). C'est un succes puisque 0 erreur ?",
+      "files": [],
+      "expected_behavior": [
+        "NON : un build INTERROMPU/abandonne affiche 'Erreur(s) 0' mais les objets ne sont PAS tous a jour -> jamais un succes",
+        "Detecte l'interruption ('Compilation interrompue' / 'Construction du projet arretee' / 'Fin anormale' / 'abandon') -> success=false + build_incomplet=true",
+        "Distingue ce cas d'un vrai 'projet a jour' (qui, lui, est un succes)",
+        "Recommande de relancer une compilation complete (buildall) pour un etat coherent"
+      ]
+    },
+    {
+      "id": "case-9-utilisateur-util-dhpt",
+      "skills": [
+        "compiling-diva-projects"
+      ],
+      "query": "Je compile un .dhpt sans passer --user. Quel utilisateur Harmony est utilise ?",
+      "files": [],
+      "expected_behavior": [
+        "compile_project.py lit le champ util=\"...\" du .dhpt et l'utilise -- ordre --user > util= > X_USER > USERNAME (#235)",
+        "Ne tombe PAS directement sur le USERNAME Windows en ignorant le util= (source de compil sous le mauvais utilisateur Harmony)",
+        "Si --user est passe ET contredit util= du .dhpt : AVERTIT (mais respecte --user, prioritaire)",
+        "Sans aucun user resolu : alerte (xwin7 risque le crash ExitCode -805306369)"
+      ]
+    },
+    {
+      "id": "case-10-xwin7-path-hors-C",
+      "skills": [
+        "compiling-diva-projects"
+      ],
+      "query": "Le runtime Divalto est sur K:\\Divalto\\Sys, pas C:\\divalto\\sys. Je passe --xwin7-path explicite.",
+      "files": [],
+      "expected_behavior": [
+        "Le working directory (Set-Location du .ps1) est DERIVE du dossier de --xwin7-path, pas C:\\divalto\\sys code en dur (#301)",
+        "Sur un poste ou C:\\divalto\\sys n'existe pas, le .ps1 n'avorte plus au Set-Location avant meme de lancer xwin7",
+        "Le Start-Process cible bien le xwin7.exe de --xwin7-path"
+      ]
+    },
+    {
+      "id": "case-11-discipline-environnement",
+      "skills": [
+        "compiling-diva-projects",
+        "understanding-integrator-workspace"
+      ],
+      "query": "La compilation echoue sur 'Module X.DHOP absent ou inaccessible' (ou construit les objets depuis une autre branche) alors que les fichiers existent.",
+      "files": [],
+      "expected_behavior": [
+        "Comprend que la compilation resout les sources via l'ENVIRONNEMENT / implicite ACTIF du poste, pas via --project seul (#161/#345)",
+        "Ne soupconne PAS d'abord le code / le harness : un environnement mal charge est la cause frequente (fichiers presents mais hors du perimetre resolu)",
+        "Delegue la verification a understanding-integrator-workspace (coherence implicite <-> .dhpt) ; rappelle que xwin7 doit tourner DANS l'environnement charge (#196)",
+        "Ce skill ne bascule PAS d'environnement (outillage du poste) ; les fausses erreurs 'Module absent' sont deja bloquees par le verdict (success=false, cf. #310)"
+      ]
+    },
+    {
+      "id": "case-12-ou-compiler-source-neuf",
+      "skills": [
+        "compiling-diva-projects",
+        "understanding-integrator-workspace"
+      ],
+      "query": "J'ai cree un nouveau fichier source .dhsp qui n'est encore declare dans aucun projet. Comment le compiler pour verifier qu'il compile ?",
+      "files": [],
+      "expected_behavior": [
+        "Compile dans la structure REELLE d'abord : si le source appartient (ou peut etre rattache) a un .dhpt/.dhps, compiler via le vrai .dhpt avec -sousproject/-source (chirurgical)",
+        "En interactif : demande a l'utilisateur dans quel sous-projet cabler le source neuf, plutot que de fabriquer un mini-projet",
+        "Le harness standalone est un DERNIER RECOURS (source hors de tout .dhps ET mode autonome sans interlocuteur) -- pas le premier choix",
+        "Si harness : generate_harness.py --from-dhpt <un .dhpt reel du workspace> EMPRUNTE la config (profil, implicite, util, cheminbases) -- aucune valeur poste en dur ; le .dhpt modele est celui identifie par understanding-integrator-workspace, pas devine",
+        "Compile ensuite via compile_project.py en repassant le borrowed_profile retourne ; n'ajoute PAS de [communs] (un source qui a besoin d'un module commun n'est pas isolable -> vrai .dhpt)"
+      ]
+    },
+    {
+      "id": "case-13-invocation-ps1-poste-verrouille",
+      "skills": [
+        "compiling-diva-projects"
+      ],
+      "query": "Sur mon poste, 'powershell -ExecutionPolicy Bypass -File' est bloque (strategie d'execution GPO ou antivirus). La compilation via compile_project.py peut-elle marcher quand meme ?",
+      "files": [],
+      "expected_behavior": [
+        "compile_project.py n'utilise PAS -ExecutionPolicy Bypass -File : il invoque le .ps1 LOCAL via l'operateur d'appel 'powershell -NoProfile -Command \"& '<ps1>'\"' (#217)",
+        "Explique pourquoi : sur poste verrouille, -ExecutionPolicy Bypass en ligne de commande est soit surcharge par une GPO MachinePolicy (script refuse), soit signale comme IOC par l'EDR (process tue)",
+        "Un script LOCAL fraichement genere s'execute sous la policy usuelle RemoteSigned sans drapeau de bypass",
+        "La lecture ISO-8859-1 du .ps1 (donc le profil accentue) est identique a -File : #217 ne casse pas le traitement du profil accentue"
+      ]
+    },
+    {
+      "id": "case-14-sousproject-surcharge-nom-standard",
+      "skills": [
+        "compiling-diva-projects",
+        "managing-diva-projects"
+      ],
+      "query": "Je veux compiler en cible un sous-projet de surcharge (nom finissant par 'u', ex '<base>u.dhps'). -sousproject '<base>u.dhps' repond 'Sous projet inexistant dans le projet'. Pourquoi ?",
+      "files": [],
+      "expected_behavior": [
+        "Explique qu'une .dhps de surcharge (<base>u.dhps) n'est jamais ciblable directement : la regle PROJ17 (managing-diva-projects) l'exclut de [sousprojets], donc xwin7 ne la trouve pas comme sous-projet",
+        "Recommande de passer le nom STANDARD sans 'u' : -sousproject '<base>.dhps' -- xwin7 resout le sous-projet standard et applique la surcharge automatiquement (#224)",
+        "Corollaire #308 : s'il n'existe aucun sous-projet standard a cibler, -sousproject est inoperant pour les deux noms -> se rabattre sur buildall global (cout cache de PROJ17) ou un harness --from-dhpt",
+        "Ne conclut PAS que le fichier de surcharge est absent/casse : c'est le mode de ciblage qui est en cause"
+      ]
+    },
+    {
+      "id": "case-15-build-bloque-fichiers-tiers",
+      "skills": [
+        "compiling-diva-projects"
+      ],
+      "query": "Le buildall du .dhpt parent echoue sur des fichiers sans rapport avec ma modif (un source standard absent, une erreur de parentheses dans un module tiers). Ma modif est-elle cassee ?",
+      "files": [],
+      "expected_behavior": [
+        "NON : un echec sur des fichiers HORS de la modif n'invalide pas la modif (#200)",
+        "Valide uniquement le fichier modifie en chirurgical : -sousproject <dhps> -source <basename> (couplage obligatoire)",
+        "Si le sous-projet lui-meme est inatteignable (surcharge sans cible standard, #308), passe par un harness --from-dhpt",
+        "Ne declare pas 'ma modif casse le build' sur la foi d'un echec tiers ; distingue le perimetre de la modif du reste du projet"
+      ]
+    },
+    {
+      "id": "case-16-harness-multi-sources-dependance-locale",
+      "skills": [
+        "compiling-diva-projects"
+      ],
+      "query": "Mon .dhsp appelle un .dhop local (un autre .dhsp du meme lot, pas un objet standard ERP) qui n'est pas encore precompile. Compiler mon .dhsp seul echoue.",
+      "files": [],
+      "expected_behavior": [
+        "Reconnait que compiler le .dhsp seul echoue quand une dependance locale (.dhop non precompile dans l'ERP) est appelee (#28)",
+        "Passe TOUTES les sources interdependantes ensemble : generate_harness.py --sources A.dhsp B.dhsp (compilation en une passe)",
+        "N'ajoute PAS la dependance en [communs] (ce n'est pas un module framework) : elle va dans les sources du harness",
+        "Distingue une dependance locale non precompilee d'un objet standard ERP (qui, lui, est deja compile et resolu via l'implicite)"
+      ]
+    },
+    {
+      "id": "case-17-dhps-orpheline",
+      "skills": [
+        "compiling-diva-projects"
+      ],
+      "query": "Une .dhps existe sur disque mais aucun .dhpt du workspace ne la reference dans [sousprojets]. -sousproject echoue avec 'inexistant'. Comment la compiler ?",
+      "files": [],
+      "expected_behavior": [
+        "Constate que -sousproject echoue car l'ancre n'est declaree dans aucun .dhpt (grep -l '<base>.dhps' projets/*.dhpt -> vide) -- #216",
+        "Ne s'acharne PAS sur -sousproject : reconstruit un harness reprenant le bloc [fichiers] de la .dhps orpheline",
+        "generate_harness.py --from-dhpt '<un .dhpt du workspace>' --sources <les fichiers du bloc [fichiers]> -- config empruntee au vrai .dhpt, pas inventee",
+        "Compile ensuite via compile_project.py avec le borrowed_profile retourne"
+      ]
+    },
+    {
+      "id": "case-18-erreur-99-mot-inconnu",
+      "skills": [
+        "compiling-diva-projects",
+        "coding-diva-advanced"
+      ],
+      "query": "Ma compilation sort 'Erreur 99 : Mot inconnu : G3XZ'. Le nom existe pourtant dans le standard, et j'ai bien declare le module qui le contient.",
+      "files": [],
+      "expected_behavior": [
+        "Ne conclut PAS a une faute de frappe : enumere les trois causes dans l'ordre d'elimination -- implicite actif, declaration Module manquante, enregistrement non declare localement (#176, #178)",
+        "Ecarte d'abord la cause environnement : des 'Module absent' EN CASCADE sur des fichiers qui existent designent l'implicite actif, pas le source",
+        "Pour un enregistrement, prescrit la declaration locale Public Record '<dico>.dhsd' <TYPE> <NOM> et dit qu'ajouter un Module ne l'apportera jamais",
+        "Renvoie vers coding-diva-advanced (reference/overwrite-pattern.md) pour la portee de Module"
       ]
     }
   ]

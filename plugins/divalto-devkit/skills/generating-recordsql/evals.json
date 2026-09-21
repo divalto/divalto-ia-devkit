@@ -13,8 +13,8 @@
       "expected_behavior": [
         "Fichier genere en ISO-8859-1 + CRLF",
         "Contient <RecordSql Name=FamRgltRtl>",
-        "Contient RtlFamRglt.Dos = MZ.Dos (filtre multi-dossier R01)",
-        "Contient overwrittenby (R02)",
+        "Contient RtlFamRglt.Dos = MZ.Dos (filtre multi-dossier RSQ01)",
+        "Contient overwrittenby (RSQ02)",
         "Contient DefaultDictionary=RTLFDD.dhsd",
         "Cases WHERE : Equal_RgltFam, Like_RgltFam, Like_Libelle, Exists, PK, ID",
         "Cases ORDERBY : Par_Code, Par_Libelle",
@@ -69,7 +69,7 @@
         "SELECT inclut CLI.* ET TIA.TiaLib",
         "FROM inclut CLI ET TIA (jointure implicite)",
         "WHERE contient CLI.Dos = MZ.Dos ET la condition de jointure 'TIA.Dos = MZ.Dos AND CLI.Ticod = TIA.Ticod'",
-        "Validation R01-R08 : 0 erreurs, pas de warning R07 (TIA mentionne dans WHERE)"
+        "Validation RSQ01-RSQ08 : 0 erreurs, pas de warning RSQ07 (TIA mentionne dans WHERE)"
       ]
     },
     {
@@ -85,7 +85,7 @@
         "SELECT inclut GtfArtFam.* ET T007.Lib",
         "FROM contient 'LEFT JOIN T007 ON T007.Dos = MZ.Dos AND T007.Code = GtfArtFam.TypeFam'",
         "WHERE ne contient PAS la condition de jointure T007 (elle est dans le ON)",
-        "Validation R01-R08 : 0 erreurs, pas de warning R08 (LEFT JOIN bien forme)"
+        "Validation RSQ01-RSQ08 : 0 erreurs, pas de warning RSQ08 (LEFT JOIN bien forme)"
       ]
     },
     {
@@ -102,7 +102,7 @@
         "WHERE contient les 2 conditions de jointure + MOUV.Dos = MZ.Dos",
         "3 cases additionnels : 'Case Equal_Ref(char val)', 'Case Like_Ref(char val)', 'Case Between_DateMouv(Date deb, Date fin)' (casse des types libre)",
         "Le case Between genere BETWEEN deb AND fin",
-        "Validation R01-R08 : 0 erreurs"
+        "Validation RSQ01-RSQ08 : 0 erreurs"
       ]
     },
     {

@@ -18,7 +18,7 @@ Reference detaillee pour l'etape 17 du workflow `creating-diva-entity` (ajout d'
 
 ## Modele Divalto du menu
 
-Voir la référence navigation ERP (interne) section 2 pour le detail. En synthese :
+Structure complete du menu ERP : skill `testing-erp`, page `reference/menu-structure.md`. En synthese :
 
 - Le menu n'est **pas une arborescence imbriquee** mais un **graphe de regroupements plats**.
 - Chaque entree appartient a un regroupement (code court comme `FIC`, `FICTABPG`, etc.).
@@ -85,7 +85,7 @@ py .claude/skills/writing-isam-files/scripts/write_isam.py \
 
 ## Champs M2 obligatoires
 
-Voir la référence d'intégration zoom (interne) section 5.6 pour la reference complete.
+Reference complete des champs M2 : [isam-fields.md](isam-fields.md) section 2.
 
 ```json
 {
@@ -122,8 +122,8 @@ clic sur l'entree avec **"Type d'enchainement incompatible avec un lancement de
 programme. Type="**, meme si `TypeChain=3` (Zoom) et `Enchain` sont corrects.
 Constate empiriquement le 2026-04-20.
 
-Le layout interne des 600 octets n'est pas encore formellement caracterise
-(cf. la référence navigation ERP (interne) section 4.1c). **Strategie recommandee** : cloner
+Le layout interne des 600 octets n'est pas encore formellement caracterise.
+**Strategie recommandee** : cloner
 le champ `Echange` depuis une entree M2 existante du **meme `TypeChain`**
 (Zoom avec Zoom, Page avec Page, Programme avec Programme), puis adapter
 uniquement les champs distinctifs.
@@ -138,7 +138,7 @@ import subprocess
 result = subprocess.run([
     "py",
     ".claude/skills/reading-isam-files/scripts/read_isam.py",
-    "--file", "C:/Developpements harmony/Standard/Version X.13/Achat-Vente/fichier/g3f.dhfi",
+    "--file", "{CHEMIN_ERP_STANDARD}/Achat-Vente/fichier/g3f.dhfi",
     "--structure", ".claude/skills/reading-isam-files/scripts/structures/structure_xmenuf_m2.json",
     "--key", "A2", "--key-value", "FIC", "--max", "1",
 ], capture_output=True, text=True, encoding="utf-8")
@@ -157,11 +157,11 @@ nouvelle_entree["EnrNo"] = "{enr_unique}"
 > `Echange` comme une string **strip()** (espaces de tete et de fin supprimes).
 > Le reecriture via `write_isam.py` repositionne alors le contenu a l'offset 0
 > du champ, alors que les sous-champs reels (Type tiers, Aide, Masque, ...) sont
-> a des offsets fixes non nuls (cf. la référence navigation ERP (interne) section 4.1c).
+> a des offsets fixes non nuls.
 > En pratique, l'ERP est tolerant sur ce decalage pour les entrees Zoom simples
 > (sous-champs lus a leurs offsets attendus = espaces = vide, mais l'enreg reste
 > exploitable). Pour des entrees complexes (Programme avec Masque/Module), ce
-> decalage **casse** l'execution. Cf. BACKLOG MNU-01 pour la caracterisation et
+> decalage **casse** l'execution. Restent a faire : la caracterisation et
 > l'exposition des sous-champs comme virtual fields dans la structure JSON
 > (permettrait un clone bytes-correct).
 
@@ -176,13 +176,13 @@ nouvelle_entree["EnrNo"] = "{enr_unique}"
   Les valeurs pour `Page` et `Programme` sont differentes — non necessaires pour
   une creation d'entite standard qui aboutit toujours a un zoom.
 
-## Visibilite F7 via M1 dans `a5f.dhfi` (R-002, 2026-04-23)
+## Visibilite F7 via M1 dans `a5f.dhfi` (2026-04-23)
 
 ### Probleme
 
 Apres ecriture M4 (zoom des zooms) et M2 (menu domaine), le zoom peut **rester invisible via F7** dans l'ERP si aucun enreg M1 (`Ce=5`) correspondant n'existe dans `a5f.dhfi`. La declaration M4 est necessaire mais insuffisante pour la visibilite contextuelle.
 
-RETEX R-002 : sur le zoom "Race de chien" (9987), M4 avait ete ecrit mais aucun M1 n'etait present -> zoom invisible jusqu'a l'ajout manuel des M1.
+RETEX : sur le zoom "Race de chien" (9987), M4 avait ete ecrit mais aucun M1 n'etait present -> zoom invisible jusqu'a l'ajout manuel des M1.
 
 ### Pattern M1
 

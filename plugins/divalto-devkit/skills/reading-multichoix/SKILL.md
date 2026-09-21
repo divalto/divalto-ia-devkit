@@ -95,15 +95,25 @@ py .claude/skills/reading-multichoix/scripts/read_multichoix.py \
 |------|-----------|-------------|
 | `--list` | `--file` | Liste les multichoix (Nc, Type dominant, nb entrees) en JSON |
 | `--detail <NC>` | `--file --detail NONOUI` | Dump des entrees du multichoix avec decodage selon son Type |
-| `--all-details` | `--file` | Dump de TOUS les multichoix avec leur type, entries et lookup (Type 3). Destine aux consommateurs machine (ex: pipeline `documenting-erp` -- le script `extract_codified_values.py` vendore ce script). |
+| `--all-details` | `--file` | Dump de TOUS les multichoix en **une passe** : `multichoix` est un **dictionnaire indexe par Nc** (et non une liste comme `--list`), chaque valeur portant `type`, `entries` (liste decodee) et `lookup` pour les Type 3. Destine aux consommateurs machine (ex: pipeline `documenting-erp` -- le script `extract_codified_values.py` vendore ce script). |
 | `--stats` | `--file` | Distribution des Types rencontres (1 / 3 / 4) |
-| `--resolve <NC>` | `--file --resolve AXENO` | **[BACKLOG MC-03]** Resout un lookup Type=3 en lisant la table cible |
+| `--resolve <NC>` | `--file --resolve AXENO` | Resout un lookup Type=3 en lisant la table cible |
 
 Ces modes sont mutuellement exclusifs. Le fichier est toujours passe via `--file` (chemin complet du `gtfdmc.dhfi`).
 
 ---
 
 ## Format de sortie
+
+> **La sortie JSON est en UTF-8**, quelle que soit la console -- le script force son
+> encodage de sortie. Sans cela, Python ecrirait dans l'encodage local (cp1252 sous
+> Windows FR) et une sortie **redirigee** deviendrait illisible pour qui la lit en UTF-8 :
+> les libelles de multichoix sont du francais accentue, un dump `--all-details` du
+> dictionnaire standard porte **842 caracteres accentues**.
+
+> **`multichoix` n'a pas la meme forme selon le mode** : une **liste** pour `--list`, un
+> **dictionnaire indexe par Nc** pour `--all-details`. C'est le piege qui a coute un
+> script a un partenaire -- lire attentivement les deux exemples ci-dessous.
 
 ### `--list`
 
@@ -119,6 +129,54 @@ Ces modes sont mutuellement exclusifs. Le fichier est toujours passe via `--file
     { "nc": "CHOIX_FICJOINT", "type": "4", "entries": 1 }
   ]
 }
+```
+
+Ici `multichoix` est une **liste**, et `entries` un **compteur**.
+
+### `--all-details`
+
+```json
+{
+  "success": true,
+  "file": ".../Achat-Vente/fichier/gtfdmc.dhfi",
+  "total_nc": 879,
+  "multichoix": {
+    "ACOMPTE": {
+      "nc": "ACOMPTE",
+      "type": "1",
+      "entries": [
+        { "ce": "1", "choix": "", "valeur": "" },
+        { "ce": "2", "choix": "#aff_compta", "valeur": "" }
+      ]
+    },
+    "AXENO": {
+      "nc": "AXENO",
+      "type": "3",
+      "entries": [ { "ce": "1" } ],
+      "lookup": { "enreg": "ca", "donnee": "axelibtb", "prefixe": "ca", "ideb": 1, "ifin": 4 }
+    }
+  }
+}
+```
+
+Ici `multichoix` est un **dictionnaire indexe par Nc**, et `entries` la **liste des
+entrees decodees** -- pas un compteur. La cle `lookup` n'est presente que pour les
+**Type=3**.
+
+**Un seul appel suffit** pour obtenir tout le dictionnaire : le fichier est lu en **une
+passe** et les enregistrements regroupes par Nc. Ne pas boucler `--detail` par Nc (N
+lectures ISAM du meme fichier pour rien).
+
+Iteration correcte cote consommateur :
+
+```python
+import json, subprocess
+r = subprocess.run(["py", "read_multichoix.py", "--file", chemin, "--all-details"],
+                   capture_output=True)
+d = json.loads(r.stdout.decode("utf-8"))          # UTF-8 garanti
+for nc, mc in d["multichoix"].items():            # dict, PAS une liste
+    for entree in mc["entries"]:                  # liste d'objets, PAS un compteur
+        traiter(nc, mc["type"], entree)
 ```
 
 ### `--detail <NC>`

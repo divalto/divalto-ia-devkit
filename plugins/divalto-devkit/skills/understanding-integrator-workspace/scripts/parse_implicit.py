@@ -89,15 +89,14 @@ def parse_line(raw_line: str, line_num: int) -> dict:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Parse un fichier implicite Divalto (R-2 + R-6 du skill "
-        "understanding-integrator-workspace).",
+        description="Parse un fichier implicite Divalto.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("--path", required=True, help="Chemin du fichier implicite")
     parser.add_argument(
         "--encoding",
         default="iso-8859-1",
-        help="Encodage du fichier (defaut: iso-8859-1 ; UTF-8 aussi valide per R-6 B1). "
+        help="Encodage du fichier (defaut: iso-8859-1 ; UTF-8 aussi rencontre). "
         "Fallback automatique sur UTF-8 si l'encodage specifie echoue.",
     )
     parser.add_argument(
@@ -105,7 +104,7 @@ def main():
         action="store_true",
         help=(
             "OBLIGATOIRE : confirme que le collaborateur a explicitement valide le "
-            "fichier implicite passe en --path (R-1/P-B). Sans ce flag, le script "
+            "fichier implicite passe en --path. Sans ce flag, le script "
             "refuse de demarrer (exit 3)."
         ),
     )
@@ -115,7 +114,7 @@ def main():
     if not args.confirmed_by_user:
         print(
             f"WARNING: Selection du fichier implicite '{args.path}' non confirmee "
-            f"par l'utilisateur (R-1/P-B). Le skill understanding-integrator-workspace "
+            f"par le collaborateur. Le skill understanding-integrator-workspace "
             f"exige que le fichier implicite soit confirme par le collaborateur avant "
             f"tout parsing. Relancer avec --confirmed-by-user apres validation explicite.",
             file=sys.stderr,

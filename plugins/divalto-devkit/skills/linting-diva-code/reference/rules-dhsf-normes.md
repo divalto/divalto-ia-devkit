@@ -1,6 +1,6 @@
 # Regles normes graphiques masques (.dhsf) -- Fragment reference linting-diva-code
 
-> Source : normes graphiques des masques Divalto (reference interne). Ce fragment documente les 6 regles E16-E21 implementees dans `lint_diva.py`.
+> Normes graphiques des masques Divalto : ce fragment documente les 6 regles E16-E21 implementees dans `lint_diva.py`.
 
 ## E16 -- Champ audit absent de l'onglet Identifiants
 
@@ -65,7 +65,7 @@ Les regex de matching (insensibles a la casse) :
 
 **Note** : `35x130` est une derogation tacite acceptee (73 masques X.13 l'utilisent, validation Stephane 2026-04-21).
 
-## E20 -- Groupbox sous-dimensionne (R-007 2026-04-23)
+## E20 -- Groupbox sous-dimensionne (2026-04-23)
 
 **Severite** : `error`
 

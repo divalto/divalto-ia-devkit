@@ -43,14 +43,62 @@
       "files": [],
       "expected_behavior": [
         "Utilise validate_project.py avec --path et --dhpt",
-        "Verifie P04 (en-tete xwin-sprojet, pas xwin-projet)",
-        "Verifie P06 (pas de virgule dans [includes])",
-        "Verifie P07 (virgule obligatoire dans [fichiers])",
-        "Verifie P09 (zdiva.dhsp present dans [includes])",
-        "Verifie P12 (section [autres] presente)",
-        "Verifie P08 (reference dans [sousprojets] du .dhpt parent)",
-        "Verifie P01/P02 (encodage ISO-8859-1, fins de ligne CRLF)",
+        "Verifie PROJ04 (en-tete xwin-sprojet, pas xwin-projet)",
+        "Verifie PROJ06 (pas de virgule dans [includes])",
+        "Verifie PROJ07 (virgule obligatoire dans [fichiers])",
+        "Verifie PROJ09 (zdiva.dhsp present dans [includes])",
+        "Verifie PROJ12 (section [autres] presente)",
+        "Verifie PROJ08 (reference dans [sousprojets] du .dhpt parent)",
+        "Verifie PROJ01/PROJ02 (encodage ISO-8859-1, fins de ligne CRLF)",
         "Retourne JSON avec valid=true/false, errors et warnings"
+      ]
+    },
+    {
+      "id": "case-4",
+      "skills": [
+        "managing-diva-projects"
+      ],
+      "query": "Valide la .dhps de surcharge 'gt_bp generationu.dhps' avec son .dhpt parent de surcharge",
+      "files": [],
+      "expected_behavior": [
+        "Utilise validate_project.py avec --path et --dhpt",
+        "Detecte la surcharge via l'en-tete xwin-s-sprojet de la .dhps",
+        "N'applique PAS PROJ08 dans ce cas : une .dhps de surcharge ne DOIT PAS figurer dans [sousprojets] (cf. PROJ17, auto-detectee via cheminbases) -> aucune erreur PROJ08 (sinon PROJ08 et PROJ17 se contrediraient)",
+        "La detection est par EN-TETE, pas par suffixe 'u' : une .dhps standard nommee 'menu.dhps' non referencee declenche bien PROJ08 (pas de faux positif)",
+        "Retourne valid=true si le reste de la structure est correct"
+      ]
+    },
+    {
+      "id": "case-5-entete-vs-extension",
+      "skills": [
+        "managing-diva-projects",
+        "linting-diva-code"
+      ],
+      "query": "validate_project.py me repond valid=true et type=dhpt sur un fichier qui s'appelle pourtant mon_sousprojet.dhps. Normal ?",
+      "files": [],
+      "expected_behavior": [
+        "NON : c'etait un defaut. Le type etait deduit de `detect_file_type(lines)`, c'est-a-dire de l'EN-TETE que PROJ04/PROJ05 sont censees valider -- donc un melange en-tete/extension etait invisible par construction et ces deux regles etaient inatteignables",
+        "Explique que le type controle vient desormais de l'EXTENSION du fichier, l'en-tete n'etant plus que ce qu'on lui compare",
+        "Sait lire les deux champs de la sortie : `type` (deduit de l'extension) et `type_annonce_par_entete` (ce que dit la 1re ligne) -- leur divergence EST le defaut",
+        "Attend PROJ04 sur un .dhps mal en-tete et PROJ05 sur un .dhpt mal en-tete : UN code par extension, jamais les deux pour un seul defaut",
+        "Reconnait les 4 en-tetes a leur place, dont les variantes de surcharge `xwin-s-projet` (.dhpt) et `xwin-s-sprojet` (.dhps)",
+        "Coherent avec `linting-diva-code`, qui rend le meme verdict sur les memes fichiers : les deux outils ne doivent pas se contredire sur un meme code de regle"
+      ]
+    },
+    {
+      "id": "case-6-p09-convention",
+      "skills": [
+        "managing-diva-projects"
+      ],
+      "query": "J'ai valide un .dhps du standard pour m'en servir de modele et il ressortait invalide a cause de zdiva.dhsp. Faut-il l'ajouter ?",
+      "files": [],
+      "expected_behavior": [
+        "Repond que PROJ09 audite une CONVENTION de projet, pas un defaut : ne conseille pas d'ajouter `zdiva.dhsp` dans le seul but de faire passer la validation",
+        "Mesure a l'appui : le standard X.13 livre ne met JAMAIS `zdiva.dhsp` dans les [includes] de ses sous-projets (0 / 2304 .dhps), un specifique le fait a 80-98 %",
+        "En deduit pourquoi la regle est hors du jeu par defaut : en `error` et active, elle rendait valid=false sur 100 % des sous-projets du standard -- exactement le cas decrit",
+        "Donne l'activation si la convention du projet est bien d'inclure zdiva.dhsp : `--with-rules PROJ09`",
+        "Sait que `--with-rules` AJOUTE au jeu normal et ne FILTRE pas -- contrairement au `--rules` de linting-diva-code, qui n'execute que les regles nommees",
+        "Ne conclut PAS que les 2304 .dhps du standard sont en defaut"
       ]
     }
   ]

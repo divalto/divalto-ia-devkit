@@ -1,0 +1,6 @@
+[TOTAL_ERRORS]0
+[INFO]---------------Compilation. Reconstruction de tout le projet c:/specifs/monworkspace/projets/monprojet.dhpt (25/08/2026 12:00:00). Profil courant : monprofil---------------
+[INFO]Construction du plan de compilation
+[INFO]Calcul de la liste de compilation des sources
+Fin anormale du compilateur
+Construction du projet arrêtée

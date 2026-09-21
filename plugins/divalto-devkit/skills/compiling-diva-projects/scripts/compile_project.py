@@ -2,7 +2,7 @@
 """Compile un projet Divalto reel (`.dhpt`) via xwin7 en contournant le piege
 d'encodage des profils avec accent (`developpement` avec `\xe9`).
 
-Probleme adresse (R-005 du batch RETEX 2026-05-27) :
+Probleme adresse (2026-05-27) :
   Passer un profil accentue (`developpement`) en argument direct depuis
   PowerShell echoue silencieusement : la session PowerShell 5.1 stocke les
   chaines en UTF-16 LE, la conversion vers les arguments natifs ne preserve
@@ -11,9 +11,11 @@ Probleme adresse (R-005 du batch RETEX 2026-05-27) :
 
 Solution :
   Generer un script .ps1 **en ISO-8859-1 + CRLF** qui contient le nom de
-  profil litteral (`$Profil = "d\xe9veloppement"`), puis l'executer via
-  `powershell -ExecutionPolicy Bypass -File <script.ps1>`. xwin7 recoit
-  alors le profil en ISO-8859-1 natif et matche correctement.
+  profil litteral (`-profile "d\xe9veloppement"`), puis l'executer via
+  l'operateur d'appel `powershell -NoProfile -Command "& '<script.ps1>'"`
+  (PAS `-ExecutionPolicy Bypass -File`, bloque/signale sur poste verrouille --
+  cf. #217 dans le corps). xwin7 recoit alors le profil en ISO-8859-1 natif
+  et matche correctement.
 
 Equivalent fonctionnel de `generate_harness.py` mais pour des projets
 **reels** (pas des harnesses standalone) : le `.dhpt` cible existe deja,
@@ -46,9 +48,13 @@ Sortie JSON (stdout) :
         "stderr_path": "<chemin>"            # capture stderr xwin7
     }
 
+Verdict : DELEGUE a parse_compilation.parse_report (regle unique --).
+Ne fait plus le faux positif #310 (mauvais implicite : "a jour" + "N ERREUR(S) autre(s)"),
+detecte les builds interrompus/abandonnes (#236), traite [TOTAL_ERRORS] en 1re classe.
+
 Exit codes :
-    0 = compilation reussie (Erreur(s)=0 dans le rapport)
-    1 = erreurs de compilation OU erreur utilisateur (input invalide)
+    0 = compilation reussie (0 erreur, aucune anomalie -- verdict parse_compilation)
+    1 = erreurs de compilation / build incomplet OU erreur utilisateur (input invalide)
     2 = erreur interne (parsing rapport echoue, etc.)
     3 = .ps1 genere mais non execute (--no-execute)
 """
@@ -65,6 +71,11 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+# Module frere (meme skill, meme dossier scripts/) : compile_project DELEGUE le verdict
+# (success/errors/build_incomplet) a la regle UNIQUE de parse_compilation.
+# Evite la logique inline divergente qui reproduisait le faux positif #310.
+import parse_compilation
+
 
 DEFAULT_XWIN7_PATH = r"C:\divalto\sys\xwin7.exe"
 VALID_ACTIONS = ("build", "buildall")
@@ -74,7 +85,7 @@ def write_iso(path: Path, content: str) -> None:
     """Ecrit un fichier en ISO-8859-1 + CRLF.
 
     Critique pour le `.ps1` : sans cette discipline, le nom de profil accentue
-    passe en argument echoue (cf. R-005).
+    passe en argument echoue.
     """
     content = content.replace("\r\n", "\n").replace("\r", "\n").replace("\n", "\r\n")
     if content and not content.endswith("\r\n"):
@@ -83,29 +94,52 @@ def write_iso(path: Path, content: str) -> None:
     path.write_bytes(content.encode("iso-8859-1"))
 
 
-def resolve_user(cli_user: str | None) -> str | None:
-    """Reproduit le fallback de `generate_harness.py` (R-008 batch precedent) :
-    --user XX > X_USER non-vide > USERNAME Windows.
+def resolve_user(cli_user: str | None, dhpt_util: str | None = None) -> str | None:
+    """Ordre de fallback (#235) : --user > util= du .dhpt > X_USER > USERNAME.
 
-    Si tout est vide, retourne None et alerte sur stderr (xwin7 risque le crash
-    ExitCode -805306369 avec corruption des objets compiles).
+    #235 : l'ancien ordre ignorait le champ `util="..."` declare dans le .dhpt et
+    tombait directement sur USERNAME Windows -> 1re compilation sous le mauvais
+    utilisateur Harmony. Le `util=` du projet passe donc AVANT les fallbacks poste.
+    Avertit si le user retenu differe du util= declare. Si tout est vide, retourne
+    None et alerte (xwin7 risque le crash ExitCode -805306369, corruption des objets).
     """
     if cli_user:
+        if dhpt_util and cli_user.strip().lower() != dhpt_util.strip().lower():
+            print(f"  WARN: --user={cli_user} differe de util=\"{dhpt_util}\" declare dans le .dhpt (#235).",
+                  file=sys.stderr)
         return cli_user
+    if dhpt_util:
+        return dhpt_util  # voie declarative du projet, avant les fallbacks poste
     env_user = os.environ.get("X_USER", "").strip()
     if env_user:
         return None  # xwin7 lira X_USER directement, ne pas passer -user
     fallback = os.environ.get("USERNAME", "").strip() or None
     if fallback:
         print(
-            f"  INFO: X_USER vide/absente, fallback sur USERNAME={fallback}",
+            f"  INFO: ni --user, ni util= du .dhpt, ni X_USER -- fallback sur USERNAME={fallback}. "
+            f"Verifier que c'est bien l'utilisateur Harmony attendu (#235).",
             file=sys.stderr,
         )
         return fallback
     print(
-        "  WARN: ni --user, ni X_USER, ni USERNAME -- xwin7 risque de crasher (ExitCode -805306369).",
+        "  WARN: ni --user, ni util=, ni X_USER, ni USERNAME -- xwin7 risque de crasher (ExitCode -805306369).",
         file=sys.stderr,
     )
+    return None
+
+
+def parse_util(dhpt_path: Path) -> str | None:
+    """Lit le champ `util="..."` du .dhpt (utilisateur Harmony declare du projet). #235."""
+    try:
+        text = dhpt_path.read_text(encoding="iso-8859-1", errors="replace")
+    except OSError:
+        return None
+    for raw in text.splitlines():
+        s = raw.strip()
+        if s.lower().startswith("util="):
+            val = s[5:].split(",", 1)[0].strip().strip('"')
+            if val:
+                return val
     return None
 
 
@@ -123,7 +157,7 @@ def generate_ps1(
 ) -> str:
     """Construit le contenu PowerShell qui lance xwin7 avec le profil accentue.
 
-    Pieces critiques pour R-005 :
+    Pieces critiques :
     - Le `.ps1` doit etre ecrit en ISO-8859-1 (cf. write_iso) -- xwin7 compare
       le nom du profil sur les octets bruts en ISO-8859-1.
     - Working directory force a `C:\\divalto\\sys` (regle partagee avec
@@ -149,9 +183,14 @@ def generate_ps1(
     args_parts.append("-outputall")
     args_str = " ".join(a for a in args_parts if a)
 
+    # cwd = dossier de xwin7.exe, DERIVE de --xwin7-path. #301 : ne PAS coder
+    # "C:\divalto\sys" en dur -- sur un poste ou Divalto est ailleurs (ex. K:\Divalto\Sys),
+    # un Set-Location vers un chemin inexistant fait avorter tout le .ps1 (Start-Process
+    # jamais atteint) ou masque un faux "a jour".
+    cwd = os.path.dirname(xwin7_path) or "C:\\divalto\\sys"
     ps1_lines = [
         "$ErrorActionPreference = 'Continue'",
-        "Set-Location 'C:\\divalto\\sys'   # cwd obligatoire (cf. SKILL.md)",
+        f"Set-Location '{cwd}'   # cwd = dossier de xwin7 (derive de --xwin7-path, #301)",
         f"$proc = Start-Process -FilePath '{xwin7_path}' "
         f"-ArgumentList '{args_str}' "
         "-Wait -PassThru -NoNewWindow "
@@ -161,64 +200,6 @@ def generate_ps1(
         "exit $proc.ExitCode",
     ]
     return "\n".join(ps1_lines)
-
-
-# Ligne de RESUME : contient "Erreur(s)=" (a ne pas confondre avec une ligne de
-# DETAIL d'erreur commencant par "Erreur ..." -- source du faux negatif #61).
-SUMMARY_ERR_RE = re.compile(r"erreur\(s\)\s*=", re.IGNORECASE)
-# "Le projet est a jour, aucune compilation a effectuer" (#27) -- pas un echec.
-UP_TO_DATE_RE = re.compile(r"aucune compilation", re.IGNORECASE)
-
-
-def parse_summary_line(log_path: Path) -> dict | None:
-    """Lit la LIGNE DE RESUME du rapport xwin7 (celle qui contient 'Erreur(s)=').
-
-    On cible specifiquement 'Erreur(s)=' (et pas une ligne de detail commencant
-    par 'Erreur ...'), sinon faux negatif -- cf. #61 (exit 1 alors que Erreur(s)=0).
-    """
-    if not log_path.is_file():
-        return None
-    try:
-        text = log_path.read_text(encoding="iso-8859-1", errors="replace")
-    except OSError:
-        return None
-    for line in text.splitlines():
-        if SUMMARY_ERR_RE.search(line):
-            summary: dict = {}
-            for token in line.split():
-                if "=" in token:
-                    key, _, value = token.partition("=")
-                    summary[key.rstrip("(s)").lower()] = value
-            if summary:
-                return summary
-    return None
-
-
-def wait_for_summary(log_path: Path, attempts: int = 12, delay: float = 0.5) -> dict | None:
-    """Attend l'apparition de la ligne de resume.
-
-    Le log peut etre visible avec un leger retard apres la fin de xwin7 (flush /
-    antivirus) -- d'ou de faux 'log absent' (#16). On retente quelques fois.
-    """
-    summary = parse_summary_line(log_path)
-    for _ in range(attempts):
-        if summary is not None:
-            return summary
-        time.sleep(delay)
-        summary = parse_summary_line(log_path)
-    return summary
-
-
-def is_up_to_date(log_path: Path) -> bool:
-    """Detecte 'Le projet est a jour, aucune compilation a effectuer' (#27) :
-    build incremental sans rien a recompiler -- ce n'est PAS un echec."""
-    if not log_path.is_file():
-        return False
-    try:
-        text = log_path.read_text(encoding="iso-8859-1", errors="replace")
-    except OSError:
-        return False
-    return bool(UP_TO_DATE_RE.search(text))
 
 
 def parse_profiles(dhpt_path: Path) -> list[str]:
@@ -246,10 +227,17 @@ def parse_profiles(dhpt_path: Path) -> list[str]:
 
 
 def main() -> None:
+    # Sortie UTF-8 (stdout + stderr) : le verdict inclut desormais des messages
+    # [ERROR]/[WARNING] accentues (via parse_compilation) ; sans ca, cp1252 casserait
+    # un json.loads(utf-8) cote appelant. Meme garde-fou que parse_compilation.
+    for _stream in (sys.stdout, sys.stderr):
+        if hasattr(_stream, "reconfigure") and (_stream.encoding or "").lower() != "utf-8":
+            _stream.reconfigure(encoding="utf-8")
+
     parser = argparse.ArgumentParser(
         description=(
             "Compile un projet Divalto reel (.dhpt) via xwin7 en contournant le "
-            "piege d'encodage des profils accentues (R-005)."
+            "piege d'encodage des profils accentues."
         )
     )
     parser.add_argument("--project", required=True, help="Chemin absolu du .dhpt cible")
@@ -358,7 +346,7 @@ def main() -> None:
     stdout_path = ps1_dir / f"compile_project_{ts}_stdout.txt"
     stderr_path = ps1_dir / f"compile_project_{ts}_stderr.txt"
 
-    user = resolve_user(args.user)
+    user = resolve_user(args.user, parse_util(project_path))
 
     ps1_content = generate_ps1(
         xwin7_path=args.xwin7_path,
@@ -388,14 +376,26 @@ def main() -> None:
         sys.stdout.write("\n")
         sys.exit(3)
 
-    # Execution reelle
+    # Execution reelle.
+    # #217 : NE PAS lancer via `powershell -ExecutionPolicy Bypass -File`. Sur un poste
+    # integrateur verrouille, `-ExecutionPolicy Bypass` en ligne de commande est soit
+    # SURCHARGE par une GPO MachinePolicy (le .ps1 est alors refuse : "running scripts is
+    # disabled"), soit SIGNALE comme IOC par l'antivirus/EDR (process tue). On invoque donc
+    # le script LOCAL fraichement genere via l'operateur d'appel `& '<ps1>'`, sans drapeau
+    # de bypass : sous la policy usuelle RemoteSigned, un script LOCAL (sans marque
+    # Zone.Identifier "telecharge") s'execute sans bypass. La lecture du .ps1 (donc le
+    # profil accentue ISO-8859-1) est identique a `-File`.
+    ps1_quoted = str(ps1_path).replace("'", "''")  # echappe une eventuelle apostrophe
     try:
+        # `; exit $LASTEXITCODE` : SANS lui, `-Command "& '<ps1>'"` renvoie toujours
+        # returncode 1 sur tout `exit N` non nul du .ps1 (PowerShell 5.1) -> le champ
+        # `exit_code` du JSON perdrait le vrai code xwin7 (dont le crash -805306369).
+        # Avec, le code est propage fidelement (verifie), sans revenir a `-File` (#217).
         proc = subprocess.run(
             [
                 "powershell",
                 "-NoProfile",
-                "-ExecutionPolicy", "Bypass",
-                "-File", str(ps1_path),
+                "-Command", f"& '{ps1_quoted}'; exit $LASTEXITCODE",
             ],
             capture_output=True, text=True, check=False,
         )
@@ -408,29 +408,34 @@ def main() -> None:
     result["powershell_stdout"] = (proc.stdout or "").strip()
     result["powershell_stderr"] = (proc.stderr or "").strip()
 
-    summary = wait_for_summary(log_path)
-    if summary is not None:
-        result["summary"] = summary
-        erreurs_str = summary.get("erreur", "0")
-        try:
-            erreurs = int(erreurs_str)
-        except ValueError:
-            erreurs = -1
-        result["success"] = (erreurs == 0)
-    elif is_up_to_date(log_path):
-        # "Le projet est a jour, aucune compilation a effectuer" : pas un echec (#27)
-        result["summary"] = None
-        result["up_to_date"] = True
-        result["success"] = True
+    # Verdict DELEGUE a parse_compilation.parse_report (source unique --).
+    # On attend d'abord que le log soit lisible (race de flush / antivirus #16). xwin7 a
+    # deja quitte (Start-Process -Wait), donc le fichier est complet une fois apparu.
+    for _ in range(12):
+        if log_path.is_file() and log_path.stat().st_size > 0:
+            break
+        time.sleep(0.5)
+
+    verdict = parse_compilation.parse_report(str(log_path)) if log_path.is_file() else {"error": "log absent"}
+
+    if "error" not in verdict:
+        result["success"] = bool(verdict.get("success"))
+        result["summary"] = verdict.get("summary")
+        if verdict.get("errors"):
+            result["errors"] = verdict["errors"]
+        # Champs de diagnostic remontes tels quels (#310 / #236).
+        for _k in ("build_incomplet", "other_errors", "up_to_date", "summary_absent"):
+            if _k in verdict:
+                result[_k] = verdict[_k]
     else:
-        # Log absent ou sans ligne de resume apres attente -- xwin7 n'a pas
-        # demarre/termine normalement (profil introuvable, .dhpt invalide...).
+        # Log absent/illisible apres attente -- xwin7 n'a pas demarre/termine normalement
+        # (profil introuvable, .dhpt invalide...).
         result["summary"] = None
         result["success"] = False
         result["error_hint"] = (
-            "Le fichier de log est absent ou ne contient pas de ligne de resume "
-            "'Erreur(s)=' apres attente. Verifier le stdout/stderr capture, le "
-            "profil (--list-profiles) et la validite du .dhpt."
+            "Le fichier de log est absent ou non parsable (ni [TOTAL_ERRORS] ni 'Erreur(s)=' "
+            "apres attente). Verifier le stdout/stderr capture, le profil (--list-profiles) "
+            "et la validite du .dhpt."
         )
 
     json.dump(result, sys.stdout, indent=2, ensure_ascii=False)

@@ -11,6 +11,10 @@ description: >
 
 # Generating Zoom SQL
 
+
+> **Ce skill couvre les Zoom SQL, pas les ecrans A5PMTAB.** Pour un ecran specifique a tableaux (`AP_Interroger_Tableaux` / `AP_Saisir_Tableaux`, callbacks
+> `DefProcInterro_*`), voir [`coding-a5pmtab-screens`](../coding-a5pmtab-screens/SKILL.md).
+
 ## Contenu
 
 - Utilisation rapide
@@ -61,10 +65,10 @@ py .claude/skills/generating-zoom-sql/scripts/validate_zoom.py \
 
 ### 3. Corriger si erreurs
 
-- **Z01 (procedures manquantes)** : le template inclut les 27 — si absentes, le template est corrompu
-- **Z03 (prefixe domaine)** : verifier que le bon domaine est passe en parametre
-- **M04 (majuser=true)** : le template l'inclut dans ZoomAvantRewrite
-- **ENC (encodage)** : utiliser le skill `writing-diva-files` pour convertir le fichier
+- **ZSQL01 (procedures manquantes)** : le template inclut les 27 — si absentes, le template est corrompu
+- **ZSQL03 (prefixe domaine)** : verifier que le bon domaine est passe en parametre
+- **ZSQL07 (majuser=true)** : le template l'inclut dans ZoomAvantRewrite
+- **ZSQL09 (encodage)** : utiliser le skill `writing-diva-files` pour convertir le fichier
 
 ### 4. Verifier l'encodage
 
@@ -78,19 +82,19 @@ Le script `validate_zoom.py` verifie 11 categories de regles :
 
 | Regle | Severite | Quoi |
 |-------|----------|------|
-| Z01 | error | 27 procedures obligatoires presentes |
-| Z02 | warning | `preturn` apres `Zoom.OK = 'I'/'S'/'C'` |
-| Z03 | error | Pas de melange de prefixes domaine |
-| Z08 | error | Module ficsql present |
-| Z10 | warning | Gestion du prefixe `-` dans Scevaleur |
-| OWB | warning | OverWrittenBy present et coherent |
-| M04 | error | `majuser=true` dans PreUpdate |
-| S08 | warning | Zoom.Valretour initialise |
-| ENC | error | Encodage ISO-8859-1 + CRLF |
-| NAMING_CONV | warning | 4e lettre du nom = `z` (convention zoom) |
-| NAMING | warning | Nommage coherent avec tokens |
+| ZSQL01 | error | 27 procedures obligatoires presentes |
+| ZSQL02 | warning | `preturn` apres `Zoom.OK = 'I'/'S'/'C'` |
+| ZSQL03 | error | Pas de melange de prefixes domaine |
+| ZSQL04 | error | Module ficsql present |
+| ZSQL05 | warning | Gestion du prefixe `-` dans Scevaleur |
+| ZSQL06 | warning | OverWrittenBy present et coherent |
+| ZSQL07 | error | `majuser=true` dans PreUpdate |
+| ZSQL08 | warning | Zoom.Valretour initialise |
+| ZSQL09 | error | Encodage ISO-8859-1 + CRLF |
+| ZSQL10 | warning | 4e lettre du nom = `z` (convention zoom) |
+| ZSQL11 | warning | Nommage coherent avec tokens |
 
-Avec `--tokens`, des verifications croisees supplementaires sont effectuees (Z03, OWB, NAMING).
+Avec `--tokens`, des verifications croisees supplementaires sont effectuees (ZSQL03, ZSQL06, ZSQL11).
 
 ---
 
@@ -108,6 +112,6 @@ Avec `--tokens`, des verifications croisees supplementaires sont effectuees (Z03
 ## References
 
 - **Les 27 procedures avec patterns** : Voir [reference/zoom-procedures.md](reference/zoom-procedures.md)
-- **Regles Z01-Z12 avec exemples** : Voir [reference/zoom-anti-patterns.md](reference/zoom-anti-patterns.md)
+- **Regles ZSQL01-ZSQL11 avec exemples** : Voir [reference/zoom-anti-patterns.md](reference/zoom-anti-patterns.md)
 - **Patterns observes dans le corpus (advisory, snapshot de fraicheur inconnue)** : Voir [reference/corpus-patterns.md](reference/corpus-patterns.md) — taux de presence des 27 procedures, extensions recurrentes, ecart sur le nom `Construire_Condition_Selection`. **Croiser avec le filesystem X.13 avant decision.**
 - **Coherence avec le masque .dhsf (normes graphiques)** : Voir [reference/normes-graphiques.md](reference/normes-graphiques.md) -- ce skill genere le `.dhsp` du zoom ; le `.dhsf` associe (produit par `manipulating-dhsf-screens`) doit exposer les champs audit du dictionnaire dans l'onglet Identifiants selon l'ordre canonique. Les 2 fichiers doivent etre coherents (regle E16-E17 verifiee par `linting-diva-code`).

@@ -38,6 +38,10 @@ RULE_BLOCK = f"""\
 {MARKER_START}
 ## Regles DIVA Skills
 
+**Portee de ce bloc** : ces regles s'appliquent au travail mene avec le plugin
+`divalto-devkit`. Elles ne regissent **pas** les skills d'autres plugins (`divalto-one`,
+etc.), ni le reste de votre workspace.
+
 **Ne jamais appeler directement un script interne d'un skill SANS avoir d'abord invoque le Skill correspondant via l'outil `Skill` dans la session courante.**
 
 Une fois le skill invoque via `Skill("<nom>")`, la doc retournee peut instruire l'execution
@@ -67,8 +71,10 @@ Ne jamais sauter un checkpoint. Ne jamais presumer que le silence vaut approbati
 Le fichier `RETEX-skills.md` a la racine du workspace doit etre alimente **immediatement**,
 pas en fin de session. A chacun des declencheurs suivants, ecrire une nouvelle entree :
 
-1. **Fin d'une invocation de skill** (creating-diva-entity, compiling-diva-projects, etc.) :
-   ecrire une entree "OK" si tout s'est bien passe, "KO" sinon. Meme si tout fonctionne.
+1. **Fin d'une invocation d'un skill `divalto-devkit`** (creating-diva-entity,
+   compiling-diva-projects, etc.) : ecrire une entree "OK" si tout s'est bien passe, "KO"
+   sinon. Meme si tout fonctionne. **PAS les skills d'autres plugins** : ce RETEX est le
+   journal du devkit DIVA, une entree sur un skill etranger le pollue sans l'aider.
 2. **Friction ou erreur detectee** : script qui echoue, doc contradictoire, parametre mal
    documente, comportement inattendu -- ecrire l'entree immediatement, avant de chercher
    un contournement.
@@ -101,6 +107,21 @@ pas en fin de session. A chacun des declencheurs suivants, ecrire une nouvelle e
 
 Incrementer R-NNN depuis le dernier ID present dans le fichier (ou R-001 si vide).
 
+**Piege d'encodage des scripts `.ps1`.**
+
+PowerShell 5.1 -- la version installee par defaut sous Windows -- lit un `.ps1` **sans BOM**
+en **ANSI/CP1252**, pas en UTF-8. Un chemin accentue ecrit **en dur** dans le script est donc
+corrompu a l'execution (`Developpements` devient `DA(c)veloppements`), et l'ecriture echoue
+sur un repertoire introuvable. Le corps du script s'execute normalement : **seule** l'operation
+qui touche au chemin casse, ce qui rend le diagnostic trompeur.
+
+Ce n'est pas propre au devkit -- c'est une propriete de PowerShell -- mais ca se produit des
+qu'on genere un `.ps1` depuis une session Claude, l'outil d'ecriture produisant de l'UTF-8.
+
+- **Ne pas** coder en dur un chemin accentue dans un `.ps1` destine a PowerShell 5.1.
+- **Passer le chemin en parametre** depuis l'appelant, ou ecrire le fichier en **ISO-8859-1**.
+- Detail et cas voisins : skill `writing-diva-files`.
+
 **Qualite de la generation DIVA.**
 
 Source canonique des 4 principes : `4PRINCIPLES.md` a la racine de votre workspace (EN, generique).
@@ -112,6 +133,14 @@ Au-dela du processus (cycle executer-verifier-expliquer-attendre), 4 regles enca
 4. **Critere de succes d'abord** : avant de lancer la generation, Claude enonce ce qui vaudra "fait" (lint OK, compil 0 erreur, synchro SQL OK, test ERP OK si applicable). La boucle `generer -> valider -> corriger` cible ce critere.
 
 Si Claude devie de l'une de ces regles, signalez-le : une entree RETEX avec categorie `BUG-SKILL` ou `SUGGESTION` permet de reajuster les skills.
+
+**Requetes SQL sur la base client.**
+
+Quand vous ecrivez ou faites ecrire une requete SQL contre la base d'un client Divalto : noms de tables et de colonnes **en MAJUSCULES** (= nom du dictionnaire, distinct du `NomOdbc` local), collation binaire **sensible a la casse et aux accents**, schema `dbo`. Devant un nom incertain ou un resultat a `0 ligne`, **decouvrir via `INFORMATION_SCHEMA`** avant de conclure a une absence. Detail des conventions et helper de portee de table : skill `querying-client-sql`.
+
+**Edition des fichiers DIVA.**
+
+Pour creer ou modifier un fichier texte DIVA (`.dhsp`, `.dhsq`, `.dhpt`, `.dhps`...), toujours passer par le skill `writing-diva-files` (scripts `write_file.py` / `patch_file.py`, ISO-8859-1 + CRLF). **Jamais** l'outil Edit/Write (ils reecrivent le fichier ENTIER en UTF-8 et corrompent tous les accents, meme pour une ligne ASCII), **ni un script Python maison** (`bytes.replace`, patch ad-hoc). Le hook `protect_encoding` bloque Edit/Write sur ces fichiers -- mais **PAS** les scripts du skill : ils sont la voie sanctionnee, non bloquee (aucune raison de contourner par un script raw). Fichiers structures : `.dhsd` -> `managing-diva-dictionaries` ; `.dhsf`/`.dhsi` -> `manipulating-dhsf-screens`.
 {MARKER_END}
 """
 

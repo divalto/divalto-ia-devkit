@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Ajoute des bindings FK a un Module Check (.dhsp) existant (FK-05).
+"""Ajoute des bindings FK a un Module Check (.dhsp) existant.
 
 Pour chaque FK :
 - Injecte `Module "Gttmchk<target>.dhop"` dans la section des imports Module
@@ -134,7 +134,7 @@ def build_check_procedures(fk, src_table, dict_name, nomvue, prefix_):
     code = []
     code.append("\r\n;*\r\n")
     code.append(
-        f";*\t\tProcedure Check_{src_table}_Field_{champ} (FK-05 : auto-generee)\r\n"
+        f";*\t\tProcedure Check_{src_table}_Field_{champ} (auto-generee)\r\n"
     )
     code.append(";*\r\n")
     code.append(f"Public function int Check_{src_table}_Field_{champ}(&{src_table})\r\n")
@@ -220,6 +220,9 @@ def main():
         metavar="CHAMP:TARGET[:ZOOM]",
         help="FK a ajouter, repetable",
     )
+    ap.add_argument("--no-backup", action="store_true",
+                    help="Ne pas creer de .bak du fichier avant de le reecrire.")
+
     args = ap.parse_args()
 
     path = Path(args.path)
@@ -266,6 +269,7 @@ def main():
 
     # Normaliser CRLF
     text = text.replace("\r\n", "\n").replace("\n", "\r\n")
+    sauvegarder_avant_ecriture(path, not getattr(args, "no_backup", False))
     path.write_bytes(text.encode("iso-8859-1"))
 
     report = {

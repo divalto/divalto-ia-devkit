@@ -1,6 +1,8 @@
 [
   {
-    "skills": ["managing-diva-error-messages"],
+    "skills": [
+      "managing-diva-error-messages"
+    ],
     "query": "Liste les codes et libellés d'erreur du fichier gtferr.dhfi, et donne-moi le libellé du code 1183.",
     "expected_behavior": [
       "Localiser gtferr.dhfi (convention objets/, mais via understanding-integrator-workspace si ailleurs)",
@@ -10,7 +12,9 @@
     ]
   },
   {
-    "skills": ["managing-diva-error-messages"],
+    "skills": [
+      "managing-diva-error-messages"
+    ],
     "query": "J'ai ajouté un GererErreurCheck(30050) dans mon objet métier mais aucun texte ne s'affiche. Comment vérifier et corriger ?",
     "expected_behavior": [
       "Vérifier d'abord si le code existe : --check 30050 (exit 1 / found:false s'il est absent)",
@@ -20,7 +24,9 @@
     ]
   },
   {
-    "skills": ["managing-diva-error-messages"],
+    "skills": [
+      "managing-diva-error-messages"
+    ],
     "query": "Je prépare un downgrade. Compare les codes erreur de mon pack courant avec le standard cible pour ne rien perdre.",
     "expected_behavior": [
       "Exécute --diff <courant>/gtferr.dhfi <standard>/gtferr.dhfi (lecture seule via reading-isam-files)",
@@ -31,12 +37,27 @@
     ]
   },
   {
-    "skills": ["managing-diva-error-messages"],
+    "skills": [
+      "managing-diva-error-messages"
+    ],
     "query": "Est-ce que je peux modifier gtferr.dhfi pour y mettre mes messages custom ?",
     "expected_behavior": [
       "Non : gtferr est un fichier d'erreur STANDARD → lecture seule, jamais modifié (norme)",
       "Les messages custom vont dans le XXferr SPÉCIFIQUE du partenaire (<prefixe>ferr), qui lui est modifiable",
       "Et même sur le fichier spécifique : passer par l'IHM standard, pas d'écriture binaire directe"
+    ]
+  },
+  {
+    "skills": [
+      "managing-diva-error-messages",
+      "coding-diva-advanced"
+    ],
+    "query": "Je veux ecrire un message libre dans le livre de bord et on m'a dit d'utiliser le code 9999. Ca marche partout ?",
+    "expected_behavior": [
+      "Explique le MECANISME et pas seulement la convention : le libelle de 9999 vaut $1, un pur passe-plat -- le message affiche EST le parametre (#197)",
+      "Repond NON a « partout » : sur les 13 XXferr d'un pack standard recent, 2 ne portent pas 9999",
+      "Signale l'exception mesuree : le 9999 de a5ferr vaut 'Erreur $1', donc le texte sort prefixe",
+      "Propose --check 9999 sur le XXferr du domaine vise, et rappelle que la reponse donne le libelle, donc ce que l'appel produira reellement"
     ]
   }
 ]

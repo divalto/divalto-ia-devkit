@@ -12,6 +12,7 @@
 - Cas particuliers
 - Reaffichage
 - Variante tableau
+- **Masquer une COLONNE de tableau** -- deux contextes a ne pas confondre
 - Sources
 
 ---
@@ -293,6 +294,97 @@ XmeListSetAttribut(<noms_logique>, <ligne>, <attribut>, <valeur>)
 ```
 
 `XmeListResetAttribut` est l'inverse (restauration).
+
+---
+
+## Masquer une COLONNE de tableau -- deux contextes a ne pas confondre
+
+Masquer conditionnellement une **colonne entiere** ne se fait pas de la meme facon selon qui
+pilote le tableau. Confondre les deux coute une demi-journee : le code ecrit compile, et **la
+procedure n'est simplement jamais appelee**.
+
+| Contexte | Comment obtenir l'identifiant du tableau | Ou brancher le traitement |
+|---|---|---|
+| **Zoom SQL** | `Zoom.Idtableau` | la procedure `ZoomEnteteTableau` du module de traitements |
+| **Programme protege ou custom, hors Zoom SQL** | **`XmeListGetId(...)`** | un traitement « avant affichage » dans une **surcharge du masque** |
+
+> **`ZoomEnteteTableau` n'est appelee que par le moteur Zoom SQL.** Un programme protege qui
+> gere son propre tableau ne la declenche **jamais** -- l'implementer n'y produit aucun effet,
+> et aucune erreur.
+
+**Mesure sur le corpus du standard**, qui separe nettement les deux mondes :
+
+| | |
+|---|---|
+| Programmes appelant `ZoomEnteteTableau` | **718** -- et **718 sur 718** portent le `z` de la convention de nommage des zooms |
+| Programmes appelant `XmeListGetId` | **119**, dont **93 sans aucun `z`** dans leur nom |
+| Programmes a `XmeListGetId` **sans** `Zoom.Idtableau` | **106 sur 119**, soit **89 %** |
+| Programmes ou les deux mondes se croisent | **13** |
+
+`Zoom.Idtableau` n'est pas disponible hors contexte Zoom SQL : c'est ce qui rend
+`XmeListGetId` necessaire.
+
+### `XmeListGetId` prend QUATRE arguments
+
+```
+XmeListGetId(<cleMasque>, <n>, '<NomDuTableau>', <idRetourne>)
+```
+
+**Le nom du tableau est le 3e argument, pas le 1er.** Mesure sur **132 appels** du standard :
+**131 en passent quatre** ; le 1er est une **cle de masque** (`MZ.*` 86 fois, `Zoom.*` 29,
+`HQL.*` 9, `Harmony.*` 4), et le 3e est le nom du tableau -- litteral dans 108 cas.
+
+> Ecrire `XmeListGetId('<NomDuTableau>')` produit une erreur de nombre de parametres.
+
+### La colonne se designe par son NUMERO, jamais par son nom
+
+```diva
+XmeListGetColumn(<idTableau>, <noColonne>, <COLUMNINFO>)
+; ... modifier le champ voulu de COLUMNINFO ...
+XmeListSetColumn(<idTableau>, <noColonne>, <COLUMNINFO>)
+```
+
+Sur **103 appels** du standard, le 2e argument est **toujours un numero** -- 38 litteraux,
+65 variables -- et **jamais un nom**. Il n'existe aucune fonction de correspondance nom vers
+numero.
+
+> **Ce numero est un ordinal fige a la compilation dans Xwin.** Il est stable tant que l'ordre
+> des colonnes n'est pas modifie -- et **change silencieusement** si on l'est. Le determiner une
+> fois dans Xwin, puis **l'ecrire en commentaire a cote de l'appel** : c'est la seule trace qui
+> survivra a une reorganisation.
+
+### Le champ a modifier
+
+`COLUMNINFO` est un enregistrement du dictionnaire systeme `ddsys.dhsd`. Il porte **40 champs**,
+dont deux qui touchent a l'affichage et **qu'il ne faut pas confondre** :
+
+| Champ | |
+|---|---|
+| `Affichage` | celui que vise ce cas d'usage |
+| `Visibilite` | **un autre champ**, distinct |
+
+Les champs de `COLUMNINFO` que le standard emploie reellement sont d'un tout autre ordre :
+`Libelle` (133 usages), `Nomdonnee` (49), `Bulle` (42), `Bitmap1` (25), `Indices` (5),
+`Sequence` (1).
+
+> **Ce qui n'est PAS etabli : les VALEURS a affecter.** Un retour terrain nomme
+> `AFFCOL_NON` et `AFFCOL_JAMAIS`. Ces constantes n'apparaissent **nulle part** -- ni dans les
+> **8 022** sources livrees du pack (`.dhsp`, `.dhsi`, `.dhsq`, `.dhsf`), ni dans le repertoire
+> systeme. Elles sont vraisemblablement declarees dans un module **compile** dont la source
+> n'est pas livree, comme d'autres constantes du socle. **Le champ `Affichage`, lui, existe
+> bien** -- verifie dans `ddsys.dhsd`. Interroger le graphe de connaissance avant de s'appuyer
+> sur les noms de valeurs.
+
+### La demarche complete, en contexte non-Zoom
+
+1. Creer une **surcharge du masque** (`<base>u.dhsf`).
+2. Y ajouter un traitement **« avant affichage »** sur la page qui porte le tableau.
+3. Dans ce traitement, `XmeListGetId(<cleMasque>, <n>, '<NomDuTableau>', <id>)`.
+4. `XmeListGetColumn(<id>, <noColonne>, <COLUMNINFO>)`.
+5. Modifier `COLUMNINFO.Affichage`, puis `XmeListSetColumn(<id>, <noColonne>, <COLUMNINFO>)`.
+
+Les etapes **1 a 4 sont mesurees** sur le standard. L'etape **5 vient d'un retour terrain** : le
+champ est confirme, les valeurs ne le sont pas.
 
 ---
 

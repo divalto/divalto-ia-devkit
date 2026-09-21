@@ -15,7 +15,7 @@ Si le dictionnaire `.dhsd` de l'entite declare les champs audit standard (`Ce1`,
    - **Codes enregistrements** en 1er (Y min) -- si `Ce1`/`Note`/`Joint` presents
    - **Creation** + **Derniere modification** en dernier (Y max) -- si socle UserCr/UserMo present
    - Extensions domaine acceptees apres.
-3. Le **fichier `.dhsp` zoom** (ce skill) doit inclure les references de procedures aux vues liees (typiquement via les blocs `ZoomAvantInsert`, `ZoomAvantRewrite` qui doivent propager les valeurs audit via `GT_PreUpdate_recordSql(rs, majuser=true)` -- cf. anti-pattern M04).
+3. Le **fichier `.dhsp` zoom** (ce skill) doit inclure les references de procedures aux vues liees (typiquement via les blocs `ZoomAvantInsert`, `ZoomAvantRewrite` qui doivent propager les valeurs audit via `GT_PreUpdate_recordSql(rs, majuser=true)` -- cf. anti-pattern ZSQL07).
 
 ## Verification post-generation
 
@@ -32,6 +32,6 @@ Doit retourner :
 
 ## Voir aussi (dans ce skill)
 
-- `reference/zoom-anti-patterns.md` -- Z01-Z15 avec focus M04 (majuser=true)
+- `reference/zoom-anti-patterns.md` -- ZSQL01-ZSQL11 avec focus ZSQL07 (majuser=true)
 - `reference/zoom-procedures.md` -- les 27 procedures cycle CRUD
 - Pour les details de placement / styles / formules : voir le skill `manipulating-dhsf-screens` et son fragment `reference/normes-graphiques.md`.

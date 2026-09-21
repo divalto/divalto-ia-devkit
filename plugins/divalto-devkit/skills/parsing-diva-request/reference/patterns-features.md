@@ -47,7 +47,7 @@ Regex : `\bCA\s*\d+\s*:\s*([^\n]+)`
 
 ### Pattern 3 : BDD scenarios
 
-Non extrait automatiquement en CA -- les scenarios BDD sont tournes comme un test, pas comme un CA atomique. Le LLM orchestrateur peut les reformuler en CA au CP1 si besoin.
+Non extrait automatiquement en CA -- les scenarios BDD sont tournes comme un test, pas comme un CA atomique. Le LLM orchestrateur peut les reformuler en CA si besoin.
 
 ## Extraction des acteurs
 
@@ -63,8 +63,8 @@ Si aucun `En tant que` n'est trouve mais que des CA sont detectes, la demande es
 |-----------|--------------|
 | Texte 100% BDD (Etant donne + Quand + Alors) sans "En tant que" | `type: feature`, `acteurs: []`, `needs_clarification: true` si pas de CA non plus |
 | User story "Je veux X afin de Y" sans CA | `type: feature`, `ca_detectes: []`, `needs_clarification: true` |
-| Texte avec "user story" en titre mais corps anomalie | `type: feature` l'emporte (score supra-anomalie si > 0). Le LLM doit detecter la contradiction au CP1 |
-| Demande mixte (feature + rappel anomalie precedente) | Le score plus eleve l'emporte. Le LLM peut splitter au CP1 si necessaire |
+| Texte avec "user story" en titre mais corps anomalie | `type: feature` l'emporte (score supra-anomalie si > 0). Le LLM doit detecter la contradiction |
+| Demande mixte (feature + rappel anomalie precedente) | Le score plus eleve l'emporte. Le LLM peut splitter si necessaire |
 
 ## Ne pas etendre sans tests
 
@@ -73,4 +73,4 @@ Ce fichier documente le comportement actuel. Toute extension (ex : support de `A
 - D'un scenario dans `evals.json`
 - D'une mise a jour de ce fichier
 
-Voir la référence recherche ERP (interne) section "Regles pour le LLM" pour le cadrage general.
+Pour le cadrage general de la recherche dans les sources : skill `searching-erp-sources`, page `reference/search-strategies.md`.

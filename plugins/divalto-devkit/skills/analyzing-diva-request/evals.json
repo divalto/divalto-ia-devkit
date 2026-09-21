@@ -39,7 +39,7 @@
     },
     {
       "id": "mode-plan-read-only",
-      "description": "Invocation en mode plan -> aucune ecriture disque, analyse read-only restituee dans le plan (R-011).",
+      "description": "Invocation en mode plan -> aucune ecriture disque, analyse read-only restituee dans le plan.",
       "input_text": "[Session en mode plan] Analyse cette US : impression automatique d'un document a la validation d'une commande.",
       "mode": "plan",
       "expected": {
@@ -48,6 +48,35 @@
         "approach": "read-only (agents Explore + diva-mcp + Read) ; strategie hybride X.12 -> X.13 conservee, sans persister output/*.json",
         "restitution": "directement dans le fichier plan / ExitPlanMode, pas de livrable output/*.md",
         "fallback": "si une analyse file-based complete est requise, proposer de sortir du mode plan d'abord"
+      }
+    },
+    {
+      "id": "mcp-tool-name-stable",
+      "description": "Phase 2 : invoque le bon outil MCP et ne bascule PAS en mode direct sur un faux 'outil inconnu'.",
+      "input_text": "Analyse cette US : ajouter un controle d'existence sur le champ famille de la fiche client.",
+      "expected": {
+        "phase2_mcp_tool": "mcp__plugin_divalto-devkit_diva-mcp__query_cypher",
+        "n_utilise_pas": "read_neo4j_cypher ni un prefixe UUID mcp__<uuid>__",
+        "mode_direct_declenche_seulement_si": "echec reel (reseau/token/timeout), jamais sur 'outil inconnu'"
+      }
+    },
+    {
+      "id": "version-cible-avant-hook",
+      "description": "CP1 : etablir la version ERP cible du projet avant de localiser un point de surcharge.",
+      "input_text": "Analyse cette US : surcharger la construction des notes Factur-x sur un projet client.",
+      "expected": {
+        "cp1_version_cible": "lue depuis le .dhpt (versioncible / segment repobjet), cf. R-17 understanding-integrator-workspace -- PAS le defaut X.13",
+        "erp_root": "fixe sur la version cible pour toute la suite",
+        "reverif_symbole": "existence d'un hook/fonction verifiee dans LA version cible, pas la derniere (structure des points d'extension differe entre majeures)"
+      }
+    },
+    {
+      "id": "env-fallbacks-ado-pdf",
+      "description": "Phase 1 : gerer proprement un PAT ADO expire et un PDF de spec illisible.",
+      "input_text": "Analyse l'US (work item ADO + PDF de spec joint).",
+      "expected": {
+        "ado_pat_expire": "afficher la procedure de renouvellement (Azure DevOps + var ADO_PAT User scope + relancer), pas l'erreur HTML brute",
+        "pdf_illisible": "fallback pypdf -> extraire vers .txt UTF-8 -> relire ; jamais de print() direct (console cp1252)"
       }
     }
   ],

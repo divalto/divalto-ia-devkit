@@ -28,7 +28,7 @@ Migration de sources DIVA `.dhsp` : remplacer les lectures ISAM historiques par 
 1. **Dossier des sources** a convertir (`--src`, recursif). Traite par defaut `.dhsp,.dhsf,.dhsi,.dhsq` (option `--extensions`) et exclut les fichiers `*_base.*` (option `--exclude-pattern`).
 2. **Dossier de sortie** (`--out`) — seuls les fichiers modifies y sont ecrits, en miroir.
 3. **Chemin du PACK STD DE DESTINATION** (`--std`) de la migration.
-   - C'est le pack de la version cible (ex. `C:\Developpements Harmony\Sources\v2026_erpX13_sp223c`).
+   - C'est le pack de la version cible (ex. `C:\...\Sources\v2026_erpX13_sp223c`).
    - **PAS** le dossier interne editeur `C:\...\Std` : les integrateurs n'y ont pas acces.
    - Si l'integrateur ne l'a pas, lui demander de recuperer le pack Std de la version visee.
 4. **Arbre des Objets COMPILES (.dhop)** de la version cible (`--objets`, **obligatoire**).

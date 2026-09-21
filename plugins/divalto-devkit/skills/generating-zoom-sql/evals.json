@@ -30,7 +30,7 @@
       }
     },
     {
-      "name": "ZoomDebut — Construire_Condition_Selection inconditionnelle (R-016)",
+      "name": "ZoomDebut — Construire_Condition_Selection inconditionnelle",
       "input": "Genere un Zoom SQL et verifie le placement de Construire_Condition_Selection dans ZoomDebut.",
       "expected": {
         "tokens": "n'importe quelle entite (ex. --domaine Retail --entite FamRglt --table RtlFamRglt --champ-cle RgltFam)",

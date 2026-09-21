@@ -69,9 +69,30 @@ def compute_max_id(tree: dict) -> int:
     return max_id
 
 
+def compute_id_floor(tree: dict) -> int:
+    """Plancher d'allocation : le plus grand entre les id PRESENTS et `dernier_id` DECLARE.
+
+    Pourquoi les deux (#268). `compute_max_id` ne regarde que les elements du
+    fichier. Sur un masque de **surcharge**, l'en-tete declare `dernier_id=1000000` pour
+    reserver la plage de surcharge, alors que les id reellement presents restent ceux du
+    standard (par exemple 178). Allouer sur le seul max present redonnait donc un id
+    STANDARD a un element ajoute en surcharge -- convention cassee, collision possible avec
+    un id du masque de base.
+
+    On ne teste pas `surcharge=oui` et on ne code pas 1000000 en dur : la valeur est
+    declaree par le fichier lui-meme, et respecter `dernier_id` est correct dans TOUS les
+    cas -- sur un masque standard bien tenu, les deux coincident (mesure : 2623 / 2623 sur
+    un masque du standard).
+
+    `action_add_page` appliquait deja ce principe a `dernier_id_page` ; les trois autres
+    actions ne le faisaient pas. C'etait une asymetrie a l'interieur d'un meme fichier.
+    """
+    return max(compute_max_id(tree), tree.get("masque", {}).get("dernier_id", 0))
+
+
 def next_id(tree: dict) -> int:
     """Return the next available id."""
-    return compute_max_id(tree) + 1
+    return compute_id_floor(tree) + 1
 
 
 # ---------------------------------------------------------------------------
@@ -84,13 +105,39 @@ def read_file(path: str) -> list[str]:
         return f.readlines()
 
 
-def write_file(path: str, lines: list[str]):
-    """Write lines back to the file in ISO-8859-1 + CRLF."""
+def sauvegarder_avant_ecriture(path, creer_backup: bool = True):
+    """Copie `path` en `path.bak` avant de le reecrire. Retourne le chemin du .bak.
+
+    REFUS, pas un simple avertissement : si la copie echoue, on n'ecrit pas. Ecraser un
+    fichier existant apres avoir PERDU le filet de securite est precisement le scenario
+    destructeur que le backup existe pour couvrir. Meme discipline que
+    `writing-diva-files/scripts/write_file.py`.
+    """
+    import shutil
+    p = str(path)
+    if not creer_backup or not os.path.exists(p):
+        return None
+    backup = p + ".bak"
+    try:
+        if os.path.exists(backup):
+            os.remove(backup)
+        shutil.copy2(p, backup)
+    except Exception as e:
+        print("Erreur: sauvegarde impossible (%s) -- ecriture ANNULEE, le fichier existant "
+              "est intact. Liberer ou reparer le dossier, ou assumer le risque "
+              "explicitement avec --no-backup." % e, file=sys.stderr)
+        sys.exit(1)
+    return backup
+
+
+def write_file(path: str, lines: list[str], creer_backup: bool = True):
+    """Write lines back to the file in ISO-8859-1 + CRLF, apres sauvegarde."""
     content = ""
     for line in lines:
         # Normalize line ending
         stripped = line.rstrip("\r\n")
         content += stripped + "\r\n"
+    sauvegarder_avant_ecriture(path, creer_backup)
     Path(path).write_bytes(content.encode("iso-8859-1"))
 
 
@@ -201,7 +248,7 @@ def gen_column_block(
 ) -> list[str]:
     """Generate the lines for a champ_tableau (table column).
 
-    fl_aff : "toujours" / "oui" / "non" (RETEX R-015).
+    fl_aff : "toujours" / "oui" / "non".
       - "toujours" : colonne toujours affichee, non masquable -> AUCUNE ligne
         fl_aff emise (c'est l'absence de l'attribut qui code ce comportement).
       - "oui"      : affichee par defaut mais masquable -> `fl_aff=oui`.
@@ -317,7 +364,7 @@ def action_add_field(path: str, tree: dict, params: dict) -> dict:
     if page is None:
         return {"success": False, "error": f"Page {page_num} introuvable"}
 
-    # Verifier que la page a les attributs obligatoires (R-011)
+    # Verifier que la page a les attributs obligatoires
     required_attrs = ["numero", "nb_lig", "nb_col", "offset_lig", "offset_col"]
     attrs = page.get("attrs", {}) or {}
     missing = [a for a in required_attrs if not attrs.get(a)]
@@ -344,7 +391,7 @@ def action_add_field(path: str, tree: dict, params: dict) -> dict:
         y_pos = max_y + 14
 
     # Allocate IDs
-    current_max = compute_max_id(tree)
+    current_max = compute_id_floor(tree)
     id_texte = current_max + 1
     id_champ = current_max + 2
 
@@ -372,7 +419,7 @@ def action_add_field(path: str, tree: dict, params: dict) -> dict:
     lines = update_dernier_id(lines, id_champ)
     lines = update_timestamp(lines)
 
-    write_file(path, lines)
+    write_file(path, lines, creer_backup=not params.get("_no_backup", False))
 
     return {
         "success": True,
@@ -431,7 +478,7 @@ def action_add_column(path: str, tree: dict, params: dict) -> dict:
         return {"success": False, "error": f"Aucun [tableau] sur la page {page_num}"}
 
     # Allocate ID
-    current_max = compute_max_id(tree)
+    current_max = compute_id_floor(tree)
     col_id = current_max + 1
 
     # Generate block
@@ -455,7 +502,7 @@ def action_add_column(path: str, tree: dict, params: dict) -> dict:
     lines = update_dernier_id(lines, col_id)
     lines = update_timestamp(lines)
 
-    write_file(path, lines)
+    write_file(path, lines, creer_backup=not params.get("_no_backup", False))
 
     return {
         "success": True,
@@ -534,7 +581,7 @@ def action_add_page(path: str, tree: dict, params: dict) -> dict:
 
     lines = update_timestamp(lines)
 
-    write_file(path, lines)
+    write_file(path, lines, creer_backup=not params.get("_no_backup", False))
 
     return {
         "success": True,
@@ -548,7 +595,7 @@ def action_add_page(path: str, tree: dict, params: dict) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# Validation des formules groupbox / bornes de grille (R-007 2026-04-23)
+# Validation des formules groupbox / bornes de grille (2026-04-23)
 # ---------------------------------------------------------------------------
 
 # Valeurs canoniques reference/normes-graphiques.md section 5
@@ -573,9 +620,9 @@ _GROUPBOX_CHILD_TYPES = {
 }
 
 # Types a grille INTERNE propre (tableau / arbre / panel WPF) : les bornes de grille
-# de PAGE (R4 = nb_col*4, R5 = nb_lig*14) ne s'y appliquent pas. Mesure sur corpus
-# reel X.13 (standard + surcharges, qui COMPILENT) : ~13600 declenchements R4/R5,
-# 100 % sur ces types, 0 sur un element de page normal -> faux positifs. Exclus de R4/R5.
+# de PAGE (DHSF04 = nb_col*4, DHSF05 = nb_lig*14) ne s'y appliquent pas. Mesure sur corpus
+# reel X.13 (standard + surcharges, qui COMPILENT) : ~13600 declenchements DHSF04/DHSF05,
+# 100 % sur ces types, 0 sur un element de page normal -> faux positifs. Exclus de DHSF04/DHSF05.
 GRID_EXEMPT_TYPES = {
     "tableau", "arbre", "panel_wpf", "champ_tableau", "multi_choix_tableau",
 }
@@ -600,11 +647,11 @@ def validate_groupbox_layout(tree: dict) -> dict:
     """Valide un masque parse contre les formules normes-graphiques.md section 5.
 
     Regles :
-        R1 (error)   : taille_groupbox >= NbLignes * 10 + 18 (borne min, espacement 10)
-        R2 (warning) : Y(premier enfant) - Y(groupbox) >= 15 (reserve titre)
-        R3 (warning) : gap (entre groupbox N+1 et fin groupbox N) >= 8
-        R4 (error)   : max_X(obj) <= nb_col * 4 (saturation largeur, cause 'clip grille')
-        R5 (error)   : max_Y(obj) <= nb_lig * 14 (saturation hauteur)
+        DHSF01 (error)   : taille_groupbox >= NbLignes * 10 + 18 (borne min, espacement 10)
+        DHSF02 (warning) : Y(premier enfant) - Y(groupbox) >= 15 (reserve titre)
+        DHSF03 (warning) : gap (entre groupbox N+1 et fin groupbox N) >= 8
+        DHSF04 (error)   : max_X(obj) <= nb_col * 4 (saturation largeur, cause 'clip grille')
+        DHSF05 (error)   : max_Y(obj) <= nb_lig * 14 (saturation hauteur)
 
     Convention positions : position=Y,X  et taille=H,L (cf dhsf_parser._parse_pair).
 
@@ -635,7 +682,7 @@ def validate_groupbox_layout(tree: dict) -> dict:
         else:
             max_y_bound = None
 
-        # R4/R5 : bornes de grille de PAGE -- ne s'appliquent PAS aux widgets a grille
+        # DHSF04/DHSF05 : bornes de grille de PAGE -- ne s'appliquent PAS aux widgets a grille
         # interne (tableau/arbre/panel), qui produiraient des faux positifs (cf. mesure
         # corpus). On les exclut explicitement.
         for elem in _flatten_elements(page.get("elements", [])):
@@ -646,7 +693,7 @@ def validate_groupbox_layout(tree: dict) -> dict:
             max_x, max_y = _max_xy(elem)
             if max_x_bound is not None and max_x > max_x_bound:
                 violations.append({
-                    "rule": "R4",
+                    "rule": "DHSF04",
                     "severity": "error",
                     "page": page_no,
                     "id": elem.get("id", 0),
@@ -655,7 +702,7 @@ def validate_groupbox_layout(tree: dict) -> dict:
                 })
             if max_y_bound is not None and max_y > max_y_bound:
                 violations.append({
-                    "rule": "R5",
+                    "rule": "DHSF05",
                     "severity": "error",
                     "page": page_no,
                     "id": elem.get("id", 0),
@@ -663,7 +710,7 @@ def validate_groupbox_layout(tree: dict) -> dict:
                     "detail": f"max_Y {max_y} > borne effective {max_y_bound} (nb_lig*14 - marge {marge}) -- saturation hauteur (cause 'Objet en dehors de la clip grille')",
                 })
 
-        # R1/R2 : sur groupbox uniquement (children directs)
+        # DHSF01/DHSF02 : sur groupbox uniquement (children directs)
         groupboxes = [e for e in page.get("elements", []) if e.get("type") == "groupbox"]
         for gb in groupboxes:
             pos = gb.get("position", [0, 0])
@@ -680,7 +727,7 @@ def validate_groupbox_layout(tree: dict) -> dict:
                 min_expected = n_lines * GROUPBOX_MIN_ESPACEMENT + GROUPBOX_OVERHEAD
                 if gb_h < min_expected:
                     violations.append({
-                        "rule": "R1",
+                        "rule": "DHSF01",
                         "severity": "error",
                         "page": page_no,
                         "id": gb_id,
@@ -702,7 +749,7 @@ def validate_groupbox_layout(tree: dict) -> dict:
                     margin = first_y - gb_y
                     if margin < GROUPBOX_TITLE_RESERVE:
                         violations.append({
-                            "rule": "R2",
+                            "rule": "DHSF02",
                             "severity": "warning",
                             "page": page_no,
                             "id": gb_id,
@@ -713,7 +760,7 @@ def validate_groupbox_layout(tree: dict) -> dict:
                             ),
                         })
 
-        # R3 : gap entre groupbox consecutives, regroupees par colonne X
+        # DHSF03 : gap entre groupbox consecutives, regroupees par colonne X
         by_col = defaultdict(list)
         for gb in groupboxes:
             pos = gb.get("position", [0, 0])
@@ -731,7 +778,7 @@ def validate_groupbox_layout(tree: dict) -> dict:
                 gap = nxt_y - cur_end
                 if gap < GROUPBOX_MIN_GAP:
                     violations.append({
-                        "rule": "R3",
+                        "rule": "DHSF03",
                         "severity": "warning",
                         "page": page_no,
                         "id": nxt.get("id", 0),
@@ -755,12 +802,66 @@ def validate_groupbox_layout(tree: dict) -> dict:
     }
 
 
+def validate_page_chain(tree: dict) -> dict:
+    """Valide la chaine des pages : aucun `suiv=`/`prec=` ne doit designer une page absente.
+
+    Pourquoi cette regle existe (#259). Un lien orphelin compile a **0 erreur**.
+    L'ecran meurt a l'OUVERTURE, avec "page N du masque inexistante" -- donc bien apres la
+    compilation, chez l'utilisateur. Le cas vecu : la page 12 "Identifiants" du template zoom
+    supprimee (table sans socle audit) en laissant le `suiv=12` de la page 11.
+
+    Regles :
+        DHSF06 (error) : `suiv=N` alors que la page N n'existe pas dans le masque.
+        DHSF07 (error) : `prec=N` alors que la page N n'existe pas dans le masque.
+
+    Args:
+        tree: arbre retourne par parse_dhsf().
+
+    Returns:
+        {"valid": bool, "violations": [{rule, severity, page, id, type, detail}, ...]}
+    """
+    presentes = {p.get("numero") for p in tree.get("pages", [])}
+    violations = []
+    for page in tree.get("pages", []):
+        origine = page.get("numero", 0)
+        for cle, regle in (("suiv", "DHSF06"), ("prec", "DHSF07")):
+            cible = page.get(cle)
+            if cible is None or cible in presentes:
+                continue
+            violations.append({
+                "rule": regle,
+                "severity": "error",
+                "page": origine,
+                "id": None,
+                "type": "page",
+                "detail": (
+                    "page %s : %s=%s designe une page absente du masque "
+                    "(pages presentes : %s). Compile a 0 erreur, casse a l'OUVERTURE avec "
+                    "\"page %s du masque inexistante\". Retirer la ligne %s= (une page sans "
+                    "successeur n'en a pas) ou reintroduire la page %s."
+                    % (origine, cle, cible, sorted(n for n in presentes if n is not None),
+                       cible, cle, cible)
+                ),
+            })
+    return {"valid": not violations, "violations": violations}
+
+
 def action_validate(path: str, tree: dict, params: dict) -> dict:
-    """Action 'validate' : valide le masque sans modification. Lecture seule."""
-    report = validate_groupbox_layout(tree)
+    """Action 'validate' : valide le masque sans modification. Lecture seule.
+
+    Deux familles de controles, cumulees :
+      - layout des groupbox (normes graphiques) ;
+      - chaine des pages `suiv=`/`prec=` (#259).
+    """
+    layout = validate_groupbox_layout(tree)
+    chaine = validate_page_chain(tree)
+    violations = layout["violations"] + chaine["violations"]
+    report = {k: v for k, v in layout.items() if k not in ("valid", "violations")}
     return {
-        "success": report["valid"],
+        "success": not violations,
         "action": "validate",
+        "valid": not violations,
+        "violations": violations,
         **report,
     }
 
@@ -874,7 +975,7 @@ def action_add_groupbox(path: str, tree: dict, params: dict) -> dict:
     gb_width = (max_x - gb_x) + margin_x
 
     # Allouer l'id
-    gb_id = compute_max_id(tree) + 1
+    gb_id = compute_id_floor(tree) + 1
 
     # Bloc groupbox
     block = gen_groupbox_block(
@@ -895,7 +996,7 @@ def action_add_groupbox(path: str, tree: dict, params: dict) -> dict:
     lines = insert_lines(lines, insert_at, block)
     lines = update_dernier_id(lines, gb_id)
     lines = update_timestamp(lines)
-    write_file(path, lines)
+    write_file(path, lines, creer_backup=not params.get("_no_backup", False))
 
     return {
         "success": True,
@@ -939,6 +1040,9 @@ def main():
         "--params", required=True,
         help="JSON avec les parametres de l'action"
     )
+    parser.add_argument("--no-backup", action="store_true",
+                    help="Ne pas creer de .bak du fichier avant de le reecrire.")
+
     args = parser.parse_args()
 
     if not os.path.isfile(args.path):
@@ -951,6 +1055,10 @@ def main():
         print(f"Error: invalid JSON in --params: {e}", file=sys.stderr)
         sys.exit(1)
 
+    # Le choix de sauvegarde voyage par params : les fonctions action_* recoivent
+    # (path, tree, params) et n'ont pas acces a args.
+    params["_no_backup"] = bool(args.no_backup)
+
     # Parse the file to get the tree
     tree = parse_dhsf(args.path)
 
@@ -958,13 +1066,31 @@ def main():
     action_fn = ACTIONS[args.action]
     result = action_fn(args.path, tree, params)
 
-    # Post-modification : valider le layout groupbox / bornes grille (R-007 2026-04-23).
+    # Post-modification : valider le layout groupbox / bornes grille (2026-04-23)
+    # ET la chaine des pages. Les deux familles, comme `--action validate` : la
+    # post-validation n'en executait qu'une, si bien qu'un masque a la chaine cassee
+    # passait en silence apres une modification alors que `validate` l'aurait dit.
     # Chirurgical : juste emettre l'info dans le JSON de retour, ne pas bloquer l'action.
     # L'appelant (orchestrateur creating-diva-entity ou humain) decide quoi faire.
     if args.action != "validate" and result.get("success"):
         try:
             retree = parse_dhsf(args.path)
-            result["post_validation"] = validate_groupbox_layout(retree)
+            layout = validate_groupbox_layout(retree)
+            chaine = validate_page_chain(retree)
+            violations = layout["violations"] + chaine["violations"]
+            erreurs = sum(1 for v in violations if v["severity"] == "error")
+            # Meme forme qu'avant -- {valid, violations, stats} -- pour ne pas casser
+            # les appelants, et meme semantique de `valid` : seules les erreurs
+            # l'invalident.
+            result["post_validation"] = {
+                "valid": erreurs == 0,
+                "violations": violations,
+                "stats": {
+                    "total": len(violations),
+                    "errors": erreurs,
+                    "warnings": len(violations) - erreurs,
+                },
+            }
         except Exception as e:  # noqa: BLE001
             result["post_validation"] = {
                 "valid": None,

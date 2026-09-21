@@ -34,6 +34,27 @@ Aucun claim n'est affecte a la couche `strategic` : cette couche est synthetisee
 depuis `facts.verdict`, `facts.request`, `facts.coverage` et `facts.selection`
 par le renderer. Elle ne contient pas de claim atomique -- c'est une vue de tete.
 
+### Le panorama : libelle humain, jamais le slug
+
+Le panorama de la couche strategique est bati sur `facts.selection`. **Il affiche
+`selection[].title`, jamais `selection[].slug`** : cette couche s'adresse a un chef de
+projet, et `endroit_agir` ou `verification_prealable` sont du jargon de pipeline. Un
+retour terrain a signale que le lecteur avait du demander en seance ce que ces termes
+voulaient dire.
+
+**Le libelle vient de l'amont.** `content_types.py` le porte deja (`ContentType.title`),
+`evaluate_catalog` le produit, et le producteur le transmet dans le facts.json. **Aucune
+table de libelles n'est tenue dans ce skill** : deux tables finiraient par diverger. Un
+cas de test interdit l'apparition d'une table locale.
+
+**Repli assume** : un `facts.json` anterieur n'a pas ce champ ; le rendu retombe alors
+sur le slug plutot que d'afficher du vide.
+
+> **Le panorama reste dans la couche strategique.** Le retour terrain suggerait de le
+> deplacer vers la couche technique, moins consultee. Ce n'est pas retenu : cette couche
+> est **definie** comme synthetisee depuis `facts.selection` -- l'y retirer viderait le
+> contrat ci-dessus de sa substance. Le probleme etait le **jargon**, pas l'emplacement.
+
 ## Ordre de rendu dans une couche
 
 Dans la couche **tactique** :

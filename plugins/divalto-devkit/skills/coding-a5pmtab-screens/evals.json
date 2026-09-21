@@ -1,0 +1,91 @@
+{
+  "skill": "coding-a5pmtab-screens",
+  "description": "Scenarios d'evaluation de coding-a5pmtab-screens.",
+  "scenarios": [
+    {
+      "name": "a5pmtab-second-tableau-signature",
+      "description": "Ajout d'un 2e tableau : la regle du suffixe change la signature",
+      "prompt": "Mon ecran A5PMTAB mono-tableau marche. J'ajoute un second tableau en reutilisant mes callbacks DefProcInterro_Charger / _Apres / _ArretSpecifique, et au clic sur une ligne j'obtiens : « la fonction attend 0 parametre(s) et l'appelant a place 1 parametre(s) sur la pile ». Pourquoi ?",
+      "expected": {
+        "patterns": [
+          "Le suffixe ne change pas seulement le nom : il change la SIGNATURE",
+          "Forme suffixee DefProcInterro_<NOM>_Apres : elle ne recoit PAS Id",
+          "Forme non suffixee DefProcInterro_Apres : elle recoit &Id en premier",
+          "Des qu'il y a plusieurs tableaux, A5PMTAB appelle la forme SUFFIXEE",
+          "Creer une serie suffixee PAR TABLEAU, et ne jamais melanger les deux formes sur un meme ecran"
+        ]
+      }
+    },
+    {
+      "name": "a5pmtab-id-par-adresse",
+      "description": "Le fichier de prototypes se trompe sur le mode de passage de Id",
+      "prompt": "J'ai recopie la signature depuis proto_a5pmtab.dhsp : Function Int DefProcInterro_Apres(Id). C'est bon ?",
+      "expected": {
+        "patterns": [
+          "NON : Id est passe PAR ADRESSE, la signature s'ecrit (&Id)",
+          "Le fichier proto_a5pmtab.dhsp ecrit Id sans esperluette sur ses 90 callbacks non suffixees -- c'est faux sur ce point",
+          "Les formes correctes sont celles des extraits ExtraitsErp et des ecrans du standard, qui ecrivent &Id",
+          "Declarer par valeur ce que l'appelant empile par adresse COMPILE et casse a l'execution sans message",
+          "Utiliser le prototype pour la LISTE des callbacks et le NOMBRE de parametres, pas pour le mode de passage"
+        ]
+      }
+    },
+    {
+      "name": "a5pmtab-niveau-1a-alignement",
+      "description": "1A sur un parametre de callback : alignement, pas pointeur",
+      "prompt": "J'ai declare le parametre de sortie de ma callback A5PMTAB en 1A Sortie B = false, comme la ligne du dessus qui fait 1A ... X = 0. Ca compile sans erreur mais je ne peux plus selectionner de ligne dans le tableau.",
+      "expected": {
+        "patterns": [
+          "1A n'est PAS un type adresse ou pointeur : c'est le niveau 1 avec forcage d'ALIGNEMENT sur adresse paire",
+          "L'alignement est destine aux SOUS-DONNEES ; au niveau 1 il est deja automatique",
+          "Le prototype declare 1 Sortie B = false -- reproduire exactement son niveau",
+          "1A est legitime ailleurs (sur un local de type X), d'ou la confusion",
+          "Ne jamais ajouter A parce que la ligne du dessus en a un"
+        ]
+      }
+    },
+    {
+      "name": "a5pmtab-tableau-fige-diagnostic",
+      "description": "Tableau fige sans message : ordre de diagnostic",
+      "prompt": "Mon tableau A5PMTAB s'affiche avec les bonnes donnees mais il est entierement fige : impossible de changer de ligne, Valider et Echap inertes, aucune erreur. Je vais essayer de basculer l'option <SELECTION>.",
+      "expected": {
+        "patterns": [
+          "Ne PAS commencer par les options d'affichage : elles changent le comportement de l'interface, elles ne reparent pas une signature",
+          "Soupconner d'abord la DECLARATION d'une callback",
+          "Un tableau fige pointe en priorite vers ArretSpecifique",
+          "Verifier dans l'ordre : forme suffixee ou non, &Id, niveau des parametres",
+          "Sur la valeur de retour d'ArretSpecifique, le devkit ne prescrit rien : le RETEX et le prototype livre se contredisent, le point est declare non resolu"
+        ]
+      }
+    },
+    {
+      "name": "a5pmtab-aller-retour-boucle-infinie",
+      "description": "Le motif bFirstInput / XmeNext n'a aucune base dans le standard",
+      "prompt": "J'ai trouve dans du code client en production un motif d'aller-retour saisie / tableau A5PMTAB avec un flag bFirstInput et un XmeNext(Harmony.Retour, Harmony.Cplretour). Le 1er aller-retour marche, le 2e part en boucle infinie.",
+      "expected": {
+        "patterns": [
+          "Mesure : ZERO des 56 routines du standard qui appellent AP_Interroger_Tableaux ou AP_Saisir_Tableaux n'utilise XmeNext",
+          "Ce motif n'a donc aucune base dans le standard -- etre en production ne le rend pas correct, ca rend seulement son echec plus tardif",
+          "Le flag bFirstInput n'est jamais reinitialise, et Harmony.Retour / Harmony.Cplretour sont ecrases entre-temps",
+          "Le standard fait une boucle de saisie simple, sans flag et sans XmeNext",
+          "Limite assumee : aucun ecran du standard ne retourne en saisie APRES le tableau, donc le devkit ne peut pas montrer la forme correcte d'un aller-retour"
+        ]
+      }
+    },
+    {
+      "name": "a5pmtab-invocation-complete",
+      "description": "Invoquer un tableau : modules, Creer_Parametre, options HMP",
+      "prompt": "Ecris-moi le squelette d'invocation d'un tableau A5PMTAB en consultation, avec multiselection et tri.",
+      "expected": {
+        "patterns": [
+          "Declarer LES DEUX modules : A5PMTAB.dhop ET A5PMTAB000.dhop -- la declaration Module n'est pas transitive",
+          "options = Creer_Parametre(<varTableauXme>, <constanteArret>, <nomMasque>, SCROLLBAR32) -- 4 parametres",
+          "Les options sont une chaine HMP : options &= '<Tag>' & HmpEncode(valeur)",
+          "<Selection> pour la multiselection, <tri> pour le tri par en-tete",
+          "Une option mal orthographiee est ignoree SANS erreur",
+          "AP_Interroger_Tableaux(<constanteApplic>, <varTableauXme>, options) -- apres quoi A5PMTAB prend le controle et appelle vos callbacks"
+        ]
+      }
+    }
+  ]
+}

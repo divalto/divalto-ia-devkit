@@ -7,7 +7,7 @@
       "skills": [
         "assisting-functional-question"
       ],
-      "query": "Nicolas demande : pourquoi le zoom client ne montre plus rien depuis qu'on a active la gestion multi-etablissements ?",
+      "query": "Un collegue demande : pourquoi le zoom client ne montre plus rien depuis qu'on a active la gestion multi-etablissements ?",
       "files": [],
       "expected_behavior": [
         "Identifie 3 a 5 causes probables classees par probabilite",
@@ -26,8 +26,50 @@
       "files": [],
       "expected_behavior": [
         "Detecte que la formulation est une user story formelle (anti-declencheur)",
-        "Refuse le traitement et redirige vers analyzing-diva-request (UC-100)",
+        "Refuse le traitement et redirige vers analyzing-diva-request",
         "Explique brievement la difference de perimetre entre les deux skills"
+      ]
+    },
+    {
+      "id": "case-3",
+      "skills": [
+        "assisting-functional-question"
+      ],
+      "query": "Un collegue dit : le multichoix de la facture affiche un statut, mais dans le code le comportement d'integration compta ne colle pas. Pourquoi ?",
+      "files": [],
+      "expected_behavior": [
+        "Explique que le flag d'integration compta est porte par ENT.Ce2 (valeurs metier ' '/1/2), sens hardcode cote code",
+        "Avertit que le multichoix STATUSENT_C2 est bindé sur ENT.Status (statut de preparation), PAS sur Ce2 -- ne pas en deduire le sens de Ce2",
+        "Recommande de verifier l'usage reel via grep ENT.Ce2 (ex. gttmpce.dhsp / STA_ENT_Selection) plutot que le multichoix",
+        "Format chat-ready court, cause + reference fichier"
+      ]
+    },
+    {
+      "id": "case-4",
+      "skills": [
+        "assisting-functional-question"
+      ],
+      "query": "Un traitement de nuit a echoue sans aucun message a l'ecran. Comment savoir ce qui s'est passe ?",
+      "files": [],
+      "expected_behavior": [
+        "1er reflexe : consulter ferror.log (erreurs techniques/crash), chemin par defaut C:\\Divalto\\DivaltoLog\\ferror.log, configurable via ServeurLog dans divalto.ini",
+        "Complement : la table SQL M8 (livre de bord, LIVREDEBORD) pour les erreurs metier, filtrer NIVALERTE IN (1,3)",
+        "Renvoie a understanding-integrator-workspace pour resoudre la connexion SQL avant d'interroger M8",
+        "Format chat-ready, actions de verification concretes"
+      ]
+    },
+    {
+      "id": "case-5",
+      "skills": [
+        "assisting-functional-question"
+      ],
+      "query": "Mon traitement automatique ne selectionne pas les bonnes dates alors que j'ai saisi une date. Pourquoi ?",
+      "files": [],
+      "expected_behavior": [
+        "Suggere que le critere date est peut-etre une formule dynamique (plage glissante) dans MPVAR, evaluee a l'execution, pas une date figee",
+        "Explique le mecanisme (MPVAR -> Hdate) SANS affirmer une signature FctDate non verifiee",
+        "Propose de verifier MPVAR comme action concrete",
+        "Format chat-ready court"
       ]
     }
   ]

@@ -8,7 +8,7 @@ description: >
   `<site>-<env>@<apikey>`, et patche le `.mcp.json` du plugin pour persister la config
   pour toutes les sessions Claude Code futures. A invoquer la premiere fois apres
   l'installation du plugin, ou en cas de cle expiree / 401 sur les outils
-  `mcp__diva-mcp__*`, ou apres une mise a jour du plugin qui aurait restaure le
+  `mcp__plugin_divalto-devkit_diva-mcp__*`, ou apres une mise a jour du plugin qui aurait restaure le
   template d'origine (perte des credentials). Triggers : "configure diva-mcp",
   "ma cle API diva", "diva-mcp 401 / unauthorized", "diva-mcp ne marche pas",
   "premier demarrage diva-mcp", "renouveler ma cle diva-mcp".
@@ -32,7 +32,7 @@ description: >
 | Situation | Action attendue |
 |-----------|-----------------|
 | Premiere installation du plugin par un partenaire | Le `.mcp.json` est livre sans headers. Lancer ce skill pour les saisir. |
-| `mcp__diva-mcp__*` retourne 401 / Unauthorized | La cle est probablement expiree ou rotated. Lancer ce skill pour saisir la nouvelle. |
+| `mcp__plugin_divalto-devkit_diva-mcp__*` retourne 401 / Unauthorized | La cle est probablement expiree ou rotated. Lancer ce skill pour saisir la nouvelle. |
 | Mise a jour du plugin via marketplace | Le `.mcp.json` est restaure a son template. Relancer ce skill. |
 | Le partenaire change de site / d'environnement | Lancer ce skill pour mettre a jour les valeurs. |
 
@@ -106,11 +106,18 @@ Le script :
   }
   ```
 - Ecrit atomiquement (write to `.tmp` puis rename)
-- Sortie JSON sur stdout : `{"status": "ok", "mcp_path": "...", "backup": "..."}`
+- Sortie JSON sur stdout : `{"status": "ok", "mcp_path": "...", "backup": "...", "header": "X-Api-Key: <site>-<env>@<cle masquee : 10 premiers...4 derniers>"}`
 
-> **CHECKPOINT 3** -- Confirmer au partenaire que l'ecriture a eu lieu, mentionner le
-> chemin du `.bak` au cas ou il voudrait rollback, et lui dire qu'il doit
-> **redemarrer Claude Code** pour que le `.mcp.json` modifie soit pris en compte.
+> **CHECKPOINT 3** -- Confirmer au partenaire que l'ecriture a eu lieu :
+> - **Verifier la terminaison de la cle** : comparer les **4 derniers caracteres**
+>   affiches dans le champ `header` de la sortie a la fin de la cle fournie par le
+>   partenaire. S'ils **different**, la cle a probablement ete corrompue au transport
+>   (expansion shell de `$` / `$$` / `!` via `--apikey`) -> relancer via `--apikey-stdin`.
+>   C'est la **seule** verification fiable : aucune detection automatique n'est possible
+>   une fois la cle recue par le script (un `$` peut aussi etre du **contenu legitime**
+>   de la cle -- on ne peut donc ni la refuser ni deviner qu'elle a ete alteree).
+> - Mentionner le chemin du `.bak` (rollback possible).
+> - Rappeler qu'il faut **redemarrer Claude Code** pour que le `.mcp.json` soit pris en compte.
 
 ---
 
@@ -136,14 +143,14 @@ runtime. Apres ecriture par ce skill :
 2. Relance Claude Code
 3. Au demarrage, `.mcp.json` est parse, le bloc `headers` est present, diva-mcp se
    connecte avec authentification
-4. Test : appeler un outil simple `mcp__diva-mcp__get_schema` -- doit repondre sans
+4. Test : appeler un outil simple `mcp__plugin_divalto-devkit_diva-mcp__get_schema` -- doit repondre sans
    401
 
 Si le 401 persiste apres redemarrage :
 - Le format `<site>-<env>@<apikey>` est-il accepte par le serveur ? Verifier avec
   Divalto (cf. `reference/credentials-format.md`)
 - La cle est-elle active ? (peut etre revoque cote serveur)
-- L'URL `https://mcp-diva-partner.red.divalto.com` est-elle joignable depuis le poste ?
+- L'URL `https://mcp-diva.divaltocloud.com` est-elle joignable depuis le poste ?
 
 ---
 

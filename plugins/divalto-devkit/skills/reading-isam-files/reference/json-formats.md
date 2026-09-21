@@ -87,7 +87,7 @@ Un seul enregistrement a ecrire.
 
 ```json
 {
-    "Fichier": "C:\\Developpements harmony\\Bases sql\\a5f.dhfi",
+    "Fichier": "{CHEMIN_FICHIERS}/a5f.dhfi",
     "Structure": "structure_m4.json",
     "Donnees": {
         "Ce": "4",

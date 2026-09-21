@@ -9,7 +9,7 @@ et le verdict, puis produit :
 
 Tri deterministe des items : entite alpha -> categorie (E1, E3, E4, E2)
 -> severite (erreur, warning, info) -> yaml_path. Timestamps exclus du diff
-d'idempotence (CA13 UC-201).
+d'idempotence.
 
 Si un fichier `.detect_eN.json` est absent, il est simplement ignore
 (0 items pour cette categorie).
@@ -103,7 +103,7 @@ def verdict(stats: dict) -> str:
     total_errors = stats.get("total", {}).get("erreur", 0)
     items_count = stats.get("items_count", 0)
     if items_count and e1_errors >= items_count * 0.5:
-        return "regression CA4 UC-200"
+        return "regression citation stricte"
     if total_errors == 0:
         return "publiable en l'etat"
     return "corrections necessaires avant publication"

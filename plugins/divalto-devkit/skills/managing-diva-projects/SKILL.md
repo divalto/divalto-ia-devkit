@@ -4,7 +4,7 @@ description: >
   Cree et modifie les fichiers projet Divalto : .dhpt (projet principal) et .dhps (sous-projet).
   Genere un .dhps avec toutes les sections obligatoires ([general], [communs], [fichiers],
   [includes], [autres]), l'ajoute dans [sousprojets] du .dhpt parent, et valide la structure
-  complete contre les regles P01-P16. A utiliser pour declarer un nouveau sous-projet
+  complete contre les regles PROJ01-PROJ17. A utiliser pour declarer un nouveau sous-projet
   (nouvelle entite a compiler) ou modifier les fichiers/includes d'un .dhps existant.
 ---
 
@@ -14,7 +14,7 @@ description: >
 
 - Utilisation rapide
 - Workflow complet (3 etapes)
-- Validation (P01-P16)
+- Validation (PROJ01-PROJ17)
 - Scripts disponibles
 - References
 
@@ -95,23 +95,15 @@ Un projet de surcharge (`.dhpt` avec en-tete `xwin-s-projet`) heberge des `.dhps
 | Nom | `gt_zoom article.dhps` | `gt_zoom articleu.dhps` (suffixe `u`) |
 | En-tete | `xwin-sprojet 2.0` | `xwin-s-sprojet 2.0` |
 | .dhpt parent | `xwin-projet 2.0` | `xwin-s-projet 2.0` |
-| Dans [sousprojets] du .dhpt | Oui (P08) | **Non** (P17) -- auto-detectee via `cheminbases` |
+| Dans [sousprojets] du .dhpt | Oui (PROJ08) | **Non** (PROJ17) -- auto-detectee via `cheminbases` |
 
 `create_subproject.py` bascule en mode surcharge via :
 - `--surcharge` (flag explicite)
 - `--parent-dhpt <projet.dhpt>` (auto-detection : si en-tete `xwin-s-projet`, mode surcharge)
 
-`add_to_project.py` refuse l'ajout d'une `.dhps` de surcharge dans `[sousprojets]` (garde-fou P17).
+`add_to_project.py` refuse l'ajout d'une `.dhps` de surcharge dans `[sousprojets]` (garde-fou PROJ17).
 
 Voir [reference/dhps-structure.md](reference/dhps-structure.md) section "En-tete" pour les regles xwin7 exactes.
-
-**Check SVN pre-modification** (optionnel) : avant de modifier un fichier projet .dhpt/.dhps existant, verifier les modifs locales non committees et l'activite recente pour detecter un refactor en cours.
-
-```bash
-py .claude/skills/managing-diva-projects/scripts/check_svn_recent.py     --path "{DHPT_PATH}" --limit 5 --days 30
-```
-
-Si `warning != null` ou `local_changes.has_changes=true`, signaler au collaborateur avant de poursuivre. Degradation gracieuse si SVN indispo. Voir [reference/svn-policy.md](reference/svn-policy.md).
 
 ### Etape 2 -- Generer et inserer
 
@@ -138,7 +130,7 @@ Verifications effectuees :
 - `zdiva.dhsp` present dans [includes]
 - Encodage ISO-8859-1 et CRLF
 - Reference dans [sousprojets] du parent (si `--dhpt` fourni)
-- Aucune `.dhps` de surcharge (`<base>u.dhps`) dans [sousprojets] (P17)
+- Aucune `.dhps` de surcharge (`<base>u.dhps`) dans [sousprojets] (PROJ17)
 
 Si erreurs : corriger et re-valider.
 
@@ -146,36 +138,36 @@ Si erreurs : corriger et re-valider.
 
 ## Validation
 
-### Anti-patterns verifies (P01-P17)
+### Anti-patterns verifies (PROJ01-PROJ17)
 
 | Code | Severite | Regle |
 |------|----------|-------|
-| P01 | error | Encodage UTF-8 interdit (ISO-8859-1 requis) |
-| P02 | error | Fins de ligne LF interdites (CRLF requis) |
-| P03 | error | Ne pas utiliser Edit/Write de Claude Code sur fichiers avec accents |
-| P04 | error | En-tete `xwin-projet` interdit dans .dhps (utiliser `xwin-sprojet` ou `xwin-s-sprojet`) |
-| P05 | error | En-tete `xwin-sprojet` interdit dans .dhpt (utiliser `xwin-projet` ou `xwin-s-projet`) |
-| P06 | error | `fic="nom"," "` interdit dans [includes] |
-| P07 | error | `fic="nom"` sans `," "` interdit dans [fichiers] |
-| P08 | error | .dhps non reference dans [sousprojets] du .dhpt parent |
-| P09 | error | `zdiva.dhsp` absent de [includes] |
-| P10 | warning | Groupes communs manquants dans [communs] |
-| P11 | warning | Melange de prefixes domaine |
-| P12 | error | Section [autres] absente en fin de .dhps |
-| P13 | error | Sections obligatoires absentes dans .dhpt |
-| P14 | error | Accent manquant dans `developpement` (profil) |
-| P15 | error | Accent manquant dans `developpement_x13.txt` (implicites) |
-| P16 | warning | Pas de verification d'encodage finale |
-| P17 | error | `.dhps` de surcharge (`<base>u.dhps`) listee dans [sousprojets] |
+| PROJ01 | error | Encodage UTF-8 interdit (ISO-8859-1 requis) |
+| PROJ02 | error | Fins de ligne LF interdites (CRLF requis) |
+| PROJ03 | *consigne, non verifiee* | Ne pas utiliser Edit/Write de Claude Code sur fichiers accentues -- le hook `protect_encoding.py` l'applique, pas le validateur |
+| PROJ04 | error | **.dhps** : en-tete invalide -- attendu `xwin-sprojet` (ou `xwin-s-sprojet` pour une surcharge). Le type controle vient de l'**extension**, pas de l'en-tete |
+| PROJ05 | error | **.dhpt** : en-tete invalide -- attendu `xwin-projet` (ou `xwin-s-projet` pour une surcharge). Un code par extension : PROJ04 pour le `.dhps`, PROJ05 pour le `.dhpt` |
+| PROJ06 | error | `fic="nom"," "` interdit dans [includes] |
+| PROJ07 | error | `fic="nom"` sans `," "` interdit dans [fichiers] |
+| PROJ08 | error | .dhps **standard** non reference dans [sousprojets] du .dhpt parent (**exemptee pour une .dhps de surcharge** `xwin-s-sprojet` -- cf. PROJ17) |
+| PROJ09 | `info` **hors defaut** | `zdiva.dhsp` absent de [includes] -- **convention**, `--with-rules PROJ09`. Le standard livre ne le fait **jamais** (0/2304 `.dhps`), un specifique le fait a 80-98 % |
+| PROJ10 | warning | Groupes communs manquants dans [communs] |
+| PROJ11 | *non implementee* | Melange de prefixes domaine -- annoncee, codee nulle part (ni ici, ni chez le linter) |
+| PROJ12 | error | Section [autres] absente en fin de .dhps |
+| PROJ13 | error | Sections obligatoires absentes dans .dhpt |
+| PROJ14 | error | Accent manquant dans `developpement` (profil) |
+| PROJ15 | error | Accent manquant dans `developpement_x13.txt` (implicites) |
+| PROJ16 | warning | Pas de verification d'encodage finale |
+| PROJ17 | error | `.dhps` de surcharge (`<base>u.dhps`) listee dans [sousprojets] |
 
-Detail complet : [reference/project-anti-patterns.md](reference/project-anti-patterns.md) (P01-P17)
+Detail complet : [reference/project-anti-patterns.md](reference/project-anti-patterns.md) (PROJ01-PROJ17)
 
 ### Difference critique : [fichiers] vs [includes]
 
 | Section | Syntaxe | Erreur si inverse |
 |---------|---------|-------------------|
-| `[fichiers]` | `fic="nom"," "` | P07 |
-| `[includes]` | `fic="nom"` | P06 |
+| `[fichiers]` | `fic="nom"," "` | PROJ07 |
+| `[includes]` | `fic="nom"` | PROJ06 |
 
 ---
 
@@ -185,7 +177,7 @@ Detail complet : [reference/project-anti-patterns.md](reference/project-anti-pat
 |--------|------|--------|--------|
 | `create_subproject.py` | Genere un .dhps complet | JSON (--stdin) | Fichier .dhps (--output) ou stdout |
 | `add_to_project.py` | Ajoute un .dhps dans [sousprojets] d'un .dhpt | --dhpt + --dhps | JSON resultat + .dhpt modifie |
-| `validate_project.py` | Valide structure .dhpt ou .dhps (P01-P16) | --path [--dhpt] | JSON (valid, errors, warnings) |
+| `validate_project.py` | Valide structure .dhpt ou .dhps (PROJ01-PROJ17). Le type controle vient de l'**extension** ; l'en-tete est ce qu'on lui compare (PROJ04/PROJ05) | --path [--dhpt] [--with-rules PROJ09] | JSON (valid, type, type_annonce_par_entete, errors, warnings) |
 | `cleanup_communs_from_subproject.py` | Retire des entrees temporaires de `[fichiers]` (cleanup post-compilation) | --path .dhps --remove FICHIER (repetable) | JSON (removed, kept, backup) + .dhps modifie (+ .bak) |
 
 > **Workaround [communs]** : pour le pattern "pousser temporairement
@@ -197,10 +189,37 @@ Detail complet : [reference/project-anti-patterns.md](reference/project-anti-pat
 
 **Convention** : tous les scripts utilisent `py` comme lanceur, sortie JSON sur stdout, erreurs sur stderr. Exit code 0 = succes, 1 = erreur.
 
+> **Regles hors jeu par defaut** -- audit de **convention** : le constat n'est ni une
+> erreur de compilation ni un dysfonctionnement, et ne rend pas le fichier invalide.
+> Aujourd'hui : **`PROJ09`** (`zdiva.dhsp` dans `[includes]` -- le standard livre ne le fait
+> **jamais**, 0/2304 `.dhps` ; un specifique le fait a 80-98 %). Activation :
+> `--with-rules PROJ09`.
+>
+> **`--with-rules` AJOUTE au jeu normal**, il ne filtre pas -- a ne pas confondre avec le
+> `--rules` de `linting-diva-code`, qui n'execute QUE les regles nommees. Un validateur
+> structurel prive de ses controles de structure n'aurait aucun sens : deux sens
+> differents, deux noms d'option differents.
+
+---
+
+## Tests
+
+Les regles d'en-tete et de convention ont une suite executable, sans poste Divalto :
+
+```
+py .claude/skills/managing-diva-projects/tests/run_all.py
+```
+
+A lancer apres toute modification de `scripts/validate_project.py`. Chaque cas rejoue un
+defaut reel : PROJ04/PROJ05 etaient **inatteignables** (le type etait deduit de l'en-tete meme
+qu'elles validaient, donc un melange en-tete/extension repondait `valid: true`), et PROJ09
+etait une `error` « obligatoire » sur une simple convention. Detail :
+[tests/README.md](tests/README.md).
+
 ---
 
 ## References
 
 - [Structure .dhpt](reference/dhpt-structure.md) -- sections, proprietes, arborescence
 - [Structure .dhps](reference/dhps-structure.md) -- sections, difference [fichiers]/[includes], conventions nommage
-- [Anti-patterns P01-P16](reference/project-anti-patterns.md) -- detail, exemples, corrections
+- [Anti-patterns PROJ01-PROJ17](reference/project-anti-patterns.md) -- detail, exemples, corrections

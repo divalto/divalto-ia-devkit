@@ -12,6 +12,7 @@ description: A utiliser lors de la migration du specifique d'un client d'une ver
 - Ordre de compilation (les deux pieges)
 - Verifier l'integrite des surcharges (script)
 - Arbitrer les sources d'un downgrade
+- Monter une surcharge de version (Service Pack)
 - References
 
 ---
@@ -60,11 +61,11 @@ Pack migre, surcharges intactes
 
 Detail complet : [reference/migration-build-order.md](reference/migration-build-order.md).
 
-1. **Piege overWrite (R-035)** -- `OverWrite <base>.dhop` **fusionne** ses procedures
+1. **Piege overWrite** -- `OverWrite <base>.dhop` **fusionne** ses procedures
    dans `<base>.dhop`. Recompiler le standard `<base>` **apres** sa surcharge regenere
    l'objet **propre** et **efface** la surcharge (0 erreur de compil ; bug silencieux au
    runtime). **Regle d'or : bases standard d'abord, surcharges ENSUITE.**
-2. **Dependances `.dhps` non declarees (R-010)** -- en `buildall`, un mauvais ordre
+2. **Dependances `.dhps` non declarees** -- en `buildall`, un mauvais ordre
    provoque « Erreur dictionnaire ... recompiler les dictionnaires » sur des `.dhoq`
    standard. **Contournement : 2e passe** en mode `build`. **Correctif durable** :
    declarer les dependances dans les `.dhps` (cf. `managing-diva-projects`).
@@ -117,6 +118,29 @@ source standard.** Croiser **3 signaux** :
 L'arbitrage des RecordSQL se joue sur le record relationnel `[CHAMPL]` du dictionnaire --
 voir le diff 3 couches / 3 voies de
 [managing-diva-dictionaries](../managing-diva-dictionaries/reference/dhsd-diff-downgrade.md).
+
+---
+
+## Monter une surcharge de version (Service Pack)
+
+Deux actions `xwin7` reportent une surcharge sur un nouveau standard :
+`creerprojetsurcharge` (cree la surcharge N depuis N-1) et `mettreAJourMasquesSurcharge`
+(reporte les pages du masque d'origine).
+
+**Trois pieges, tous verifiables :**
+
+| Piege | Ce qu'il faut savoir |
+|---|---|
+| `-Base_N` | designe le standard **CIBLE**, pas celui d'ou l'on part |
+| `-Base_Nm1` | **n'existe pas** -- l'inventer par symetrie avec `-OverLoad_Nm1` est le reflexe a bloquer |
+| Le resultat | tombe dans `FUpgrade.log`, **pas** sur `-output` ; le code de sortie 1 est cosmetique |
+
+Toujours commencer par **`-AnalyzeOnly`** (n'ecrit rien) avec **`-ClearFUpgrade`** (sinon on
+lit le journal du run precedent), et **un run par `.dhpt`** : un projet ne couvre qu'un
+sous-ensemble des masques.
+
+Detail des parametres, forme reelle du journal et **niveau de preuve de chaque affirmation**
+dans [reference/montee-version-surcharge.md](reference/montee-version-surcharge.md).
 
 ---
 

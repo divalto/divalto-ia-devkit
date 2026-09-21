@@ -9,6 +9,16 @@ Usage :
     py insert_dhsd_blocks.py --dhsd "chemin/gtfdd.dhsd" --blocks "blocs.json"
     py insert_dhsd_blocks.py --dhsd "chemin/gtfdd.dhsd" --blocks "blocs.json" --dry-run
 
+Base deja existante :
+    py insert_dhsd_blocks.py --dhsd "..." --blocks "..." --attach-to-base GtfTrace
+
+    Sans cette option, une base deja presente fait echouer l'insertion
+    ("Base 'X' existe deja"). Avec, aucun bloc [BASE] n'est cree : la table est
+    rattachee a la base existante par une ligne `Nom=<table>,0` inseree au rang
+    alphabetique de son `[TABLES]`. Se contenter de NE PAS inserer le bloc [BASE]
+    livrerait une table orpheline -- c'est ce rattachement qui l'attache au
+    fichier physique.
+
 Sortie JSON :
     {
         "success": true,
@@ -243,6 +253,85 @@ def find_base_insert_pos(lines, zone, base_name):
     return (zone["end"] + 1, False)
 
 
+def base_referencee_par_les_blocs(blocks):
+    """Nom de base que les blocs generes referencent (via [INDEXL] ou CLE=).
+
+    Sert au controle de coherence de --attach-to-base : les [INDEX] portent le nom
+    de base dans leur ligne CLE=, et les lignes [INDEXL] en 1re position. Rattacher
+    la table a une base et laisser ses index pointer vers une autre produirait un
+    dictionnaire incoherent.
+    """
+    for il in blocks.get("indexl") or []:
+        m = re.match(r"Nom=([^,]+),", il.strip())
+        if m:
+            return m.group(1)
+    for idx in blocks.get("indexes") or []:
+        m = re.search(r"^CLE=([^,]+),", idx.get("block", ""), re.M)
+        if m:
+            return m.group(1)
+    m = re.search(r"^Nom=([^,]+),", blocks.get("base", ""), re.M)
+    return m.group(1) if m else None
+
+
+def find_tables_insert_pos(lines, zone, base_name, table_name):
+    """Position d'insertion de `Nom=<table>,0` dans le [TABLES] d'une base existante.
+
+    Une base peut porter PLUSIEURS tables : mesure sur un dictionnaire specifique
+    reel, 10 bases sur 24 sont multi-tables -- ce n'est pas un cas limite. La liste
+    `[TABLES]` y est triee alphabetiquement, insensible a la casse, dans les 10 cas
+    sans exception : c'est la regle appliquee ici.
+
+    Returns:
+        (pos, erreur) : `pos` = index d'insertion 0-based, `erreur` = message ou None.
+    """
+    base_lower = base_name.lower()
+    i = zone["start"]
+    fin = zone["end"] if zone["end"] is not None else len(lines) - 1
+
+    while i <= fin:
+        if lines[i].strip().upper() != "[BASE]":
+            i += 1
+            continue
+        # Nom de cette base = 1er Nom= avant le [TABLES]
+        j = i + 1
+        nom = None
+        while j <= fin and lines[j].strip().upper() != "[TABLES]":
+            if lines[j].strip().upper().startswith("[BASE]"):
+                break
+            m = re.match(r"Nom=([^,]+),", lines[j].strip())
+            if m and nom is None:
+                nom = m.group(1)
+            j += 1
+        if nom is None or nom.lower() != base_lower:
+            i = j + 1
+            continue
+        if j > fin or lines[j].strip().upper() != "[TABLES]":
+            return (None, f"Base '{base_name}' trouvee mais sans section [TABLES] : "
+                          f"dictionnaire anormal, rien insere.")
+        # Parcourir les tables deja rattachees
+        k = j + 1
+        existantes = []
+        while k <= fin and lines[k].strip().upper() != "[/TABLES]":
+            m = re.match(r"Nom=([^,]+),", lines[k].strip())
+            if m:
+                existantes.append((m.group(1), k))
+            k += 1
+        if k > fin:
+            return (None, f"Base '{base_name}' : section [/TABLES] manquante, rien insere.")
+        for nom_t, _ligne in existantes:
+            if nom_t.lower() == table_name.lower():
+                return (None, f"Table '{table_name}' deja rattachee a la base "
+                              f"'{base_name}' : rien insere.")
+        # Rang alphabetique (insensible a la casse), comme le reste du fichier
+        for nom_t, ligne in existantes:
+            if nom_t.lower() > table_name.lower():
+                return (ligne, None)
+        return (k, None)   # apres la derniere, juste avant [/TABLES]
+
+    return (None, f"Base '{base_name}' introuvable dans le dictionnaire : rien insere. "
+                  f"Pour une base NOUVELLE, ne pas passer --attach-to-base.")
+
+
 def find_index_insert_pos(lines, zone, base_name):
     """Trouve la position d'insertion pour les [INDEX] d'une nouvelle base.
 
@@ -273,13 +362,17 @@ def find_index_insert_pos(lines, zone, base_name):
 # Insertion
 # ---------------------------------------------------------------------------
 
-def insert_blocks(lines, zones, blocks):
+def insert_blocks(lines, zones, blocks, table_name=None, attach_to_base=None):
     """Insere les blocs dans les lignes.
 
     Args:
         lines: liste de lignes du .dhsd
         zones: dict des zones detectees
         blocks: dict des blocs (depuis le JSON genere)
+        table_name: nom de la table (requis avec attach_to_base)
+        attach_to_base: nom d'une base EXISTANTE. Dans ce cas aucun bloc [BASE]
+            n'est cree : la table est rattachee a cette base par une ligne
+            `Nom=<table>,0` dans son `[TABLES]`.
 
     Returns:
         (lines_modified, insertions_report, errors)
@@ -306,15 +399,43 @@ def insert_blocks(lines, zones, blocks):
                     idx_lines = idx_block["block"].split("\n")
                     pending.append((pos, idx_lines, {"type": "index", "name": idx_block["name"]}))
 
-    # 3. BASE
-    if zones["base"]["start"] is not None and "base" in blocks:
+    # 3. BASE -- creation d'une nouvelle base, OU rattachement a une base existante
+    if attach_to_base:
+        # Le bloc [BASE] genere est volontairement IGNORE. Le rattachement se fait
+        # par une ligne dans le [TABLES] de la base cible : sauter le bloc [BASE]
+        # sans faire ce rattachement livrerait une table ORPHELINE, non rattachee.
+        referencee = base_referencee_par_les_blocs(blocks)
+        if referencee and referencee.lower() != attach_to_base.lower():
+            errors.append(
+                f"Incoherence : --attach-to-base '{attach_to_base}' alors que les blocs "
+                f"generes referencent la base '{referencee}' (CLE= / [INDEXL]). "
+                f"Regenerer les blocs avec base = '{attach_to_base}', sinon la table "
+                f"serait rattachee a une base et ses index a une autre.")
+        elif not table_name:
+            errors.append("Nom de table introuvable dans le JSON de blocs : "
+                          "rattachement impossible.")
+        elif zones["base"]["start"] is None:
+            errors.append("Aucune zone [BASE] detectee : rattachement impossible.")
+        else:
+            pos, err = find_tables_insert_pos(lines, zones["base"], attach_to_base,
+                                              table_name)
+            if err:
+                errors.append(err)
+            else:
+                pending.append((pos, [f"Nom={table_name},0"],
+                                {"type": "attach", "name": attach_to_base}))
+    elif zones["base"]["start"] is not None and "base" in blocks:
         base_text = blocks["base"]
         base_name_match = re.search(r"Nom=([^,]+),", base_text)
         if base_name_match:
             base_name = base_name_match.group(1)
             pos, is_dup = find_base_insert_pos(lines, zones["base"], base_name)
             if is_dup:
-                errors.append(f"Base '{base_name}' existe deja dans le dictionnaire")
+                errors.append(
+                    f"Base '{base_name}' existe deja dans le dictionnaire. Pour y "
+                    f"ajouter cette table, relancer avec "
+                    f"--attach-to-base {base_name} (la table est alors rattachee a "
+                    f"la base existante au lieu d'en recreer une).")
             else:
                 base_lines = base_text.split("\n")
                 pending.append((pos, base_lines, {"type": "base", "name": base_name}))
@@ -374,7 +495,12 @@ def insert_blocks(lines, zones, blocks):
         elif info["type"] == "table":
             insertions["table"] = {"name": info["name"], "line": actual_line}
         elif info["type"] == "base":
-            insertions["base"] = {"name": info["name"], "line": actual_line}
+            insertions["base"] = {"name": info["name"], "line": actual_line,
+                                  "action": "base creee"}
+        elif info["type"] == "attach":
+            insertions["base"] = {"name": info["name"], "line": actual_line,
+                                  "action": "table rattachee a une base existante "
+                                            "([TABLES]), aucun bloc [BASE] cree"}
         elif info["type"] == "index":
             insertions["indexes"].append({"name": info["name"], "line": actual_line})
         elif info["type"] == "indexl":
@@ -393,6 +519,11 @@ def main():
     )
     parser.add_argument("--dhsd", required=True, help="Chemin du dictionnaire .dhsd")
     parser.add_argument("--blocks", required=True, help="Chemin du JSON de blocs (generate_dhsd_block.py)")
+    parser.add_argument("--attach-to-base", default=None, metavar="NomBase",
+                        help="La base existe DEJA : ne pas creer de bloc [BASE], et "
+                             "rattacher la table a cette base par une ligne "
+                             "Nom=<table>,0 dans son [TABLES] (rang alphabetique). "
+                             "Le nom doit etre celui que referencent les blocs generes.")
     parser.add_argument("--dry-run", action="store_true", help="Affiche les positions sans modifier")
     parser.add_argument("--no-backup", action="store_true", help="Ne pas creer de backup .bak")
     args = parser.parse_args()
@@ -447,7 +578,9 @@ def main():
         sys.exit(1)
 
     # Inserer les blocs
-    lines, insertions, errors = insert_blocks(lines, zones, blocks)
+    lines, insertions, errors = insert_blocks(lines, zones, blocks,
+                                              table_name=table_name,
+                                              attach_to_base=args.attach_to_base)
 
     if errors:
         result["errors"] = errors
@@ -481,10 +614,16 @@ def main():
     # Validation post-insertion
     validate_script = os.path.join(os.path.dirname(__file__), "validate_dhsd.py")
     if os.path.isfile(validate_script):
+        cmd = [sys.executable, validate_script, "--path", args.dhsd, "--table", table_name]
+        # Propager l'absence DELIBEREE de container U : sans cela la
+        # validation post-insertion remonterait DICT03 en erreur sur une table que
+        # le generateur vient de produire conformement a la convention.
+        summary = blocks_data.get("summary") or {}
+        if "u_field" in summary and summary.get("u_field") is None:
+            cmd.append("--no-u-field")
         try:
             proc = subprocess.run(
-                [sys.executable, validate_script, "--path", args.dhsd, "--table", table_name],
-                capture_output=True, text=True, timeout=30
+                cmd, capture_output=True, text=True, timeout=30
             )
             result["validation"] = json.loads(proc.stdout) if proc.stdout.strip() else None
         except Exception:

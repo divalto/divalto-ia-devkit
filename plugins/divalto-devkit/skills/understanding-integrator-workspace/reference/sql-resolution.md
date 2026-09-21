@@ -358,3 +358,24 @@ sqlcmd -S "<Data Source>" -d "<Database>" -U "<User Id>" -P "<Password>" -Q "SEL
 | `Trusted_Connection=Yes` (Windows integrated) | Aucun credential a manipuler. La connexion utilise le user Windows qui execute le client. Verifier que ce user a les droits SQL voulus. | N/A |
 | SQL Server Auth (porte ADO.NET) | Directement dans la `<chaineDeConnexion>` de `connexions.xml` (R-11). Source unique pour cette porte. | Regle d'or de R-11 -- redaction systematique des `Password=`, `User Id=`. |
 | SQL Server Auth (porte Harmony / DSN ODBC) | Generalement HORS du DSN (les drivers modernes les demandent au runtime). Si exceptionnellement dans le registre (champ `PWD`), meme regle d'hygiene. | Voir R-10 garde-fou. |
+
+---
+
+## Lecture des tables de parametrage `T*` (mecanisme T000 / TABTYP)
+
+Une table de parametrage `Tnnn` du standard peut etre **commune a tous les dossiers** ou **propre a chaque dossier**. C'est la table **`T000`** (entity `TABLECOMMUNE`) qui porte cette information : **une seule ligne, sur le dossier commun `999`**, avec une colonne **`TABTYP_<nnnn>`** par numero de table (`nnnn` = n° de table `gtftab` sur 4 chiffres, ex. `TABTYP_0021` pour la table 21) :
+
+| `TABTYP_<nnnn>` | Portee de `Tnnn` | Ou vivent les enregistrements |
+|-----------------|------------------|-------------------------------|
+| `2` | **commune** | sur le **dossier commun `999`** ; s'appliquent a tous les dossiers |
+| `1` | **par dossier** | sur chaque dossier concerne |
+
+> **⚠️ Dico logique ≠ representation SQL.** Dans le dico (`get_table_schema('T000')` / .dhsd), `TABTYP` apparait comme **un seul champ repete** (`nature 1,0`). En base SQL il est **aplati en colonnes** `TABTYP_0001 … TABTYP_0200` (une par table, sur l'unique ligne `DOS=999`). Donc requeter **`SELECT TABTYP_0021 FROM T000`** est la bonne forme cote SQL -- ne pas se fier a la vue dico/graphe qui ne montre qu'un champ unique.
+
+**Regle : avant de conclure qu'une table `T*` est "vide" pour un dossier, lire `T000.TABTYP_<nnnn>`.** Si `2` (commune), requeter le **dossier `999`**, pas le dossier metier -- sinon on conclut a tort a une absence de parametrage.
+
+**Piege concret, verifie sur `INFINITYX13` (X.13)** : `SELECT * FROM T021 WHERE RTRIM(DOS)='998'` -> 0 ligne, d'ou la conclusion tentante « aucun taux de change pour 998 ». Or `SELECT TABTYP_0021 FROM T000` = `2` (commune) et les **86 lignes de `T021` vivent toutes sur `DOS='999'`** -> les taux s'appliquent bien a 998. Ne jamais conclure sans verifier TABTYP.
+
+> **Valeurs verifiees sur `INFINITYX13` (X.13), mais = exemples pas une liste figee** : `TABTYP_0007=2`, `TABTYP_0013=2`, `TABTYP_0021=2` (communes) ; `TABTYP_0005=1`, `TABTYP_0019=1` (par dossier). Elles **varient selon version/config** -- toujours lire `T000` sur la base cible.
+
+> **Helper differe** : `check_table_scope.py --table Tnnn` (qui lit `T000.TABTYP_<nnnn>` sur la base client) releve du **requetage SQL client** -> a construire avec `querying-client-sql`. Ici = la regle (mecanisme + forme SQL verifies sur base reelle) ; l'execution automatisee viendra avec ce skill.

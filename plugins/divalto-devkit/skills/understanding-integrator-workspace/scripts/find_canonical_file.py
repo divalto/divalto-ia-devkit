@@ -82,7 +82,7 @@ def search_file_in_dir(directory: Path, filename: str, recursive: bool) -> Path 
 def main():
     parser = argparse.ArgumentParser(
         description="Trouve la version canonique d'un fichier pour un workspace "
-        "integrateur (R-13).",
+        "integrateur.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("--implicit", required=True, help="Chemin du fichier implicite confirme")
@@ -104,7 +104,7 @@ def main():
         action="store_true",
         help=(
             "OBLIGATOIRE : confirme que le collaborateur a explicitement valide le "
-            "fichier implicite passe en --implicit (R-1/P-B). Sans ce flag, le script "
+            "fichier implicite passe en --implicit. Sans ce flag, le script "
             "refuse de demarrer (exit 3)."
         ),
     )
@@ -114,7 +114,7 @@ def main():
     if not args.confirmed_by_user:
         print(
             f"WARNING: Selection du fichier implicite '{args.implicit}' non confirmee "
-            f"par l'utilisateur (R-1/P-B). Le skill understanding-integrator-workspace "
+            f"par le collaborateur. Le skill understanding-integrator-workspace "
             f"exige que le fichier implicite soit confirme par le collaborateur avant "
             f"toute resolution de fichier canonique. Relancer avec --confirmed-by-user "
             f"apres validation explicite.",
@@ -130,7 +130,7 @@ def main():
     # R-5 : decouvrir DIVA_ROOT
     info = discover_diva_root()
     if "error" in info:
-        print(f"ERROR R-5 : {info['error']}", file=sys.stderr)
+        print(f"ERREUR : racine d'installation Divalto introuvable dans le registre -- {info['error']}", file=sys.stderr)
         sys.exit(2)
     diva_root = info["diva_root"]
     fconfig_dhfd = Path(info["fconfig_dhfd"]) if info.get("fconfig_dhfd") else None
@@ -139,7 +139,7 @@ def main():
     cfg_path = Path(diva_root) / "sys" / "divaltopath.cfg"
     cfg = parse_divaltopath_cfg(cfg_path)
     if "error" in cfg:
-        print(f"WARNING R-3 : {cfg['error']} (poursuite avec R-4 seul)", file=sys.stderr)
+        print(f"AVERTISSEMENT : divaltopath.cfg illisible -- {cfg['error']} (poursuite avec le seul fconfig)", file=sys.stderr)
         cfg_aliases = {}
     else:
         cfg_aliases = cfg["aliases"]

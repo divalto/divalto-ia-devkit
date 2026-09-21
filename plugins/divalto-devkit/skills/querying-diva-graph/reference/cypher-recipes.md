@@ -1,11 +1,11 @@
 # cypher-recipes.md
 
-Recettes Cypher exploitees par `querying-diva-graph`. Alignees sur le référentiel interne du graphe diva-mcp (schema, labels, relations, limites APOC).
+Recettes Cypher exploitees par `querying-diva-graph`. Les limites APOC et leurs equivalents sans APOC sont plus bas dans cette page. Les pieges de requetage vivent dans [mcp-query-pitfalls.md](mcp-query-pitfalls.md), l'avertissement X.12 dans [x12-advisory-rules.md](x12-advisory-rules.md).
 
 ## Conventions
 
 - Toutes les requetes incluent `LIMIT` (15 a 25) -- aucune requete ouverte
-- Pour les noms de fonction/procedure : toujours unir `Function OR Procedure OR DObj` (cf. MCP-DIVA-GRAPH.md section "Piege")
+- Pour les noms de fonction/procedure : toujours unir `Function OR Procedure OR DObj`
 - Les proprietes attendues : `p.name`, `p.path`, `m.name`, `m.prefix`, `t.table_name`, `t.entity`, `f.field_name`
 - Les resultats sont **advisory X.12** -- marquage systematique dans le JSON consolide
 
@@ -94,7 +94,7 @@ ORDER BY caller_name LIMIT 25;
 
 Usage : identifier les invocations via le pattern transaction Divalto (`xmt_call`, `g3_xmt_call`, `tnt_xmt_call`, `ga_xmt_call`, `xmt_call_sql`, ...). Volumes ordre de grandeur : ~1 400 XMT_CALL. Complete `callers_of` et `dynamic_callers_of` pour une couverture d'impact analysis complete.
 
-> **`get_call_graph` ne suffit PAS pour l'impact analysis (R-068)** : l'outil MCP de commodite
+> **`get_call_graph` ne suffit PAS pour l'impact analysis** : l'outil MCP de commodite
 > `get_call_graph` ne remonte que les relations **CALLS statiques**. Il **manque** les appels
 > dynamiques / transactionnels -- typiquement `TNT_Xmt_Call("NomProcedure")`, ou la cible est
 > passee en chaine. Consequence : la procedure cible **n'apparait pas** dans les CALLS sortants
@@ -123,13 +123,13 @@ Usage : trouver des patterns d'entite metier comparables (Client, Article, FamRg
 
 | Limitation | Impact | Reference |
 |-----------|--------|-----------|
-| Snapshot X.12, pas X.13 | Faux positifs/negatifs sur toute modification post-X.12 | MCP-DIVA-GRAPH.md section "Avertissement" |
-| `RecordField` label vide | Pas de query champs d'un RecordSql | MCP-DIVA-GRAPH.md section "Decouvertes -- Limitation 4" |
-| `scope_type=procedure` non source-faithful | Compter les populations source = filesystem X.13 | MCP-DIVA-GRAPH.md section "Decouvertes -- Piege 5" |
-| APOC `apoc.meta.schema` sandboxed | Pas d'introspection via APOC ; utiliser `db.labels()`/`db.relationshipTypes()` | MCP-DIVA-GRAPH.md section "APOC disponible" |
+| Snapshot X.12, pas X.13 | Faux positifs/negatifs sur toute modification post-X.12 | constat de ce skill |
+| `RecordField` label vide | Pas de query champs d'un RecordSql | classe declaree mais 0 noeud (remesure 2026-09-09) |
+| `scope_type=procedure` non source-faithful | Compter les populations source = filesystem X.13 | constat de ce skill |
+| APOC `apoc.meta.schema` : limitation **plus reproductible** | L'introspection passe : `apoc.meta.schema()` renvoie classes, proprietes et types d'aretes. Equivalents sans APOC, toujours valables : `db.labels()` / `db.relationshipTypes()` | remesure 2026-09-09 |
 | Pas de relation `OverWrittenBy` explicite | Detection des surcharges = grep X.13 (searching-erp-sources) | -- |
-| `get_call_graph` = CALLS statiques uniquement | Appels dynamiques/XMT (`TNT_Xmt_Call`) manques | recettes `dynamic_callers_of` + `xmt_callers_of` (`query_cypher`) + grep local (R-068) |
-| Graphe en retard sur revisions recentes | `[]` sur programme existant != absence | verifier en local (`searching-erp-sources`) (R-067) |
+| `get_call_graph` = CALLS statiques uniquement | Appels dynamiques/XMT (`TNT_Xmt_Call`) manques | recettes `dynamic_callers_of` + `xmt_callers_of` (`query_cypher`) + grep local |
+| Graphe en retard sur revisions recentes | `[]` sur programme existant != absence | verifier en local (`searching-erp-sources`) |
 
 ## Ajouter une nouvelle recette
 

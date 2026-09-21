@@ -42,16 +42,23 @@ TEMPLATES_DIR = Path(__file__).parent / "templates"
 CE4_TABLE = [
     {"code": "1", "label": "active"},
     {"code": "2", "label": "suspendue"},
-    {"code": "4", "label": "modele"},
+    {"code": "4", "label": "modèle"},
     {"code": "7", "label": "provisoire"},
-    {"code": "8", "label": "perimee"},
-    {"code": "9", "label": "transferee"},
-    {"code": "A", "label": "archivee"},
+    {"code": "8", "label": "périmée"},
+    {"code": "9", "label": "transférée"},
+    {"code": "A", "label": "archivée"},
 ]
 
 
+# Trois formes, et non une seule comparaison :
+#   `Ce4 = '1'`        comparaison ou affectation ;
+#   `Ce4 WHEN '1'`     forme du CASE dans un .dhsq -- c'est CELLE-LA qui definit
+#                      les valeurs (cf. dav_sd.dhsq), et elle etait ignoree ;
+#   `Ce4 in ('1',...)` forme mesuree au graphe (5 objets), le plus souvent avec des
+#                      constantes nommees ; la variante litterale est une precaution.
 _LITERAL_SCAN = re.compile(
-    r"(Ce4|TiCod|PiCod|AsCod)\s*[=<>!]+\s*['\"][\w\d]{1,3}['\"]",
+    r"(Ce4|TiCod|PiCod|AsCod)\s*(?:[=<>!]+|\bwhen\b|\bin\b\s*\()"
+    r"\s*['\"][\w\d]{1,3}['\"]",
     re.IGNORECASE,
 )
 _OVERWRITE_SCAN = re.compile(r"\b(Xmt_Call|OverWrittenBy)\b", re.IGNORECASE)
@@ -337,12 +344,7 @@ def _rank_confirmed_by_relevance(confirmed: list[dict], request: dict) -> list[d
 
 
 def _seed_type_1(evidence: dict, request: dict) -> dict:
-    """Exemples cibles : max 5 confirmed, prioritises par pertinence aux keywords.
-
-    Enrichissement SVN (S-15, optionnel) : si evidence.confirmed[i].svn_log_recent
-    est present (produit par verify_x13.py --svn-enrich), on ajoute svn_last_commit
-    a l'example pour afficher la "fraicheur" du code.
-    """
+    """Exemples cibles : max 5 confirmed, prioritises par pertinence aux keywords."""
     ranked = _rank_confirmed_by_relevance(evidence.get("confirmed", []), request)
     examples = []
     for c in ranked[:5]:
@@ -356,16 +358,6 @@ def _seed_type_1(evidence: dict, request: dict) -> dict:
             "status": c.get("status", "CONFIRME X.13"),
             "targeted_symbol": c.get("targeted_symbol"),
         }
-        svn_log_recent = c.get("svn_log_recent") or []
-        if svn_log_recent:
-            last = svn_log_recent[0]
-            msg = (last.get("message") or "").splitlines()
-            example["svn_last_commit"] = {
-                "revision": last.get("revision"),
-                "author": last.get("author", ""),
-                "date": (last.get("date", "") or "")[:10],
-                "message_excerpt": (msg[0][:80] if msg else ""),
-            }
         examples.append(example)
     return {
         "examples": examples,
@@ -444,45 +436,6 @@ def _seed_type_3(evidence: dict, candidates: dict) -> dict:
 
 
 _ACTION_CONST_SCAN = re.compile(r"\bC_Action_\w+\b")
-
-
-# S-15 -- Extraction des tickets Divalto dans les messages SVN des confirmed.
-# Formats observes empiriquement sur l'historique SVN Divalto :
-# - `US #NNNNN` (User Story Azure DevOps)
-# - `\xa7DMS-NNNNN` (JIRA projet DMS, separateur section sign)
-_TICKET_US = re.compile(r"\bUS\s*#(\d{3,7})\b", re.IGNORECASE)
-_TICKET_DMS = re.compile("\xa7DMS-(\\d{3,7})")
-
-
-def _extract_related_tickets_from_svn(evidence: dict, max_tickets: int = 5) -> list[dict]:
-    """Extrait les tickets US/DMS des messages svn_log_recent des confirmed.
-
-    Dedup sur (type, number), max `max_tickets`. Retourne liste vide si aucun confirme
-    n'est enrichi SVN (le champ svn_log_recent est produit par verify_x13.py --svn-enrich).
-    """
-    seen: set = set()
-    tickets: list[dict] = []
-    for c in evidence.get("confirmed", []):
-        log = c.get("svn_log_recent") or []
-        if not log:
-            continue
-        file_label = Path(c.get("file_path", "")).name
-        for entry in log:
-            msg = entry.get("message") or ""
-            rev = entry.get("revision", 0)
-            for m in _TICKET_US.finditer(msg):
-                key = ("US", m.group(1))
-                if key not in seen:
-                    seen.add(key)
-                    tickets.append({"type": "US", "number": m.group(1), "file": file_label, "rev": rev})
-            for m in _TICKET_DMS.finditer(msg):
-                key = ("DMS", m.group(1))
-                if key not in seen:
-                    seen.add(key)
-                    tickets.append({"type": "DMS", "number": m.group(1), "file": file_label, "rev": rev})
-            if len(tickets) >= max_tickets:
-                return tickets
-    return tickets
 
 
 def _pick_best_action(actions: set[str], request: dict) -> str | None:
@@ -589,7 +542,8 @@ def _seed_type_4(evidence: dict, request: dict) -> dict:
             next_step = f"rg '\\b{symbol}\\b' X.13/  # voir qui consomme ce pattern"
         else:
             action_kind = f"clarifier puis analyser `{symbol}`"
-            hypothese = "Type de demande non confirme -- clarification CP1 requise avant d'agir."
+            hypothese = ("Type de demande non confirme -- clarification requise avec le "
+                         "collaborateur avant d'agir.")
             next_step = "Re-parser la demande apres precision du collaborateur."
 
         # N6 : filtrer les enclosing_block "int" / "main" (main body du program, pas une
@@ -607,12 +561,7 @@ def _seed_type_4(evidence: dict, request: dict) -> dict:
             "next_uc": next_step,
             "hypothese": hypothese,
         })
-    result = {"propositions": props}
-    # S-15 : tickets Divalto extraits des commits SVN des confirmed (si enrichissement actif)
-    related_tickets = _extract_related_tickets_from_svn(evidence)
-    if related_tickets:
-        result["related_tickets"] = related_tickets
-    return result
+    return {"propositions": props}
 
 
 def _seed_type_5(request: dict, evidence: dict) -> dict:
@@ -721,7 +670,6 @@ def _seed_type_6(evidence: dict) -> dict:
 _KNOWN_LITERAL_TABLES: dict[str, dict] = {
     "Ce4": {
         "name": "Ce4 (etat piece)",
-        "canonical_source_doc": "../docs/ETATS-PIECE.md",
         "canonical_source_code": "Achat-Vente/source/Dav/dav_sd.dhsq:453",
         "table": CE4_TABLE,
         "note": "Pas de constantes nommees -- litteraux bruts dans 30+ sites.",
@@ -734,7 +682,7 @@ def _seed_type_7(literals_detected: tuple[str, ...], request: dict | None = None
 
     V3 : pour les patterns detectes mais sans table documentee (TiCod, PiCod, AsCod...), OMETTRE
     plutot que livrer une ligne vide "a documenter". Un placeholder transmis au dev = bruit.
-    Quand un pattern est detecte mais omis, on ajoute une note de backlog dans `omitted_patterns`.
+    Quand un pattern est detecte mais omis, on le signale dans `omitted_patterns`.
 
     V4 (RETEX Session 3) : si la request mentionne des libelles d'etat metier specifiques
     (ex: "preparation", "valide en facture", "facture en avoir"), enrichir la note du Ce4 avec
@@ -800,7 +748,7 @@ def _seed_type_8(ctx: ReportContext) -> dict:
     return {"triggers_hit": triggers, "grep_hint": grep_hint}
 
 
-def _seed_type_10(request: dict, evidence: dict) -> dict:
+def _seed_type_10(request: dict, evidence: dict, erp_root: str) -> dict:
     """Verification prealable : commandes CIBLEES (pas de rg global qui ramene 2000 matches).
 
     V3 :
@@ -826,7 +774,7 @@ def _seed_type_10(request: dict, evidence: dict) -> dict:
     if chosen_sym:
         verifs.append({
             "intent": f"Confirmer la cascade d'appels autour de `{chosen_sym}`",
-            "command": f'rg -n "\\b{chosen_sym}\\b" "C:/Developpements harmony/Standard/Version X.13"',
+            "command": f'rg -n "\\b{chosen_sym}\\b" "{erp_root}"',
             "expected": "appelants directs du symbole (1-20 matches typiquement)",
         })
 
@@ -839,7 +787,7 @@ def _seed_type_10(request: dict, evidence: dict) -> dict:
     if best_action:
         verifs.append({
             "intent": f"Identifier les listeners de `{best_action}` (action ERP detectee dans le snippet)",
-            "command": f'rg -n "\\b{best_action}\\b" "C:/Developpements harmony/Standard/Version X.13"',
+            "command": f'rg -n "\\b{best_action}\\b" "{erp_root}"',
             "expected": "site qui consomme l'action (listener candidat pour la cause racine)",
         })
 
@@ -850,7 +798,7 @@ def _seed_type_10(request: dict, evidence: dict) -> dict:
         probe = kws_tech[0].lower()[:4] if kws_tech else "ctm"
         verifs.append({
             "intent": "Localiser les champs dossier lies au parametrage mentionne",
-            "command": f'rg -ni "{probe}" "C:/Developpements harmony/Standard/Version X.13/Fichier/gtfdd.dhsd"',
+            "command": f'rg -ni "{probe}" "{erp_root}/Fichier/gtfdd.dhsd"',
             "expected": "champs dossier candidats (ex: CtmActif, CtmMode, ...) dans le dictionnaire",
         })
 
@@ -1163,7 +1111,8 @@ def _build_chain_of_blame(request: dict, candidates: dict, evidence: dict) -> di
     }
 
 
-def build_seeds(ctx: ReportContext, request: dict, candidates: dict, evidence: dict) -> dict:
+def build_seeds(ctx: ReportContext, request: dict, candidates: dict, evidence: dict,
+                erp_root: str) -> dict:
     """Construit tous les seeds necessaires aux fragments Jinja + le TL;DR global.
 
     Tous les types sont seedes meme s'ils sont omis : le script reste deterministe,
@@ -1178,7 +1127,7 @@ def build_seeds(ctx: ReportContext, request: dict, candidates: dict, evidence: d
         "type_6": _seed_type_6(evidence),
         "type_7": _seed_type_7(ctx.literals_detected, request),
         "type_8": _seed_type_8(ctx),
-        "type_10": _seed_type_10(request, evidence),
+        "type_10": _seed_type_10(request, evidence, erp_root),
     }
     seeds["chain_of_blame"] = _build_chain_of_blame(request, candidates, evidence)
     seeds["ca_mapping"] = _build_ca_mapping(request, candidates, evidence)
@@ -1254,7 +1203,7 @@ def _build_ca_mapping(request: dict, candidates: dict, evidence: dict) -> dict:
             "tier": "x13",
         })
     # Map program name -> X.13 path (derivee de X.12 en remplacant la version).
-    # Chemin X.12 typique : /mnt/c/Developpements harmony/Standard/Version X.12/Achat-Vente/source/Dav/gtppdtr020.dhsp
+    # Chemin X.12 typique : <racine>/Standard/Version X.12/Achat-Vente/source/Dav/gtppdtr020.dhsp
     prog_x13_paths: dict[str, str] = {}
     for p in candidates.get("programs", []):
         pname = (p.get("name") or "").lower()
@@ -1329,8 +1278,8 @@ def _build_ca_mapping(request: dict, candidates: dict, evidence: dict) -> dict:
 def _file_uri(abs_path: str) -> str:
     """Convertit un chemin absolu Windows en URI file:// URL-encoded.
 
-    Ex: C:/Developpements harmony/.../gttmaction.dhsp
-      -> file:///C:/Developpements%20harmony/.../gttmaction.dhsp
+    Ex: {CHEMIN_ERP_STANDARD}/.../gttmaction.dhsp
+      -> file:///C:/.../gttmaction.dhsp   (les espaces sont encodes %20)
     """
     if not abs_path:
         return ""
@@ -1429,7 +1378,7 @@ def compute_metrics(
     evidence: dict,
     selection: list[dict],
 ) -> dict:
-    """Calcule les metriques du rapport + liste `types_included` (CA10)."""
+    """Calcule les metriques du rapport + liste `types_included`."""
     confirmed = evidence.get("confirmed", [])
     disappeared = evidence.get("disappeared", [])
     new_findings = evidence.get("new_findings", [])
@@ -1494,7 +1443,7 @@ def prepare_context(
     cleaned_request["resume"] = _clean_resume(request.get("resume", ""))
     cleaned_request["keywords_metier"] = _filter_keywords(request.get("keywords_metier", []))
     selection = evaluate_catalog(ctx)
-    seeds = build_seeds(ctx, cleaned_request, candidates, evidence)
+    seeds = build_seeds(ctx, cleaned_request, candidates, evidence, erp_root)
     _strip_erp_root(seeds, erp_root)
     metrics = compute_metrics(cleaned_request, candidates, evidence, selection)
 
@@ -1625,7 +1574,7 @@ def preflight_check(request: dict, candidates: dict, evidence: dict) -> tuple[li
         warnings.append("request.domaine_pressenti absent -- les candidats seront moins cibles.")
     kws = request.get("keywords_techniques") or []
     if len(kws) < 2:
-        warnings.append(f"request.keywords_techniques faible ({len(kws)} items) -- enrichir au CP1.")
+        warnings.append(f"request.keywords_techniques faible ({len(kws)} items) -- a enrichir avant de continuer.")
 
     # --- candidates_x12.json ---
     fns = candidates.get("functions") or []
@@ -1647,7 +1596,7 @@ def preflight_check(request: dict, candidates: dict, evidence: dict) -> tuple[li
         # = rapport "plat" sans pistes nommees. Mieux vaut bloquer que livrer un rapport sans signal.
         errors.append(
             "feature sans fonctions ni relations -- candidats trop generiques (programs seuls). "
-            "Enrichir les keywords_techniques CP1 ou elargir callers_of avant de continuer."
+            "Enrichir les keywords_techniques ou elargir callers_of avant de continuer."
         )
 
     # --- evidence_x13.json ---
@@ -1692,7 +1641,7 @@ def _cli() -> int:
     ap.add_argument("--output-dir", default="output")
     ap.add_argument("--slug")
     ap.add_argument("--date")
-    ap.add_argument("--erp-root", default="C:/Developpements harmony/Standard/Version X.13",
+    ap.add_argument("--erp-root", required=True,
                     help="Racine ERP pour rendre les chemins relatifs dans le rapport.")
     args = ap.parse_args()
 

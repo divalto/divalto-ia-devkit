@@ -31,7 +31,7 @@ en obtenir une (ou une nouvelle si compromise) :
 
 > Note : la cle a une duree de vie typique de **12 mois**. Un message d'avertissement
 > est emis par l'API a partir de J-30 avant expiration. En cas de cle expiree, le
-> serveur retourne 401 sur tous les outils `mcp__diva-mcp__*`.
+> serveur retourne 401 sur tous les outils `mcp__plugin_divalto-devkit_diva-mcp__*`.
 
 ## Securite
 
@@ -47,7 +47,7 @@ explicite (vs. variables d'env) pour simplifier la configuration. Implications :
 
 ## Que faire en cas de 401 / Unauthorized
 
-1. **Verifier l'URL** : `curl -sI https://mcp-diva-partner.red.divalto.com` doit
+1. **Verifier l'URL** : `curl -sI https://mcp-diva.divaltocloud.com` doit
    repondre (sans header, attend 401 -- c'est normal).
 2. **Verifier le format** : ouvrir `.mcp.json`, regarder la ligne `X-Api-Key` -- doit
    matcher `<site>-<env>@<apikey>` strictement.

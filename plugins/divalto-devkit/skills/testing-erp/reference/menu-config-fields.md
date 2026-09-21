@@ -1,7 +1,5 @@
 # Champs de configuration du menu (Modifier via F4)
 
-> Reference : la référence navigation ERP (interne) section 4
-
 ## Acces
 
 Clic droit sur une entree du menu > "Modifier via F4"

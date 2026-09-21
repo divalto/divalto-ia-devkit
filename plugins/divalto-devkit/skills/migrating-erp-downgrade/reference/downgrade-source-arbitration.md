@@ -3,7 +3,7 @@
 > Quand on reprend un projet **downgrade** (couche de surcharge d'un distributeur /
 > integrateur) au passage d'un Service Pack, il faut decider, source par source, quoi
 > **conserver + rebaser**, quoi **abandonner**. Le piege : croire qu'un simple diff
-> textuel contre le standard suffit (R-028).
+> textuel contre le standard suffit.
 
 ## Contenu
 

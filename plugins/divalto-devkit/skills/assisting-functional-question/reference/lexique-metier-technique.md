@@ -108,6 +108,9 @@ Une entree du lexique = un concept (gauche) + un ou plusieurs symboles technique
 | "contremarque" | `Achat-Vente/source/Dav/gtppctm*.dhsp` | `Supprimer_LienContremarque`, `ActionERP_Contremarque_*` |
 | "livraison" | `Achat-Vente/source/Dav/gttmliv*.dhsp` | |
 | "tarif" | `Achat-Vente/source/Dav/gttmtar*.dhsp` | |
+| "facture integree en compta" (flag entete) | `Achat-Vente/source/Dav/gttmpce.dhsp` (`STA_ENT_Selection`, test `ENT.Ce2`) | `ENT.Ce2` = flag d'integration comptable de la facture, valeurs metier `' '` / `1` / `2` -- **sens hardcode cote code, NON inferable du dico ni d'un multichoix** |
+
+> **⚠️ Piege : les `Ce<n>` d'entete DAV sont polysemiques et leur sens est souvent HARDCODE dans le code** (pas dans le dico, pas dans le multichoix bindé). Ex. `ENT.Ce2` = flag d'integration comptable ; **ne pas** deduire son sens du multichoix `STATUSENT_C2`, qui est bindé sur **`ENT.Status`** (statut de preparation) et **pas** sur `Ce2`. Devant un `Ce<n>` d'entete : chercher son usage reel dans le code (`grep ENT.Ce<n>`) plutot que de se fier a un multichoix qui porte sur un autre champ.
 
 ---
 
@@ -125,6 +128,29 @@ Une entree du lexique = un concept (gauche) + un ou plusieurs symboles technique
 
 ---
 
+## Debogage -- ou trouver les erreurs
+
+Reflexes quand « ca ne marche pas » sans message clair (verify-actions).
+
+| Situation | Ou regarder | Details |
+|-----------|-------------|---------|
+| Plantage sans message / traitement automatique ou de nuit / process sans IHM | **`ferror.log`** | Journal technique des erreurs runtime (alimente par `ErrorFatal`, `SystemLogWrite`...). Chemin par defaut `C:\Divalto\DivaltoLog\ferror.log` -- **configurable** via `ServeurLog` dans `divalto.ini`. 1er reflexe quand il n'y a pas d'IHM pour afficher l'erreur. |
+| Erreur / alerte **metier** pendant un traitement | **table SQL `M8`** (livre de bord) | Entite `LIVREDEBORD` (dico `A5DD.DHSD`). Filtrer `NIVALERTE IN (1,3)` pour les vraies erreurs metier. Complement de `ferror.log` (qui, lui, est technique). |
+
+> Interroger `M8` suppose une connexion SQL client resolue : c'est le ressort de `understanding-integrator-workspace` (`sql-resolution.md`, R-7 a R-12) -- pas de ce skill.
+
+---
+
+## Traitements automatiques -- filtres date dynamiques (MPVAR)
+
+| Situation | Mecanisme | Details |
+|-----------|-----------|---------|
+| "le filtre date de mon traitement auto ne prend pas les bonnes dates" / plage glissante | **MPVAR** (parametres variables du traitement) | Un critere date d'un traitement automatique peut etre stocke **non comme une date fixe mais comme une formule** evaluee a l'execution (plage glissante), aboutissant in fine a la fonction native `Hdate([date],[op_jour],[op_mois],[op_annee])`. **Verifier MPVAR** pour voir si le critere est une formule dynamique plutot qu'une date figee. |
+
+> **Prudence** : la fonction de formule (parfois nommee `FctDate` dans les remontees terrain) et son mapping de parametres exact **ne sont pas verifiables sur le snapshot du graphe** ; seule `Hdate` est confirmee comme fonction native. Documenter le **mecanisme** (formule dynamique MPVAR -> `Hdate`), pas une signature figee.
+
+---
+
 ## Symptomes courants et pistes
 
 | Symptome conversationnel | Pistes immediates |
@@ -135,12 +161,15 @@ Une entree du lexique = un concept (gauche) + un ou plusieurs symboles technique
 | "impossible de creer Y" | Module check `Init_Y_Record` + conditions `Field_*` |
 | "l'option est activee mais rien ne change" | Restart de tache requis ? Recompilation ? Ordre d'init dans `DOS_1_Ap` ? |
 | "acces refuse / confidentialite" | `SOC.ConfEnr(N)`, `G3_Protection`, droits utilisateur |
+| "ca a plante sans message" / "le traitement de nuit a echoue" | `ferror.log` (technique) puis table `M8` livre de bord (erreurs metier) -- cf. section Debogage |
+| "mon filtre date d'un traitement auto ne renvoie rien" | Critere date = formule dynamique dans MPVAR (plage glissante -> `Hdate`) ? -- cf. section Traitements automatiques |
+| "ce flag Ce<n> ne veut pas dire ce que le multichoix affiche" | Sens hardcode cote code -- `grep ENT.Ce<n>` ; ne pas se fier au multichoix (souvent bindé sur un autre champ, ex. Status) -- cf. section DAV |
 
 ---
 
 ## Comment enrichir ce lexique
 
-Apres chaque nouveau cas UC-110 traite avec succes :
+Apres chaque nouvelle question traitee avec succes :
 1. Noter le **concept conversationnel** utilise par le collaborateur
 2. Noter le **symbole technique** qui a permis de debloquer
 3. Ajouter une entree dans la table appropriee ci-dessus

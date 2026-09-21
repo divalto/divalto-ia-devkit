@@ -4,8 +4,8 @@ description: >
   Structure une demande DIVA en texte libre (user story + criteres d'acceptation, ou ticket
   myService d'anomalie) en JSON canonique : type de demande, titre, resume, acteurs, donnees
   manipulees, domaine ERP pressenti, keywords techniques et metier, CA detectes, message
-  d'erreur. Le parseur est deterministe (regex + heuristiques), le LLM raffine la sortie au
-  checkpoint CP1 de l'orchestrateur. A utiliser quand une demande est livree en texte libre
+  d'erreur. Le parseur est deterministe (regex + heuristiques), le LLM raffine la sortie a
+  l'etape de comprehension de la demande. A utiliser quand une demande est livree en texte libre
   et qu'il faut produire un JSON structure exploitable par les phases suivantes d'analyse.
 ---
 
@@ -107,7 +107,7 @@ Liste canonique :
 | `GR_` | Relation-Tiers | CRM, contact, prospect, tiers |
 | `A5` | Framework A5 | framework, menu, dossier, utilisateur, securite |
 
-La detection est informative (hint pour le CP2 de l'orchestrateur). Si aucun domaine ne matche, `domaine_pressenti: null`.
+La detection est informative : elle alimente le checkpoint de perimetre de l'orchestrateur qui invoque ce skill. Si aucun domaine ne matche, `domaine_pressenti: null`.
 
 ---
 
@@ -119,7 +119,7 @@ Le flag `needs_clarification: true` est leve quand :
 - Type = `feature` mais aucun acteur extrait (pas de `En tant que`)
 - Type = `ticket` mais aucun message d'erreur ni stack trace identifie
 
-Dans ces cas, l'orchestrateur LLM doit demander au developpeur de clarifier au CP1 avant de poursuivre. Le parseur n'invente pas -- c'est la responsabilite du LLM.
+Dans ces cas, l'orchestrateur LLM doit demander au developpeur de clarifier avant de poursuivre. Le parseur n'invente pas -- c'est la responsabilite du LLM.
 
 ---
 

@@ -48,14 +48,14 @@
       "skills": [
         "reading-isam-files"
       ],
-      "query": "Fais un parcours forward complet du fichier a5f.dhfi sur la cle A4 pour verifier que le refactor R-014 tient : tu dois lire tous les enregistrements sans saturation.",
+      "query": "Fais un parcours forward complet du fichier a5f.dhfi sur la cle A4 pour verifier que le refactor tient : tu dois lire tous les enregistrements sans saturation.",
       "files": [],
       "expected_behavior": [
         "Execute read_isam.py avec --file sur a5f.dhfi, --key A4, --max 10000",
         "Utilise le mode reservation par defaut (P = Partage, pas de consommation de la table de reservations ISAM)",
         "Retourne count = 7480 records environ (drift possible selon l'etat du fichier). Distribution attendue : Ce=4 ~2483, Ce=5 ~4577, Ce=7 ~420",
         "Aucun warning 'ret=46 detecte (table de reservations ISAM saturee)' sur stderr",
-        "Garde-fou R-014 (2026-04-22) : un count plafonne a ~1003 indiquerait usage accidentel du mode R (ou alias invalide S) en parcours forward. Cas historique corrige par le refactor ISAM-06 (parametre `reservation=b\"P\"` par defaut)"
+        "Garde-fou (2026-04-22) : un count plafonne a ~1003 indiquerait usage accidentel du mode R (ou alias invalide S) en parcours forward. Cas historique corrige par le refactor ISAM-06 (parametre `reservation=b\"P\"` par defaut)"
       ]
     },
     {
@@ -69,8 +69,36 @@
         "Execute read_isam.py deux fois en mode reservation par defaut (P)",
         "Forward (--key A4, --max 10000) : ~7480 records (Ce=4 + Ce=5 + Ce=7 -- la cle A4 positionne au premier Ce=4, puis remonte vers Ce=5 et Ce=7)",
         "Reverse (--key A4, --reverse, --max 10000) : ~2483 records Ce=4 uniquement (la cle A4 delimite la plage haute en remontee, arret au changement de Ce)",
-        "Reverse avec ZoomNum 49998 en premier et 0 en dernier (ordre decroissant coherent avec R-011)",
+        "Reverse avec ZoomNum 49998 en premier et 0 en dernier (ordre decroissant coherent)",
         "Aucun warning saturation sur stderr dans aucun des deux sens"
+      ]
+    },
+    {
+      "id": "case-6",
+      "skills": [
+        "reading-isam-files"
+      ],
+      "query": "Sur ce poste Divalto est installe sur K:\\ (pas C:\\). Lis les zooms M4 de a5f.dhfi.",
+      "files": [],
+      "expected_behavior": [
+        "NE suppose PAS le chemin C:\\divalto\\sys : DhxIsam64.dll est resolue automatiquement (--dll-path/--sys-dir > env DIVALTO_SYS_DIR > registre Divalto CheminUl1 -> \\sys > fallback C:\\divalto\\sys)",
+        "Sur un poste standard, aucune option n'est necessaire (le registre Divalto donne la racine d'installation)",
+        "Si le registre ne resout pas (install portable/atypique), propose --sys-dir <dir> ou --dll-path <chemin> plutot que d'echouer en silence",
+        "Ne lit dans le registre QUE la valeur CheminUl1 (discipline P-C)"
+      ]
+    },
+    {
+      "id": "case-7",
+      "skills": [
+        "reading-isam-files"
+      ],
+      "query": "J'ai copie g3f.dhfi tout seul dans un dossier de test et la lecture echoue avec le code 100. Pourquoi ?",
+      "files": [],
+      "expected_behavior": [
+        "Identifie que le code 100 = fichier compagnon .dhfd (index) absent a cote du .dhfi",
+        "Explique qu'un .dhfi exige son .dhfd de meme nom pour s'ouvrir (echec de xisam_topenlong sinon)",
+        "Recommande de copier le .dhfd de meme nom a cote du .dhfi (toute copie/backup doit embarquer les deux fichiers)",
+        "Ne conclut PAS a un fichier corrompu ni a un mauvais chemin de DLL"
       ]
     }
   ]

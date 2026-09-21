@@ -146,12 +146,13 @@ A executer **a chaque demarrage** d'une session sur un workspace deja audite :
 - **Memoire locale au poste** : les conventions stockees ne sont pas transposables d'un poste a l'autre. Si un meme integrateur change de machine, refaire l'audit initial. Le partenaire peut s'inspirer d'une memoire d'un poste voisin **comme reference**, jamais comme verite par defaut.
 - **Conventions evoluent** : versions ERP, profils, structures de workspace bougent. La memoire **doit etre relue et re-validee** a chaque session -- elle accelere l'audit, elle ne le supprime pas.
 - **Pas de mecanisme automatique** : ce template documente une **bonne pratique** -- Claude la suit explicitement, il n'y a pas de hook Claude Code qui force la capture. Si une session se termine sans capture, ce n'est pas bloquant ; la prochaine session refera juste l'audit complet.
-- **Pas de SC futur sans datapoint** : si une convention se revele systematiquement valable cross-postes (typique : *« sur tous les postes integrateurs Divalto, `flagrelatif=1` est la convention »*), elle peut etre promue vers la doc generale du skill (`dhpt-structure.md`). Le canal est la RETEX -- pas de generalisation prematuree avant accumulation de datapoints terrain.
+- **Pas de SC futur sans datapoint** : si une convention se revele systematiquement valable cross-postes (typique : *« sur tous les postes integrateurs Divalto, `flagrelatif=1` est la convention »*), elle peut etre promue vers la doc generale du skill `managing-diva-projects`
+  (`reference/dhpt-structure.md`). Le canal est la RETEX -- pas de generalisation prematuree avant accumulation de datapoints terrain.
 
 ---
 
 ## Lien avec les autres regles
 
 - **R-1 a R-15** : produisent les donnees a stocker dans `poste-conventions.md`. R-16 est la **persistance** de ces decouvertes.
-- **SC-002 (batch 2026-05-27)** : enrichit la doc generale `dhpt-structure.md` avec les conventions terrain (cheminbases, flagrelatif, casse lowercase, cles `[general]`). Le template ci-dessus reference ces conventions comme valeurs **typiques** -- les valeurs **effectives** du poste vivent dans la memoire.
+- **Doc generale du poste** : `managing-diva-projects/reference/dhpt-structure.md` porte les conventions terrain (cheminbases, flagrelatif, casse lowercase, cles `[general]`). Le template ci-dessus reference ces conventions comme valeurs **typiques** -- les valeurs **effectives** du poste vivent dans la memoire.
 - **Principes transverses P-A / P-B / P-C** : la capture et la relecture sont soumises a P-B (jamais sans confirmation explicite) et P-C (la memoire vit dans `memory/`, jamais dans le registre Windows).

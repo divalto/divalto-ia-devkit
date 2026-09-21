@@ -8,9 +8,13 @@ En-tetes .dhpt acceptes :
 - `xwin-projet 2.0` (projet standard)
 - `xwin-s-projet 2.0` (projet de surcharge)
 
-Garde-fou surcharge : une .dhps de surcharge (suffixe `u.dhps`) ne doit
-PAS etre listee dans [sousprojets] -- xwin7 leve "ne peut etre charge
-directement". Le script refuse l'ajout dans ce cas.
+Garde-fou surcharge : une .dhps de surcharge ne doit PAS etre listee dans
+[sousprojets] -- xwin7 leve "ne peut etre charge directement". Le script
+refuse l'ajout dans ce cas. La surcharge est identifiee par son EN-TETE
+(`xwin-s-sprojet`), JAMAIS par le suffixe `u` du nom de fichier : sur un
+corpus reel de 2513 entrees, ce suffixe donnait 31 faux positifs et zero
+vrai positif (`gt_menu.dhps`, `...bordereau.dhps`, `...individu.dhps`...),
+dont 30 noms figurant dans des .dhpt du standard livre.
 
 Usage :
     py add_to_project.py --dhpt chemin.dhpt --dhps "gt_zoom article.dhps"
@@ -22,7 +26,8 @@ Sortie JSON (stdout) :
         "dhps_added": "gt_zoom article.dhps",
         "already_present": false,
         "total_subprojects": 42,
-        "output": "updated.dhpt"
+        "output": "updated.dhpt",
+        "warning": "... (present UNIQUEMENT si le statut de surcharge n'a pas pu etre verifie)"
     }
 
 Exit codes :
@@ -78,19 +83,38 @@ def get_existing_subprojects(lines, start, end):
     return subprojects
 
 
-def is_surcharge_dhps(dhps_name):
-    """Detecte une .dhps de surcharge via la convention de nommage.
+# NB : fonction volontairement DUPLIQUEE dans validate_project.py. Les deux scripts
+# sont des CLI autonomes -- un import croise casserait celui qu'on copie seul.
+def surcharge_dhps(dhps_name, dhpt_path):
+    """Statut de surcharge de la .dhps, d'apres son EN-TETE. Jamais d'apres son nom.
 
-    xwin7 fait une auto-detection : `<nom>u.dhps` dans le repertoire `projets/`
-    surcharge automatiquement `<nom>.dhps` du standard via `cheminbases`.
-    La .dhps de surcharge ne doit PAS etre listee dans [sousprojets] sinon
-    xwin7 leve "ne peut etre charge directement" (cf. anti-pattern P17).
+    Retourne "surcharge" (en-tete `xwin-s-sprojet`), "standard" (tout autre en-tete
+    reconnu), ou "inconnu" quand le fichier est introuvable.
 
-    `gt_zoom articleu.dhps` -> True
-    `gt_zoom article.dhps`  -> False
+    xwin7 auto-detecte une .dhps de surcharge via `cheminbases` : la lister dans
+    [sousprojets] casse la compilation ("ne peut etre charge directement",
+    anti-pattern PROJ17). Mais le suffixe `u` du nom de fichier est une CONVENTION DE
+    NOMMAGE, pas un marqueur : sur un corpus reel de 2513 entrees [sousprojets], le
+    test `stem.endswith("u")` produisait **31 faux positifs et zero vrai positif** --
+    il refusait `gt_menu.dhps`, `a5_menu.dhps`, `rc_cpt_bordereau.dhps`,
+    `pp_zoom individu.dhps`, `...lieu.dhps`, `...fou.dhps`, soit tout mot finissant
+    par `u`. Dont **30 noms figurant dans des .dhpt du standard livre** : le script
+    refusait donc d'ajouter des sous-projets parfaitement legitimes.
+
+    `inconnu` n'est pas un refus : voir add_subproject. Bloquer une operation
+    legitime coute plus cher que laisser passer une surcharge, que xwin7 signalera
+    au compile de facon recuperable.
     """
-    stem = os.path.splitext(dhps_name)[0]
-    return stem.endswith("u")
+    cible = os.path.join(os.path.dirname(os.path.abspath(dhpt_path)),
+                         os.path.basename(dhps_name))
+    if not os.path.isfile(cible):
+        return "inconnu"
+    try:
+        with open(cible, "r", encoding="iso-8859-1") as fh:
+            entete = fh.readline().strip().lower()
+    except OSError:
+        return "inconnu"
+    return "surcharge" if entete.startswith("xwin-s-sprojet") else "standard"
 
 
 def add_subproject(dhpt_path, dhps_name, output_path=None):
@@ -109,18 +133,31 @@ def add_subproject(dhpt_path, dhps_name, output_path=None):
     # Extraire le nom simple : xwin7 -sousproject attend le basename
     dhps_name = os.path.basename(dhps_name)
 
-    # Garde-fou P17 : refuser une .dhps de surcharge (suffixe `u`).
+    # Garde-fou PROJ17 : refuser une .dhps de surcharge, identifiee par son EN-TETE.
     # Elle est auto-detectee par xwin7 via `cheminbases`, l'ajouter dans
     # [sousprojets] casse la compilation ("ne peut etre charge directement").
-    if is_surcharge_dhps(dhps_name):
+    statut = surcharge_dhps(dhps_name, dhpt_path)
+    if statut == "surcharge":
         return {
             "error": (
-                f"{dhps_name} est une .dhps de surcharge (suffixe 'u'). "
-                f"xwin7 la detecte automatiquement via cheminbases : elle ne "
-                f"doit PAS etre listee dans [sousprojets] du .dhpt parent "
-                f"(anti-pattern P17). Aucune modification appliquee."
+                f"{dhps_name} est une .dhps de surcharge (en-tete "
+                f"'xwin-s-sprojet'). xwin7 la detecte automatiquement via "
+                f"cheminbases : elle ne doit PAS etre listee dans [sousprojets] "
+                f"du .dhpt parent (anti-pattern PROJ17). Aucune modification "
+                f"appliquee."
             )
         }
+    # `inconnu` = fichier introuvable a cote du .dhpt (sous-projet pas encore cree).
+    # On n'a AUCUN moyen de savoir : on ajoute, et on le dit. Refuser a tort bloque
+    # une operation legitime ; une surcharge reellement declaree sera signalee par
+    # xwin7 au compile, ce qui est recuperable.
+    avertissement = None
+    if statut == "inconnu":
+        avertissement = (
+            f"{dhps_name} introuvable a cote du .dhpt : statut de surcharge "
+            f"NON verifie (l'en-tete n'a pas pu etre lu). Si ce fichier est une "
+            f"surcharge, il ne doit pas figurer dans [sousprojets] -- cf. PROJ17."
+        )
 
     # Lire le fichier en mode binaire pour preserver CRLF + ISO-8859-1
     try:
@@ -198,13 +235,16 @@ def add_subproject(dhpt_path, dhps_name, output_path=None):
     except Exception as e:
         return {"error": f"Erreur ecriture : {e}"}
 
-    return {
+    resultat = {
         "dhpt": dhpt_path,
         "dhps_added": dhps_name,
         "already_present": False,
         "total_subprojects": len(existing) + 1,
         "output": target
     }
+    if avertissement:
+        resultat["warning"] = avertissement
+    return resultat
 
 
 def main():

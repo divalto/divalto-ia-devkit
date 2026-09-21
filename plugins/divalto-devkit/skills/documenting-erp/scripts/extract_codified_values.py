@@ -136,7 +136,7 @@ def convert_to_columns(multichoix: dict, fstyle_lookup: dict = None) -> dict:
     Quand `fstyle_lookup` est fourni et qu'un libelle `tbl*` y trouve une
     correspondance, le champ `FstyleName` est injecte dans la value (ex:
     `TBLART`). Le renderer externe s'en sert pour afficher `_(icone TBLART)_`
-    au lieu de `_(icone)_` generique (FS-03 UC-200).
+    au lieu de `_(icone)_` generique.
     """
     if fstyle_lookup is None:
         fstyle_lookup = {}

@@ -1,10 +1,12 @@
 [
   {
-    "skills": ["migrating-erp-downgrade"],
+    "skills": [
+      "migrating-erp-downgrade"
+    ],
     "query": "Apres un rebase sur le nouveau Service Pack, le comportement de la surcharge a disparu (l'ecran est redevenu standard). Verifie que la surcharge overWrite a bien survecu a la compilation.",
     "files": [],
     "expected_behavior": [
-      "Identifie le piege overWrite (R-035) : recompiler le standard de base APRES sa surcharge regenere l'objet propre et efface la fusion",
+      "Identifie le piege overWrite : recompiler le standard de base APRES sa surcharge regenere l'objet propre et efface la fusion",
       "Utilise check_overwrite_order.py --base <base>.dhop --overlay <overlay>.dhop --symbols <ProcSurcharge>",
       "Lit les deux signaux : date_inversion (base plus recent que l'overlay) et symbole lost (present overlay, absent base)",
       "Si lost=true ou date_inversion=true : recommande de recompiler la surcharge EN DERNIER (regle : bases standard d'abord, surcharges ensuite)",
@@ -12,7 +14,9 @@
     ]
   },
   {
-    "skills": ["migrating-erp-downgrade"],
+    "skills": [
+      "migrating-erp-downgrade"
+    ],
     "query": "Balaie le repertoire objets/ apres migration pour reperer les surcharges overWrite potentiellement effacees.",
     "files": [],
     "expected_behavior": [
@@ -24,14 +28,42 @@
     ]
   },
   {
-    "skills": ["migrating-erp-downgrade"],
+    "skills": [
+      "migrating-erp-downgrade"
+    ],
     "query": "Dans le downgrade, ce fichier source n'existe pas dans le nouveau SP standard. Est-ce un custom a conserver ou une source supprimable ?",
     "files": [],
     "expected_behavior": [
-      "Refuse de conclure 'supprimable' sur la seule absence de source standard (R-028)",
+      "Refuse de conclure 'supprimable' sur la seule absence de source standard",
       "Croise les 3 signaux : diff textuel (si source dispo), existence de l'objet standard (indexer objets/), couplage au dico/RecordSQL downgrade",
       "Classe : objet standard present + source absente = standard recompile en contexte downgrade (a conserver) ; ni source ni objet = include (xdiva, Public Record sans corps) ou vrai custom",
       "Pour un RecordSQL, renvoie a la couche [CHAMPL] du dictionnaire (managing-diva-dictionaries / dhsd-diff-downgrade.md)"
+    ]
+  },
+  {
+    "skills": [
+      "migrating-erp-downgrade"
+    ],
+    "query": "Comment monter la surcharge de ce client du SP precedent vers le nouveau ?",
+    "expected_behavior": [
+      "Renvoie aux deux actions xwin7 : creerprojetsurcharge et mettreAJourMasquesSurcharge",
+      "Precise que -Base_N designe le standard CIBLE, pas celui d'ou l'on part",
+      "Impose de commencer par -AnalyzeOnly (n'ecrit rien) avec -ClearFUpgrade, sinon on lit le journal du run precedent",
+      "Dit de lire FUpgrade.log et PAS le code retour, qui est cosmetique",
+      "Rappelle qu'il faut UN RUN PAR .dhpt : un projet ne couvre qu'un sous-ensemble des masques",
+      "Distingue ce qui est verifie dans le binaire de ce qui est seulement rapporte par un retour terrain"
+    ]
+  },
+  {
+    "skills": [
+      "migrating-erp-downgrade"
+    ],
+    "query": "Je mets quoi dans -Base_Nm1 pour designer l'ancienne version ?",
+    "expected_behavior": [
+      "Repond que -Base_Nm1 N'EXISTE PAS : zero occurrence dans le binaire xwin7",
+      "Explique que la symetrie avec -OverLoad_Nm1 est trompeuse : seul le couple OverLoad_Nm1 / OverLoad_N existe",
+      "Precise que la version de depart se designe par -OverLoad_Nm1, qui pointe la surcharge existante",
+      "N'INVENTE PAS de parametre de remplacement et ne suggere pas d'essayer pour voir"
     ]
   }
 ]

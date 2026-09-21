@@ -119,7 +119,17 @@ HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Divalto\divalto.ini\System
 
 R-5 court-circuite la dependance de R-4 a `<DIVA_ROOT>` -- le chemin de `fconfig.dhfd` peut etre lu directement du registre (`CheminFpartd`), sans avoir a composer `<DIVA_ROOT> + /sys/fconfig.dhfd`. Si jamais les deux divergent (cas exotique), le registre fait foi puisque c'est ce que xwin7 utilise au runtime.
 
-### Gotcha -- certains parametres Divalto sont dans le registre, pas dans `divalto.txt` (R-006)
+### Fallback -- poste sans registre Divalto (cas courant, portable / non-standard)
+
+L'absence de cle registre Divalto n'est **pas** exotique : c'est frequent sur les postes **portables** ou installes **hors installeur standard** (constate terrain). `_resolver.py --discover` echoue alors (pas de cle) -- ce n'est **pas** une impasse :
+
+1. **Deduire `<DIVA_ROOT>` et les alias depuis la structure physique du disque** (ex. la racine du poste qui porte `Standard/`, `Objets/`, `sys/`) -- repartir de l'**arborescence reelle**, jamais d'un chemin devine.
+2. **P-B obligatoire** : presenter au collaborateur les valeurs deduites (racine, alias) et **attendre confirmation** avant usage. La structure physique **varie d'un poste a l'autre** -- ne presumer aucune racine ni convention.
+3. Une fois confirmee, capturer en R-16 (`poste-conventions.md`) pour ne pas re-deduire a chaque session.
+
+Le registre reste la source **preferee** quand il existe (deterministe) ; le fallback structure-physique est la voie **normale** quand il est absent -- pas une degradation en erreur.
+
+### Gotcha -- certains parametres Divalto sont dans le registre, pas dans `divalto.txt`
 
 Plusieurs parametres `[System]` documentes "a mettre dans `Divalto.ini`" sont en realite lus
 par Harmony **exclusivement dans le registre** -- les ecrire dans `C:\divalto\sys\divalto.txt`

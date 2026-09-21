@@ -94,8 +94,230 @@
       "expected": {
         "patterns": [
           "Utiliser today() pour la date du jour, PAS MZ.DateJour (qui n'existe pas)",
-          "Constante booleenne standard : OUI = 2 (pas 1), NON = 0",
-          "Ne pas utiliser ; comme fin d'instruction (c'est un commentaire), ni | comme OU"
+          "Constante booleenne : NON = 1, OUI = 2 -- ne PAS ecrire NON = 0 (0 et l'espace veulent dire « non renseigne », pas « non »)",
+          "Ne pas utiliser ; comme fin d'instruction (c'est un commentaire), ni | comme OU",
+          "Prefere les constantes nommees Oui / Non aux litteraux 1 / 2"
+        ]
+      }
+    },
+    {
+      "name": "syntaxe-round-nest-pas-une-fonction",
+      "description": "Arrondi : Round existe, mais pas comme fonction",
+      "prompt": "Je dois arrondir le resultat d'un calcul en DIVA. Est-ce que Round(x) existe ?",
+      "expected": {
+        "patterns": [
+          "Round EXISTE, mais comme INSTRUCTION de mode sans parametre, pas comme fonction",
+          "Ne pas repondre que Round n'existe pas : c'est faux",
+          "La fonction Round(x) rendant une valeur arrondie, elle, n'existe pas",
+          "Arrondir se fait par l'indicateur porte par l'affectation : [ A ] arrondi, [ T ] tronque, [ S ] superieur",
+          "Ces indicateurs sont prioritaires sur le mode global Round / Truncate"
+        ]
+      }
+    },
+    {
+      "name": "syntaxe-faux-amis-boucles-et-conditions",
+      "description": "Elsif, EndFor, continue/break : une orthographe, une absence, deux faux sens",
+      "prompt": "Dans ma boucle For j'ai ecrit un ElseIf et un continue pour passer a l'iteration suivante, et je termine par EndFor. Rien ne marche. Qu'est-ce qui ne va pas ?",
+      "expected": {
+        "patterns": [
+          "ElseIf est une faute d'ORTHOGRAPHE : la construction existe et s'ecrit Elsif (un seul e) -- ne PAS conseiller d'imbriquer un If dans le Else",
+          "Endif est obligatoire, autant de Endif que de If imbriques",
+          "EndFor n'existe pas : le terminateur du For est Next",
+          "Next n'est pas suivi du nom de la variable compteur",
+          "Continue EXISTE en DIVA, mais appartient a la famille Switch : il enchaine sur le Case suivant, il ne relance pas une boucle -- donc il COMPILE et fait autre chose",
+          "Pour passer a l'iteration suivante d'un For, c'est RedoFor (et il avance le compteur)",
+          "Break EXISTE aussi, mais sort du Switch : pour sortir d'un For c'est ExitFor"
+        ]
+      }
+    },
+    {
+      "name": "syntaxe-prototype-endproto",
+      "description": "Prototype : declaration complete des parametres + EndProto obligatoire",
+      "prompt": "J'ai declare un Proto Function dans mon .dhsp pour appeler une fonction definie plus bas, et la compilation echoue avec des messages peu explicites. Voici ma declaration : Proto Function int Calcule(a, b)",
+      "expected": {
+        "patterns": [
+          "La declaration d'un prototype est IDENTIQUE a celle de la fonction : la signature ne porte que les NOMS des parametres",
+          "Il manque les lignes de declaration des parametres formels (ex : 1 a 24,10)",
+          "Il manque EndProto, qui est OBLIGATOIRE pour terminer la declaration",
+          "Forme complete : Proto Function <type_retour> <nom>(p1, pn) / declaration des parametres / EndProto",
+          "A quoi sert un prototype : appeler une fonction avant qu'elle soit definie, resoudre l'ordre des fonctions dans les sources et les references croisees"
+        ]
+      }
+    },
+    {
+      "name": "syntaxe-sortie-de-boucle-depuis-un-switch",
+      "description": "Piege d'execution : ExitFor depuis l'interieur d'un Switch",
+      "prompt": "Je parcours un tableau avec un For, je teste la valeur avec un Switch, et des que je trouve le bon cas je fais un ExitFor pour sortir de la boucle. C'est correct ?",
+      "expected": {
+        "patterns": [
+          "NON : on ne sort JAMAIS d'un Switch par un ExitFor / ExitLoop / ExitDo / ExitRepeat, ni par un Goto",
+          "Raison : la valeur du selecteur est EMPILEE ; sortir en traversant la structure la laisse sur la pile",
+          "Ce n'est PAS une erreur de compilation : le probleme se manifeste a l'execution",
+          "Remede : quitter le Switch par Break, memoriser ce qu'on a trouve, et faire l'ExitFor APRES le Endswitch",
+          "Endswitch est obligatoire"
+        ]
+      }
+    },
+    {
+      "name": "surcharge-fonction-neuve-public-ou-private",
+      "description": "Ajouter une fonction NEUVE dans un module de surcharge",
+      "prompt": "Dans ma surcharge de masque, je veux ajouter une procedure de calcul qui n'existe pas du tout dans le standard. Je la declare comment ?",
+      "expected": {
+        "patterns": [
+          "Dans un module de surcharge, toute fonction declaree ni Public ni Private est traitee comme une SURCHARGE -- donc une fonction neuve sans modificateur ne surcharge rien",
+          "Surcharge de MASQUE : une fonction absente du code de base doit etre declaree Private",
+          "Surcharge de DICTIONNAIRE : c'est l'INVERSE, elle doit etre Public",
+          "Mise en garde : le compilateur ne verifie cela que si l'option de profil 'Verifier que les fonctions non private sont des surcharges' est active -- du code non conforme peut compiler sans un mot",
+          "Piege de montee de version : si Divalto ajoute plus tard une fonction de ce nom au standard, la recompilation de la surcharge echouera"
+        ]
+      }
+    },
+    {
+      "name": "surcharge-module-non-transitif",
+      "description": "Erreur 99 sur une publique d'un module dependant d'un module deja inclus",
+      "prompt": "J'ai mis Module \"gttmpce.dhop\" dans mon source, et gttmpce depend de gtpmpce d'apres le graphe. Pourtant l'appel a Piece_Imprimer me donne Erreur 99 : Mot inconnu. Pourquoi ?",
+      "expected": {
+        "patterns": [
+          "La declaration Module n'est PAS transitive : chaque source doit declarer lui-meme tous les modules dont il appelle directement une publique",
+          "Ajouter Module \"gtpmpce.dhop\" en plus de gttmpce.dhop",
+          "Le fait que le graphe montre gttmpce dans les dependances de gtpmpce decrit les dependances INTERNES du module, pas ce que votre source a le droit d'appeler",
+          "Cas voisin : le module manquant peut etre un .dhop dont la source n'est pas livree -- la recherche textuelle ne le trouvera pas, ce n'est pas une faute de frappe"
+        ]
+      }
+    },
+    {
+      "name": "surcharge-programme-pp-non-surchargeable",
+      "description": "Erreur 106 sur un PP : aller vers le TT de meme numero",
+      "prompt": "J'essaie de surcharger GTPP780 avec OverWrite et j'obtiens Erreur 106 : Le module ne peut etre surcharge. Comment je fais ?",
+      "expected": {
+        "patterns": [
+          "PP = Programme Principal : source non livree, module non surchargeable (la protection porte sur le module compile entier, pas sur une fonction)",
+          "Rien n'est surchargeable par defaut : la surchargeabilite est declaree par la base",
+          "Aller vers le module TT de MEME NUMERO (GTTT780), livre en source et concu pour la surcharge",
+          "Les modules TT portent souvent des hooks _Av / _Ap deja presents mais VIDES, prevus pour recevoir du specifique",
+          "L'appariement PP/TT est quasi systematique mais PAS absolu -- verifier, ne pas presupposer"
+        ]
+      }
+    },
+    {
+      "name": "recordsql-condition-perdue",
+      "description": "Accumulation sans AddCondition final : la requete part non filtree",
+      "prompt": "Mon Select RecordSql ramene presque toute la table alors que j'ai pose cinq criteres avec Where.Equal_X(...) | Where.Equal_X.AddAndCondition(vCond). Qu'est-ce qui ne va pas ?",
+      "expected": {
+        "patterns": [
+          "AddAndCondition ne fait qu'ACCUMULER dans la variable : il n'injecte rien dans le WHERE",
+          "Il manque le Where.AddCondition(<nom>, vCond) final, AVANT le Select -- c'est lui, et lui seul, qui injecte la condition",
+          "Sans lui, TOUT ce qui a ete accumule est perdu et la requete part quasi non filtree",
+          "Aucune erreur de compilation ni d'execution : le seul symptome est le resultat",
+          "Le lint CI03 ne detecte PAS ce cas : un AddAndCondition suffit a le satisfaire"
+        ]
+      }
+    },
+    {
+      "name": "recordsql-convention-de-retour-inversee",
+      "description": "Select() teste a 0 : le bloc s'execute a l'envers",
+      "prompt": "J'ai ecrit If MonRecordSql.Select() = 0 puis mon traitement, par reflexe comme avec Give_Client(...) = 0. Le bloc ne s'execute jamais quand la ligne existe.",
+      "expected": {
+        "patterns": [
+          "Les methodes d'INSTANCE .Select() et .ReaderNext() rendent non-zero/vrai quand une ligne EST trouvee -- convention INVERSE de Give_XXX / Find_TXXX",
+          "Le test correct est <> 0, jamais = 0",
+          "Les wrappers generes Select_<Name>() / ReaderNext_<Name>() suivent, eux, la convention 0 = succes -- d'ou le reflexe",
+          "Ne produit aucune erreur : le code s'execute quand la ligne n'est PAS trouvee"
+        ]
+      }
+    },
+    {
+      "name": "recordsql-collate-interclassement",
+      "description": "Collate : moteur de ruptures pilote par callbacks",
+      "prompt": "Je veux interclasser deux RecordSql avec les fonctions Collate. Ecris-moi le squelette.",
+      "expected": {
+        "patterns": [
+          "CollateOpen(EndProc) : l'identifiant est la VALEUR DE RETOUR, pas un parametre",
+          "CollateAddRecordSQL(idCollate, Name, ProcBegin, ProcEnd, ProcDetail, FuncKey [, ModuleName]) -- Name est le NOM du RecordSql public sous forme de chaine",
+          "Poser le critere de TRI avant l'appel : CollateAddRecordSQL execute lui-meme le ReaderSelect et lit la premiere ligne",
+          "Le meme critere de tri sur tous les RecordSql -- seule obligation, les RecordSql peuvent etre heterogenes",
+          "Le travail se fait dans les procedures Debut / Detail / Fin, pas dans la boucle : c'est un moteur de ruptures",
+          "Fin d'interclassement : la sentinelle est H_EOF"
+        ]
+      }
+    },
+    {
+      "name": "programcall-extension-dhop",
+      "description": "ProgramCall : le nom du programme porte toujours l'extension",
+      "prompt": "Je lance un autre programme avec ProgramCall('monprogramme'). Est-ce correct ?",
+      "expected": {
+        "patterns": [
+          "Corrige en ProgramCall('monprogramme.dhop') -- l'extension est la regle, comme le standard",
+          "Cite la mesure X.13 : 38 sites d'appel vivants, 24 litteraux, 24 avec extension, 0 sans",
+          "N'AFFIRME PAS que le nom nu echoue : la doc native ne dit rien de l'extension et les 14 appels par variable transportent une valeur illisible -- regle de conformite, pas theoreme sur le runtime"
+        ]
+      }
+    },
+    {
+      "name": "tunnel-contexte-avant-programcall",
+      "description": "Contrat de contexte : remplir le XQ que la cible va lire, pas seulement .Tunnel",
+      "prompt": "J'ecris G3XQ = ' ' puis G3XQ.Tunnel = TRUE, Ping('XQ', G3XQ) et ProgramCall('xxx.dhop'). Ca compile et ca lance, mais le programme appele demarre sans dossier ni etablissement.",
+      "expected": {
+        "patterns": [
+          "Explique la cause : PingReceive('XQ', ...) REUSSIT, la cible prend sa branche tunnel et recopie du VIDE dans MZ.Echange / MZ.Dos / MZ.Etb",
+          "Envoie lire le Hql_Init du domaine de la cible : sa branche NON-tunnel enumere les champs attendus, et c'est la seule source qui ne se trompe pas",
+          "Donne la liste de gtqc000 : TUNNEL, LOGDH, USER, ACCES, DOS, Etb, VERSION, versionExt, JOB, ECHANGE, PRG",
+          "Corrige Tunnel = TRUE : Tunnel est un 2,0, donc un CODE d'action ; TRUE ecrit 1, qui est un code valide -- la cible fera autre chose, pas rien",
+          "Signale que la liste depend du domaine (DosCpt, NomPrg8, second PingReceive ZECHANGE_GTPCE selon les modules)",
+          "Mentionne l'alternative supportee Ping('zechange', MZ), et le piege du ProgramExit silencieux si on ne pingue ni l'un ni l'autre"
+        ]
+      }
+    },
+    {
+      "name": "module-portee-fonction-vs-enregistrement",
+      "description": "Erreur 99 : deux causes distinctes derriere le meme message",
+      "prompt": "J'ai mis Module \"gtpmpce.dhop\" dans mon source et j'obtiens Erreur 99 : Mot inconnu, a la fois sur Mode_Lecture_Impression et sur G3XZ.",
+      "expected": {
+        "patterns": [
+          "Distingue DEUX causes et deux correctifs, ne repond pas une seule chose",
+          "Mode_Lecture_Impression est definie dans gttmpce (pas gtpmpce) : ajouter Module \"gttmpce.dhop\" -- Module n'est pas transitif, et ici gtpmpce ne declare meme pas gttmpce",
+          "G3XZ ne s'obtient JAMAIS par une declaration Module : le declarer localement, Public Record 'GTFDD.dhsd' XZ G3XZ",
+          "Cite gttt545 comme le programme du standard qui declare les deux modules"
+        ]
+      }
+    },
+    {
+      "name": "log-ano-premier-parametre",
+      "description": "Log_Ano : le 1er parametre est un numero de message, jamais une donnee metier",
+      "prompt": "Ecris la ligne DIVA qui journalise « Traitement termine » dans le livre de bord pour le dossier courant.",
+      "expected": {
+        "patterns": [
+          "N'ecrit PAS MZ.Dos en premier parametre -- c'est le piege exact que la formulation « pour le dossier courant » tend",
+          "Ecrit G3_Log_Ano(9999, 'Traitement termine') -- 9999 = message libre",
+          "Explique que le 1er parametre est un code du fichier de messages du domaine (XXferr), pas une donnee metier, et que l'erreur COMPILE",
+          "Si le domaine est le socle : signale que le 9999 de a5ferr vaut 'Erreur $1', donc que A5_Log_Ano(9999, 'texte') ecrit 'Erreur texte'"
+        ]
+      }
+    },
+    {
+      "name": "faux-amis-decoupage-chaine",
+      "description": "SplitCount/SplitItem : faux amis, pas un ecart de version",
+      "prompt": "Je decoupe une chaine CSV en DIVA avec SplitCount et SplitItem, et le compilateur repond « Mot inconnu ». C'est parce que je suis sur une vieille version de l'ERP ?",
+      "expected": {
+        "patterns": [
+          "Repond NON : ce ne sont pas des noms DIVA, dans aucune version -- ce sont des faux amis",
+          "Donne le vrai nom : SplitList, en UN seul appel, et precise que le modele differe (ce n'est pas un renommage)",
+          "N'invente PAS la signature de SplitList : renvoie au graphe pour les parametres",
+          "Explique que les mots-cles du langage ne dependent pas du numero de version de l'ERP ; ce qui pourrait varier, c'est le compilateur",
+          "Si Pos ou Len sont cites : les corrige en String (qui rend une POSITION) et Length"
+        ]
+      }
+    },
+    {
+      "name": "champ-tableau-et-concatenation",
+      "description": "Champ multi-occurrence et concatenation : deux erreurs qui ne compilent pas",
+      "prompt": "Ecris la ligne DIVA qui met dans un libelle la concatenation de 'Livraison : ' et du code adresse de la piece.",
+      "expected": {
+        "patterns": [
+          "Concatene avec & -- jamais + ni des crochets",
+          "N'ecrit PAS le champ d'adresse sans indice s'il est multi-occurrence dans l'enregistrement vise : l'acces se fait avec un indice ENTRE PARENTHESES, AdrCod(n)",
+          "Ne suppose pas l'indice : dit qu'il porte du metier et qu'il se retrouve dans le dictionnaire (Nature avec *) ou dans un usage existant du meme domaine",
+          "Signale que le meme nom de champ peut etre tableau dans un enregistrement et scalaire dans un autre -- donc verifier l'enregistrement, pas un autre programme"
         ]
       }
     }

@@ -53,7 +53,7 @@
       "files": [],
       "expected_behavior": [
         "Execute read_multichoix.py avec --resolve AXENO",
-        "Sortie JSON : success=false, resolved=false, error referencant BACKLOG MC-03",
+        "Sortie JSON : success=false, resolved=false, error disant que le mode --resolve n'est pas encore implemente",
         "Exit code 1 (pas 2 : le mode est reconnu mais pas implemente)",
         "Le message suggere d'utiliser reading-isam-files pour lire axelibtb manuellement"
       ]
@@ -84,6 +84,22 @@
         "Detection = comparer le fichier a une reference standard saine (copie du pack) ; sans reference, indetectable ; un simple diff de fichiers signale identique/different",
         "Pour le detail, renvoyer vers l'outil natif Harmony 'Utilitaires > Comparaison entre 2 dictionnaires de multi-choix' ; le developpeur examine et corrige en deplacant le custom vers son propre XXfdmc",
         "Ne PAS proposer de fusionner un custom dans un dmc standard (ce serait entretenir la violation de norme)"
+      ]
+    },
+    {
+      "id": "case-all-details-machine",
+      "skills": [
+        "reading-multichoix"
+      ],
+      "files": [],
+      "query": "Je veux construire un mapping multichoix -> icone pour tous les multichoix d'un module, en un seul passage. Comment je recupere tout ?",
+      "expected_behavior": [
+        "Utilise --all-details, PAS une boucle de --detail par Nc (N lectures ISAM du meme fichier pour rien)",
+        "Sait que `multichoix` est un DICTIONNAIRE indexe par Nc en mode --all-details, et une LISTE en mode --list : ne pas confondre les deux formes",
+        "Sait que `entries` est une LISTE d'entrees decodees en --all-details, alors que c'est un COMPTEUR en --list",
+        "Lit la sortie en UTF-8 : le script force son encodage de sortie, les libelles de multichoix sont du francais accentue",
+        "N'attend `lookup` que pour les multichoix de Type 3",
+        "Si le besoin est de resoudre un Type 3, sait que --resolve n'est pas implemente et passe par --detail + reading-isam-files sur la table cible"
       ]
     }
   ]

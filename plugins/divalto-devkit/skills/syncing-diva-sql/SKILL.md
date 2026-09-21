@@ -11,7 +11,7 @@ description: >
 ## Contenu
 
 - Utilisation rapide
-- Workflow complet (3 etapes)
+- Workflow complet (pré-vol + 3 étapes)
 - Parsing du rapport
 - Apercu (dry-run) et delta de schema
 - Scripts disponibles
@@ -59,6 +59,24 @@ Avant synchronisation :
 4. Fichier .dhpt valide (voir managing-diva-projects)
 5. Script .ps1 en ISO-8859-1 si profil avec accent
 
+### Etape 1bis -- Pre-vol : valider les changements AVANT application (base sensible)
+
+`synchroauto` en CLI **applique directement** le schema : il n'y a **pas** d'etape de
+validation, contrairement au menu GUI *Projet > Synchroniser la BDD*
+(`xpsqlautosynchro.dhop`) qui affiche la **liste des modifications a valider avant**
+application. Il n'existe pas non plus de dry-run natif (cf. « Apercu (dry-run) » plus bas).
+
+Sur une base **quasi-prod / sensible**, faire un **pre-vol** avant l'Etape 2 :
+
+1. Lister les changements **attendus** (tables / index / champs de la **note de version**
+   du service pack cible).
+2. Les presenter au collaborateur comme **checklist de pre-vol**.
+
+> **CHECKPOINT** -- Ne lancer `synchroauto` (Etape 2) qu'apres **validation humaine
+> explicite** de cette liste. Pour un cas vraiment sensible, preferer le **GUI** (qui
+> montre la liste avant d'appliquer). Il n'y a **pas de rollback automatique** une fois
+> applique.
+
 ### Etape 2 -- Synchroniser
 
 ```powershell
@@ -88,6 +106,11 @@ py .claude/skills/syncing-diva-sql/scripts/parse_synchro.py \
 
 Si `success: true` → synchronisation SQL reussie, base a jour.
 Si `success: false` → corriger les erreurs et relancer.
+
+> Le rapport `-output` ne liste **pas** les DDL appliquees (seulement les etapes +
+> `[TOTAL_ERRORS]N`). Pour savoir **ce qui a reellement ete applique** sur la base,
+> parser l'audit-script : `parse_synchro.py --path C:/divalto/DivaltoLog/DhOdbcConfigSqlScript.sql --changes`
+> (cf. « Apercu (dry-run) et delta de schema »).
 
 ---
 

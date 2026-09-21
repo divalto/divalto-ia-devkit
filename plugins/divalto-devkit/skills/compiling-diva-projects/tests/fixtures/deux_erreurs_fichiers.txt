@@ -1,0 +1,5 @@
+[INFO]---------------Compilation. Construction du sous-projet monsousprojet.dhps
+[INFO]</specifs/monworkspace/sources/premier.dhsp>  version : 7.1-203c
+[ERROR]/specifs/monworkspace/sources/premier.dhsp (7) Erreur 99 : Mot inattendu
+[ERROR]/specifs/monworkspace/sources/second.dhsp (12) Erreur 99 : Mot inattendu
+[TOTAL_ERRORS]2

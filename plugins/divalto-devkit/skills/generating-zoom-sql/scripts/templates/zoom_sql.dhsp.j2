@@ -142,6 +142,7 @@ Public Procedure ZoomApresCleCreation	; Apres saisie de la cle
 Beginp
 	If Check_{{ TABLE_MAJUSCULE }}_Key({{ NomVue }}.{{ table_minuscule }}) <> 0
 		Zoom.ok = 'C'
+		preturn
 	Endif
 	{{ NomVue }}.Where.Exists({{ NomVue }}.{{ ChampCle }})
 	Zoom.Res			= Get_{{ table_minuscule }}_Reservation ({{ NomVue }}.{{ table_minuscule }})

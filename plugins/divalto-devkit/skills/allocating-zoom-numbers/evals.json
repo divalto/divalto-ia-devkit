@@ -27,7 +27,7 @@
         "Execute find_free_zoom.py avec --range 9900-9999 --count 5 --a5tczoom <chemin> --a5f-local <chemin> --a5fu <chemin> --read-isam-script <chemin> --structure <chemin>",
         "Sortie JSON avec 'free' contenant 5 numeros (ou moins si saturation)",
         "Sortie 'sources' avec compteurs a5tczoom + a5f_local + a5fu + union_used_count",
-        "Cas R-010 (9946 declare dans a5tczoom mais dans une autre plage) : ne doit PAS etre propose comme libre",
+        "Cas observe (9946 declare dans a5tczoom mais dans une autre plage) : ne doit PAS etre propose comme libre",
         "Detection globale : un zoom present uniquement dans a5fu (specifique) est exclu des libres"
       ]
     },

@@ -26,9 +26,11 @@ RULES = {
     "S03": {"severity": "error",   "types": [".dhsp"], "desc": "Declaration de variable apres BeginP/BeginF"},
     "S04": {"severity": "error",   "types": [".dhsp"], "desc": "Function sans FReturn"},
     "S10": {"severity": "error",   "types": [".dhsp"], "desc": "OverWrittenBy en .dhsp (source) au lieu de .dhop (compile)"},
+    "S11": {"severity": "error",   "types": [".dhsp"], "desc": "Procedure/Function locale appelee avant sa definition, sans Proto"},
+    "S12": {"severity": "error",   "types": [".dhsf", ".dhsp"], "desc": "Ligne physique > 251 caracteres (XWin refuse d'ouvrir le source)"},
     # S05 retiree (2026-06-16) : un commentaire de fermeture EndP/EndF n'est pas une convention DIVA
     "S06": {"severity": "error",   "types": [".dhsf"], "desc": "Code DIVA dans un .dhsf hors [diva]...[/diva]"},
-    # S09 (public en surcharge OverWrite -> Err 210) reportee a SC-030 (linter semantique) :
+    # S09 (public en surcharge OverWrite -> Err 210) reportee a un linter semantique :
     # en regex on ne distingue pas une surcharge d'une nouvelle proc publique
     # (84 faux positifs mesures sur le code de surcharge reel).
     # .dhsp — regles langage interdit
@@ -61,10 +63,10 @@ RULES = {
     "R03": {"severity": "warning", "types": [".dhsq"], "desc": "Fichier vide ou tres court"},
     "R04": {"severity": "warning", "types": [".dhsq"], "desc": "Nom de fichier non conforme"},
     "R05": {"severity": "warning", "types": [".dhsq"], "desc": "Balise <DictionarySql> absente du fichier .dhsq"},
-    "R07": {"severity": "warning", "types": [".dhsp"], "desc": "ReaderOpen sans ReaderClose"},
+    # R07 : reportee en V2 (analyse de flux requise) -- NON declaree ici, cf. rules-recordsql.md
     "R08": {"severity": "error",   "types": [".dhsq"], "desc": "Type 'Long' dans une condition <Where> -> utiliser int (Erreur 30)"},
     # CI — Regles shift-left moulinettes CI
-    "CI01": {"severity": "warning", "types": [".dhsp", ".dhsi", ".dhse", ".dhsq", ".dhsf"], "desc": "SetModuleInfo/ModuleInfo absent"},
+    "CI01": {"severity": "info",    "types": [".dhsp", ".dhsq", ".dhsf", ".dhsi", ".dhse"], "desc": "SetModuleInfo/ModuleInfo absent (tracabilite SVN -- convention, HORS jeu par defaut : --rules CI01)"},
     "CI02": {"severity": "error",   "types": [".dhsp"], "desc": "Procedure/Function non PUBLIC dans TT/TE"},
     "CI03": {"severity": "warning", "types": [".dhsp"], "desc": ".WHERE sans AddCondition"},
     "CI04": {"severity": "error",   "types": [".dhsp"], "desc": "Include de PC*.dhsp dans TT/TM"},
@@ -109,16 +111,30 @@ RULES = {
     # .dhpt
     "P01": {"severity": "error",   "types": [".dhpt", ".dhps"], "desc": "Encodage UTF-8 detecte"},
     "P02": {"severity": "error",   "types": [".dhpt", ".dhps"], "desc": "Fins de ligne LF detectees"},
-    "P04": {"severity": "error",   "types": [".dhpt", ".dhps"], "desc": "Premiere ligne incorrecte"},
-    "P05": {"severity": "error",   "types": [".dhpt"], "desc": "Premiere ligne contient xwin-sprojet au lieu de xwin-projet"},
+    "P04": {"severity": "error",   "types": [".dhps"], "desc": "En-tete invalide pour un .dhps (attendu xwin-sprojet / xwin-s-sprojet)"},
+    "P05": {"severity": "error",   "types": [".dhpt"], "desc": "En-tete invalide pour un .dhpt (attendu xwin-projet / xwin-s-projet)"},
     "P06": {"severity": "error",   "types": [".dhps"], "desc": "Syntaxe fic avec espace dans [includes]"},
     "P07": {"severity": "error",   "types": [".dhps"], "desc": "Syntaxe fic sans espace dans [fichiers]"},
-    "P09": {"severity": "warning", "types": [".dhps"], "desc": "zdiva.dhsp absent de [includes]"},
+    "P09": {"severity": "info",    "types": [".dhps"], "desc": "zdiva.dhsp absent de [includes] (convention, HORS jeu par defaut : --rules P09)"},
     "P12": {"severity": "warning", "types": [".dhps"], "desc": "Section [autres] manquante"},
     "P13": {"severity": "warning", "types": [".dhpt"], "desc": "Sections obligatoires manquantes"},
     "P14": {"severity": "warning", "types": [".dhpt"], "desc": "Mot developpement sans accent dans profil"},
     "P15": {"severity": "warning", "types": [".dhpt"], "desc": "Mot developpement_x13.txt sans accent"},
 }
+
+# Regles HORS du jeu par defaut : elles auditent une CONVENTION, pas un defaut.
+# Leur constat n'est ni une erreur de compilation ni un dysfonctionnement -- c'est
+# une politique maison que le partenaire est libre de ne pas suivre. Les activer par
+# defaut produirait du bruit de masse sur du code parfaitement legitime (cf. #243).
+# Activation explicite : --rules CI01[,...]
+REGLES_HORS_DEFAUT = {"CI01", "P09"}
+
+
+def regle_active(rule_id, active_rules):
+    """--rules absent -> tout SAUF REGLES_HORS_DEFAUT. --rules present -> la liste exacte."""
+    if active_rules is None:
+        return rule_id not in REGLES_HORS_DEFAUT
+    return rule_id in active_rules
 
 # ---------------------------------------------------------------------------
 # Utilitaires
@@ -338,6 +354,99 @@ def check_S10(lines, findings):
                 "message": f"OverWrittenBy pointe un .dhsp source ({m.group(1)}) -- devrait pointer le .dhop compile",
                 "context": line.rstrip()
             })
+
+
+# Perimetre : `.dhsp` et `.dhsf` -- les deux types que le RETEX atteste (#198). Les
+# `.dhpt`/`.dhps` en sont EXCLUS sur preuve contraire : le standard livre contient une
+# ligne `filtres="??pp*;??pc*;..."` de 282 caracteres dans `divalto modules communs.dhpt`,
+# fichier qui fonctionne -- la limite ne s'applique donc pas aux fichiers projet. Les
+# autres types (`.dhsq`, `.dhsd`, `.dhsi`, `.dhse`) sont NON TESTES : aucune source
+# reelle mesuree n'y depasse la limite, donc ni preuve ni contre-preuve.
+# Longueur maximale d'une ligne PHYSIQUE. Au-dela, l'editeur XWin REFUSE D'OUVRIR le
+# source ("Edition du fichier impossible : une ligne depasse 251 caracteres") alors que
+# la compilation, elle, passe sans erreur (#198). Le `\` de continuation DIVA reste
+# legitime : il coupe une ligne LOGIQUE en plusieurs lignes physiques, chacune devant
+# rester sous la limite. Meme regle et meme raison que `writing-diva-files`
+# (verify_encoding.py), ou elle garde le chemin d'ecriture.
+MAX_LINE = 251
+
+
+def check_S12(lines, findings):
+    """S12 -- Ligne physique de plus de 251 caracteres : XWin refuse d'ouvrir le source."""
+    for i, line in enumerate(lines, 1):
+        n = len(line.rstrip("\r\n"))
+        if n > MAX_LINE:
+            findings.append({
+                "rule": "S12", "severity": "error", "line": i,
+                "message": f"Ligne physique de {n} caracteres (> {MAX_LINE}) : la compilation "
+                           f"passe mais l'editeur XWin REFUSERA d'ouvrir ce fichier. Couper la "
+                           f"ligne logique avec le caractere de continuation DIVA",
+                "context": line.rstrip()[:120] + ("..." if n > 120 else "")
+            })
+
+
+# Une procedure/fonction locale doit etre DECLAREE avant son premier appel : le
+# compilateur DIVA resout les appels au fil du module. Le mot-cle `Proto` existe
+# exactement pour lever cette contrainte -- "le prototype d'une fonction permet
+# d'appeler la fonction avant qu'elle soit reellement definie" (Manuel de reference,
+# "Les prototypes"). Mesure sur le standard X.13 : 37 appels anticipes, TOUS couverts
+# par un `Proto` prealable, et aucun sans (#274).
+# Une `Procedure` est suivie directement de son nom ; une `Function` est suivie de son
+# TYPE DE RETOUR puis de son nom (`Function Int Verifier_Rubrique(...)`) -- verifie sur
+# les 70 000 declarations `Function` du standard, dont la forme minimale est bien
+# "type + nom". D'ou deux branches explicites plutot qu'un jeton optionnel ambigu : un
+# motif `(\w+)` unique capturait `Int` comme nom de fonction.
+S11_DEF_RE = re.compile(
+    r'^\s*(?:(?:Public|Private|Protected)\s+)?'
+    r'(?:(?P<proc>Procedure)\s+(?P<pname>\w+)'
+    r'|(?P<func>Function)\s+\w+\s+(?P<fname>\w+))', re.IGNORECASE)
+S11_PROTO_RE = re.compile(
+    r'^\s*Proto\s+(?:Procedure|Function)\s+(?:\w+\s+)?(\w+)', re.IGNORECASE)
+S11_APPEL_RE = re.compile(r'(?<![\w.])(\w+)\s*\(')
+
+
+def check_S11(lines, findings):
+    """S11 -- Appel d'une procedure/fonction locale definie plus bas, sans `Proto`."""
+    protos = {}
+    definitions = {}
+    for i, line in enumerate(lines, 1):
+        if is_comment_line(line):
+            continue
+        m = S11_PROTO_RE.match(line)
+        if m:
+            protos.setdefault(m.group(1).lower(), i)
+            continue
+        m = S11_DEF_RE.match(line)
+        if m:
+            nom = m.group("pname") or m.group("fname")
+            genre = "Procedure" if m.group("proc") else "Function"
+            definitions.setdefault(nom.lower(), (i, genre))
+
+    for i, line in enumerate(lines, 1):
+        if is_comment_line(line) or S11_DEF_RE.match(line) or S11_PROTO_RE.match(line):
+            continue
+        # Retirer le commentaire de MILIEU de ligne : sans ca, un `;a totaliser (...)`
+        # ressemble a un appel de la procedure `Totaliser` (faux positif reel constate
+        # dans cctmdeverse.dhsp du standard en mettant cette regle au point).
+        code = strip_comment(line)
+        for m in S11_APPEL_RE.finditer(code):
+            nom = m.group(1).lower()
+            if nom not in definitions:
+                continue
+            ligne_def, genre = definitions[nom]
+            if ligne_def <= i:
+                continue
+            if nom in protos and protos[nom] < i:
+                continue                       # prototype declare avant l'appel : legitime
+            findings.append({
+                "rule": "S11", "severity": "error", "line": i,
+                "message": f"{genre} '{m.group(1)}' appelee ligne {i} mais definie ligne "
+                           f"{ligne_def}, sans `Proto` prealable. Le compilateur DIVA exige "
+                           f"une declaration avant l'appel : deplacer la definition plus haut, "
+                           f"ou ajouter `Proto {genre} {m.group(1)}(...) ... EndProto` en tete",
+                "context": line.rstrip()
+            })
+            break                              # un seul constat par ligne
 
 
 def check_L01(lines, findings):
@@ -764,7 +873,7 @@ def check_S06(lines, findings):
 # proprement en regex. Le code de surcharge reel ajoute legitimement des procedures
 # PUBLIQUES nouvelles dans un fichier OverWrite (84 faux positifs mesures sur corpus).
 # Distinguer "surcharge d'une proc standard" d'une "nouvelle proc" exige la semantique
-# (symboles du standard) -> reportee au linter semantique (SC-030).
+# (symboles du standard) -> reportee au linter semantique.
 
 
 # ---------------------------------------------------------------------------
@@ -1256,7 +1365,7 @@ def check_D13(path, lines, findings):
 # Z14 -- FK orphelin cote dictionnaire (advisory)
 # ---------------------------------------------------------------------------
 _Z14_FK_SUFFIXES = {
-    # Suffixes predicteurs fiables (>=90 %) de cible FK (catalogue zooms standards Divalto, table C)
+    # Suffixes predicteurs fiables (>=90 %) de cible FK -- mesures sur le catalogue des zooms standards Divalto
     "Pay", "Pays", "Dev", "Devise", "Depo",
     "Cpt", "Col", "Axe", "Jnl",
     "Sref1", "Sref2", "Cpostal",
@@ -1380,7 +1489,7 @@ def check_Z15(path, lines, findings):
 # Z16 -- Champ .dhsf avec suffixe FK fiable sans f8=<zoom> attendu
 # ---------------------------------------------------------------------------
 # Mapping restreint aux suffixes >=95 % fiables ayant un zoom t-table unique.
-# Source : catalogue des zooms standards Divalto (Table A numeros + Table C suffixes).
+# Source : catalogue des zooms standards Divalto (numeros de zoom et suffixes predicteurs).
 # Elargir avec precaution : ne pas inclure les suffixes c-compta (Cpt, Col, Axe,
 # Jnl) qui ciblent C3/C4/C5 sans zoom simple unique.
 _Z16_SUFFIX_TO_ZOOM = {
@@ -1771,7 +1880,7 @@ def check_E16(data, lines, findings):
         if not any(field.lower() == d.lower() for d in donnee_fields):
             findings.append({
                 "rule": "E16", "severity": "error", "line": start + 1,
-                "message": f"Champ audit '{field}' absent de l'onglet Identifiants (zoom detecte). Socle audit canonique incomplet. Voir NORMES-GRAPHIQUES.md section 7",
+                "message": f"Champ audit '{field}' absent de l'onglet Identifiants (zoom detecte). Socle audit canonique incomplet. Voir reference/rules-dhsf-normes.md.",
                 "context": ""
             })
 
@@ -1833,10 +1942,17 @@ def check_E17(data, lines, findings):
 
 
 def check_E18(data, lines, findings):
-    """E18 -- Positions X hors valeurs canoniques. Rapport agrege en 1 seule info."""
-    total = 0
-    deviant = 0
-    for line in lines:
+    """E18 -- Positions X hors valeurs canoniques : UN constat par position fautive.
+
+    Auparavant un unique constat agrege ("4/19 positions hors normes") avec `line: 0`.
+    Sur un masque de ~900 lignes portant deja une vingtaine de positions, ce total ne
+    disait pas SI la position qu'on vient d'ajouter en fait partie -- il fallait linter
+    la version d'avant pour comparer les compteurs et lire le delta (#348). Chaque
+    position fautive est desormais rapportee avec SON numero de ligne, et le total
+    reste disponible en fin de message.
+    """
+    positions = []          # (numero de ligne, x) des positions en 1re colonne
+    for i, line in enumerate(lines, 1):
         m = re.match(r'\s*position\s*=\s*(\d+)\s*,\s*(\d+)', line)
         if m:
             x = int(m.group(2))
@@ -1844,18 +1960,28 @@ def check_E18(data, lines, findings):
             # la regle "bord gauche X=5" -- les X eleves sont souvent des 2nd/3eme colonnes
             # pour lesquelles la norme n'impose pas de valeur fixe.
             if x < 30:
-                total += 1
-                if x not in CANONICAL_X_VALUES:
-                    deviant += 1
-    if total == 0:
+                positions.append((i, x))
+    if not positions:
         return
-    ratio = 100.0 * deviant / total
-    if deviant > 0:
-        findings.append({
-            "rule": "E18", "severity": "info", "line": 0,
-            "message": f"{deviant}/{total} positions X en 1re colonne hors valeurs canoniques {{5, 8, 10, 12, 14, 16, 18, 26}} ({ratio:.1f}%). Voir NORMES-GRAPHIQUES.md section 2",
-            "context": ""
-        })
+    fautives = [(i, x) for i, x in positions if x not in CANONICAL_X_VALUES]
+    if not fautives:
+        return
+    ratio = 100.0 * len(fautives) / len(positions)
+    # UN seul constat, mais qui NOMME les lignes. Un constat par position ferait
+    # 20 lignes de rapport sur un masque qui en compte 20 -- or la question posee est
+    # "la position que je viens d'ajouter fait-elle partie des fautives ?", et une
+    # liste de numeros y repond. Le constat est ancre sur la 1re ligne fautive pour
+    # rester cliquable.
+    detail = ", ".join("L%d (X=%d)" % (i, x) for i, x in fautives[:12])
+    if len(fautives) > 12:
+        detail += ", ... +%d autres" % (len(fautives) - 12)
+    findings.append({
+        "rule": "E18", "severity": "info", "line": fautives[0][0],
+        "message": f"{len(fautives)}/{len(positions)} positions X en 1re colonne hors valeurs "
+                   f"canoniques {{5, 8, 10, 12, 14, 16, 18, 26}} ({ratio:.1f}%) : {detail}. "
+                   f"Voir reference/rules-dhsf-normes.md.",
+        "context": lines[fautives[0][0] - 1].rstrip()
+    })
 
 
 def check_E19(data, lines, findings):
@@ -1880,7 +2006,7 @@ def check_E19(data, lines, findings):
         authorized_str = ", ".join(f"{a}x{b}" for a, b in sorted(AUTHORIZED_SIZES))
         findings.append({
             "rule": "E19", "severity": "warning", "line": line_num,
-            "message": f"Taille {lig}x{col} hors normes autorisees ({authorized_str}). Voir NORMES-GRAPHIQUES.md section 3.1",
+            "message": f"Taille {lig}x{col} hors normes autorisees ({authorized_str}). Voir reference/rules-dhsf-normes.md.",
             "context": ""
         })
 
@@ -1948,7 +2074,7 @@ def check_E20(data, lines, findings):
 
     Borne minimale (espacement 10 + overhead 18). Si `H < n_children * 10 + 18` avec
     `n_children > 0`, le titre sera tronque ou chevauchera le premier champ
-    (incident RaceChat 2026-04-23, cf R-007).
+    (incident RaceChat 2026-04-23).
     """
     gbs = _extract_all_groupboxes(lines)
     for gb in gbs:
@@ -1962,7 +2088,7 @@ def check_E20(data, lines, findings):
                     f"Groupbox page {gb['page']} taille_H={gb['h']} < min {min_h} "
                     f"({gb['n_children']} enfants * 10 espacement min + 18 overhead) -- "
                     f"formule canonique NbLignes * espacement (10/12/14) + 18. "
-                    f"Voir NORMES-GRAPHIQUES.md section 2.5"
+                    f"Voir reference/rules-dhsf-normes.md."
                 ),
                 "context": ""
             })
@@ -2067,33 +2193,39 @@ def check_P02(raw_bytes, findings):
         })
 
 
-def check_P04_dhpt(lines, findings):
-    """Premiere ligne ne contient pas xwin-projet (.dhpt)."""
-    if lines and "xwin-projet" not in lines[0].lower():
-        findings.append({
-            "rule": "P04", "severity": "error", "line": 1,
-            "message": "Premiere ligne ne contient pas 'xwin-projet'",
-            "context": lines[0].rstrip() if lines else ""
-        })
+# En-tetes valides. La variante `-s-` designe un projet/sous-projet de SURCHARGE : elle est
+# LEGITIME (cf. managing-diva-projects, regles P08/P17) et etait rejetee a tort, car le
+# controle testait une SOUS-CHAINE -- or "xwin-s-projet" ne contient pas "xwin-projet".
+# Motif ancre en debut de ligne pour eviter tout accident de sous-chaine dans les deux sens.
+#
+# UN code par extension : P04 controle le .dhps, P05 le .dhpt. Auparavant P04 etait
+# dispatche sur les DEUX et P05 testait en plus une sous-chaine, si bien qu'un .dhpt
+# mal en-tete remontait P04 ET P05 -- deux constats pour un seul defaut -- tandis que
+# `xwin-s-sprojet` dans un .dhpt echappait a P05 (la sous-chaine "xwin-sprojet" n'y
+# figure pas : le `-s-` s'intercale, exactement la faiblesse corrigee sur P04).
+P05_DHPT_RE = re.compile(r'^\s*xwin-(s-)?projet\b', re.IGNORECASE)
+P04_DHPS_RE = re.compile(r'^\s*xwin-(s-)?sprojet\b', re.IGNORECASE)
 
 
-def check_P04_dhps(lines, findings):
-    """Premiere ligne ne contient pas xwin-sprojet (.dhps)."""
-    if lines and "xwin-sprojet" not in lines[0].lower():
+def check_P04(lines, findings):
+    """.dhps : l'en-tete doit etre xwin-sprojet ou xwin-s-sprojet (surcharge)."""
+    if lines and not P04_DHPS_RE.match(lines[0]):
         findings.append({
             "rule": "P04", "severity": "error", "line": 1,
-            "message": "Premiere ligne ne contient pas 'xwin-sprojet'",
+            "message": "En-tete invalide pour un .dhps : attendu 'xwin-sprojet' "
+                       "(ou 'xwin-s-sprojet' pour un sous-projet de surcharge)",
             "context": lines[0].rstrip() if lines else ""
         })
 
 
 def check_P05(lines, findings):
-    """Premiere ligne contient xwin-sprojet au lieu de xwin-projet."""
-    if lines and "xwin-sprojet" in lines[0].lower():
+    """.dhpt : l'en-tete doit etre xwin-projet ou xwin-s-projet (surcharge)."""
+    if lines and not P05_DHPT_RE.match(lines[0]):
         findings.append({
             "rule": "P05", "severity": "error", "line": 1,
-            "message": "Premiere ligne contient 'xwin-sprojet' au lieu de 'xwin-projet' (fichier .dhpt)",
-            "context": lines[0].rstrip()
+            "message": "En-tete invalide pour un .dhpt : attendu 'xwin-projet' "
+                       "(ou 'xwin-s-projet' pour un projet de surcharge)",
+            "context": lines[0].rstrip() if lines else ""
         })
 
 
@@ -2138,7 +2270,16 @@ def check_P07(lines, findings):
 
 
 def check_P09(lines, findings):
-    """zdiva.dhsp absent de [includes]."""
+    """zdiva.dhsp absent de la section [includes] -- AUDIT DE CONVENTION.
+
+    HORS jeu par defaut (cf. REGLES_HORS_DEFAUT). Le standard X.13 livre ne met
+    JAMAIS zdiva.dhsp dans les [includes] de ses sous-projets (mesure : 0 / 2304),
+    alors qu'un specifique partenaire mesure le fait a 80-98 %. C'est donc un usage,
+    pas une obligation : l'activer par defaut ferait remonter 100 % des .dhps du
+    standard -- exactement le cas d'un agent qui linte un fichier standard comme
+    modele de reference. A activer (--rules P09) par un partenaire dont la convention
+    de projet est d'inclure zdiva.dhsp.
+    """
     in_includes = False
     found = False
     for line in lines:
@@ -2153,8 +2294,10 @@ def check_P09(lines, findings):
             break
     if not found:
         findings.append({
-            "rule": "P09", "severity": "warning", "line": 0,
-            "message": "zdiva.dhsp absent de la section [includes]",
+            "rule": "P09", "severity": "info", "line": 0,
+            "message": ("zdiva.dhsp absent de la section [includes]"
+                        " -- convention de projet : jamais present dans le standard"
+                        " livre, usuel en specifique"),
             "context": ""
         })
 
@@ -2220,15 +2363,36 @@ def check_P15(lines, findings):
 # Regles CI — Shift-left des moulinettes CI nightly
 # ---------------------------------------------------------------------------
 
+# Types DECLARATIFS : la description (sections [masque]/[bloc]/[enregistrements])
+# precede le bloc [diva], donc SetModuleInfo y arrive bien au-dela de la ligne 100.
+# Mesure standard X.13 : 2431/2438 .dhsf et 798/811 .dhsi portent la directive APRES
+# la ligne 100 -- une fenetre positionnelle y produit ~100 % de faux positifs (#243).
+# Cote code, l'inverse est vrai : 0 .dhsp et 0 .dhsq du standard l'ont au-dela de 100.
+TYPES_DECLARATIFS = (".dhsf", ".dhsi", ".dhse")
+
+
 def check_CI01(filepath, lines, findings):
-    """SetModuleInfo (ou ModuleInfo pour .dhsq) absent dans les 100 premieres lignes.
+    """SetModuleInfo (ou ModuleInfo pour .dhsq) absent -- AUDIT DE CONVENTION.
+
+    HORS jeu par defaut (cf. REGLES_HORS_DEFAUT). `SetModuleInfo` et `ModuleInfo` sont
+    une paire de fonctions natives : la premiere positionne une information dans le module,
+    la seconde la relit A L'EXECUTION -- Divalto s'en sert pour afficher les versions des
+    modules. Son absence ne provoque AUCUNE erreur de compilation, mais le module n'expose
+    alors pas sa version. Le standard la pose systematiquement ; en specifique c'est un
+    choix du partenaire. A activer explicitement (--rules CI01) par un partenaire dont la
+    politique maison est de tracer les releases.
     Source : moulinette 001. Min 30 chars (.dhsp/.dhsi/.dhse/.dhsf), 120 chars (.dhsq).
     """
     ext = os.path.splitext(filepath)[1].lower()
     is_dhsq = ext == ".dhsq"
     keyword = "MODULEINFO" if is_dhsq else "SETMODULEINFO"
     min_len = 120 if is_dhsq else 30
-    max_lines = min(100, len(lines))
+    if ext in TYPES_DECLARATIFS:
+        max_lines = len(lines)
+        portee = "le fichier"
+    else:
+        max_lines = min(100, len(lines))
+        portee = "les 100 premieres lignes"
 
     for i in range(max_lines):
         line = lines[i]
@@ -2238,8 +2402,11 @@ def check_CI01(filepath, lines, findings):
         if keyword in code and len(line.rstrip()) >= min_len:
             return  # OK
     findings.append({
-        "rule": "CI01", "severity": "warning", "line": 0,
-        "message": f"{keyword} absent ou trop court dans les 100 premieres lignes (min {min_len} chars)",
+        "rule": "CI01", "severity": "info", "line": 0,
+        "message": (f"{keyword} absent ou trop court dans {portee} (min {min_len} chars)"
+                    " -- information lue a l'execution par ModuleInfo (Divalto y lit"
+                    " la version du module) : systematique dans le standard, libre en"
+                    " specifique"),
         "context": ""
     })
 
@@ -2287,6 +2454,19 @@ def check_CI03(lines, findings):
     """.WHERE sans AddCondition/AddAndCondition/AddOrCondition dans les 10 lignes suivantes.
     Source : moulinette 009. Detecte .WHERE. suivi d'aucun appel AddCondition.
     Exclut les appels directs .Where.Equal_*, .Where.NotEqual_*, etc. (conditions en ligne).
+
+    ANGLE MORT ASSUME -- ne pas "corriger" sans relire la mesure (cf. reference/rules-ci.md,
+    fiche CI03). Un `AddAndCondition` suffit a satisfaire cette regle, alors qu'il ne fait
+    qu'ACCUMULER dans une variable : la regle ne verifie pas qu'un `AddCondition(nom, var)`
+    cloture le motif, et c'est pourtant lui seul qui injecte la condition dans le WHERE.
+    Une routine qui accumule puis oublie l'injection est donc validee ici (RETEX #163).
+
+    La regle qui fermerait ce trou a ete MESUREE et ECARTEE le 2026-08-28 : sur le standard
+    X.13, 223 des 3456 routines utilisant AddAndCondition n'ont aucun AddCondition( dans le
+    meme corps -- mais 142 d'entre elles accumulent dans un parametre passe par ADRESSE
+    (l'appelant injecte, c'est legitime), et une part des 81 restantes sont des hooks dont le
+    contrat est que le framework injecte. 81 avertissements sur le standard = faux positifs
+    de masse. Le controle reste humain, a la relecture.
     """
     where_pat = re.compile(r'\.WHERE\.', re.IGNORECASE)
     # Patterns qui rendent le .WHERE valide (conditions appliquees)
@@ -2511,6 +2691,8 @@ def lint_dhsp(path, data, lines, raw_bytes, findings, active_rules):
         "S03": lambda: check_S03(lines, findings),
         "S04": lambda: check_S04(lines, findings),
         "S10": lambda: check_S10(lines, findings),
+        "S11": lambda: check_S11(lines, findings),
+        "S12": lambda: check_S12(lines, findings),
         "L01": lambda: check_L01(lines, findings),
         "L02": lambda: check_L02(lines, findings),
         "L03": lambda: check_L03(lines, findings),
@@ -2537,7 +2719,7 @@ def lint_dhsp(path, data, lines, raw_bytes, findings, active_rules):
         "CI11": lambda: check_CI11(lines, findings),
     }
     for rule_id, fn in rule_map.items():
-        if active_rules is None or rule_id in active_rules:
+        if regle_active(rule_id, active_rules):
             fn()
 
 
@@ -2558,7 +2740,7 @@ def lint_dhsq(path, data, lines, raw_bytes, findings, active_rules):
         "CI09": lambda: check_CI09(data, findings),
     }
     for rule_id, fn in rule_map.items():
-        if active_rules is None or rule_id in active_rules:
+        if regle_active(rule_id, active_rules):
             fn()
 
 
@@ -2584,7 +2766,7 @@ def lint_dhsd(path, data, lines, raw_bytes, findings, active_rules):
     # D01 et D02 sont traites ensemble
     d01_d02_done = False
     for rule_id, fn in rule_map.items():
-        if active_rules is None or rule_id in active_rules:
+        if regle_active(rule_id, active_rules):
             if rule_id in ("D01", "D02"):
                 if not d01_d02_done:
                     check_D01_D02(lines, findings)
@@ -2597,6 +2779,7 @@ def lint_dhsf(path, data, lines, raw_bytes, findings, active_rules):
     """Lint d'un fichier .dhsf."""
     rule_map = {
         "S06": lambda: check_S06(lines, findings),
+        "S12": lambda: check_S12(lines, findings),
         "E01": lambda: check_E01(lines, findings),
         "E08": lambda: check_E08(data, findings),
         "E09": lambda: check_E09(lines, findings),
@@ -2612,10 +2795,10 @@ def lint_dhsf(path, data, lines, raw_bytes, findings, active_rules):
         "E20": lambda: check_E20(data, lines, findings),
         "E21": lambda: check_E21(data, lines, findings),
         "Z16": lambda: check_Z16(lines, findings),
-        "CI01": lambda: check_CI01(path, lines, findings),
+        "CI01": lambda: check_CI01(path, lines, findings),   # hors defaut (--rules CI01)
     }
     for rule_id, fn in rule_map.items():
-        if active_rules is None or rule_id in active_rules:
+        if regle_active(rule_id, active_rules):
             fn()
 
 
@@ -2624,14 +2807,13 @@ def lint_dhpt(path, data, lines, raw_bytes, findings, active_rules):
     rule_map = {
         "P01": lambda: check_P01(raw_bytes, findings),
         "P02": lambda: check_P02(raw_bytes, findings),
-        "P04": lambda: check_P04_dhpt(lines, findings),
         "P05": lambda: check_P05(lines, findings),
         "P13": lambda: check_P13(lines, findings),
         "P14": lambda: check_P14(lines, findings),
         "P15": lambda: check_P15(lines, findings),
     }
     for rule_id, fn in rule_map.items():
-        if active_rules is None or rule_id in active_rules:
+        if regle_active(rule_id, active_rules):
             fn()
 
 
@@ -2640,14 +2822,14 @@ def lint_dhps(path, data, lines, raw_bytes, findings, active_rules):
     rule_map = {
         "P01": lambda: check_P01(raw_bytes, findings),
         "P02": lambda: check_P02(raw_bytes, findings),
-        "P04": lambda: check_P04_dhps(lines, findings),
+        "P04": lambda: check_P04(lines, findings),
         "P06": lambda: check_P06(lines, findings),
         "P07": lambda: check_P07(lines, findings),
         "P09": lambda: check_P09(lines, findings),
         "P12": lambda: check_P12(data, findings),
     }
     for rule_id, fn in rule_map.items():
-        if active_rules is None or rule_id in active_rules:
+        if regle_active(rule_id, active_rules):
             fn()
 
 
@@ -2656,12 +2838,12 @@ def lint_dhps(path, data, lines, raw_bytes, findings, active_rules):
 # ---------------------------------------------------------------------------
 
 def lint_dhsi(path, data, lines, raw_bytes, findings, active_rules):
-    """Lint d'un fichier .dhsi (include)."""
+    """Lint d'un fichier .dhsi (masque d'impression)."""
     rule_map = {
-        "CI01": lambda: check_CI01(path, lines, findings),
+        "CI01": lambda: check_CI01(path, lines, findings),   # hors defaut (--rules CI01)
     }
     for rule_id, fn in rule_map.items():
-        if active_rules is None or rule_id in active_rules:
+        if regle_active(rule_id, active_rules):
             fn()
 
 
@@ -2671,7 +2853,7 @@ def lint_dhse(path, data, lines, raw_bytes, findings, active_rules):
         "CI01": lambda: check_CI01(path, lines, findings),
     }
     for rule_id, fn in rule_map.items():
-        if active_rules is None or rule_id in active_rules:
+        if regle_active(rule_id, active_rules):
             fn()
 
 
@@ -2681,7 +2863,7 @@ def lint_sql(path, data, lines, raw_bytes, findings, active_rules):
         "CI07": lambda: check_CI07(lines, findings),
     }
     for rule_id, fn in rule_map.items():
-        if active_rules is None or rule_id in active_rules:
+        if regle_active(rule_id, active_rules):
             fn()
 
 
@@ -2705,7 +2887,7 @@ def main():
     parser.add_argument("--path", required=True, help="Chemin du fichier a analyser")
     parser.add_argument("--rules", default=None,
                         help="Liste de regles a verifier (virgule, ex: S01,S02). Defaut: toutes.")
-    parser.add_argument("--severity", choices=["error", "warning", "all"], default="all",
+    parser.add_argument("--severity", choices=["error", "warning", "info", "all"], default="all",
                         help="Filtrer par severite (defaut: all)")
     parser.add_argument("--format", choices=["json", "text"], default="json",
                         help="Format de sortie (defaut: json)")
@@ -2754,6 +2936,8 @@ def main():
         findings = [f for f in findings if f["severity"] == "error"]
     elif args.severity == "warning":
         findings = [f for f in findings if f["severity"] == "warning"]
+    elif args.severity == "info":
+        findings = [f for f in findings if f["severity"] == "info"]
 
     # Trier par numero de ligne
     findings.sort(key=lambda f: (f["line"], f["rule"]))

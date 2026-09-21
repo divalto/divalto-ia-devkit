@@ -1,7 +1,7 @@
 ---
 name: rendering-preaction-livrable
 description: >
-  Rend le livrable final d'une analyse pre-action UC-100 a partir d'un facts.json.
+  Rend le livrable final d'une analyse pre-action a partir d'un facts.json.
   Produit un markdown unique structure en 3 couches de lecture : strategique (2 min,
   chef projet), tactique (15 min, dev implementeur), technique (30 min, auditeur).
   Autonomie documentaire stricte : aucun path absolu, aucune balise [X.12] ou

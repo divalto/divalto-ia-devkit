@@ -113,7 +113,7 @@ _CITATION_PATTERN = re.compile(r'[A-Za-z0-9_]+\.(?:dhsp|dhsd|dhsf|dhsq|dhop):\d+
 
 
 def check_ce_citations(entity: dict, path: Path) -> list:
-    """Verifie la regle de citation stricte (CA4) sur les descriptions metier CE.
+    """Verifie la regle de citation stricte sur les descriptions metier CE.
 
     Pour chaque entree dans technical.ce_analysis.fields[] :
     - status=="actif" + description_metier non vide :
@@ -198,7 +198,7 @@ def main():
             with path.open(encoding="utf-8") as f:
                 d = yaml.safe_load(f) or {}
             layer_stats[d.get("code", path.stem)] = compute_layer_completion(d)
-            # Regle de citation stricte CA4 sur les CE actifs
+            # Regle de citation stricte sur les CE actifs
             all_errors.extend(check_ce_citations(d, path))
 
     all_errors.extend(check_cross_references(model_dir))

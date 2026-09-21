@@ -70,7 +70,7 @@ Sous-sections obligatoires : `[presentation]` + `[texte]`. Sous-section optionne
 
 ## Position et taille
 
-Coefficients de conversion entre coordonnees orteils et nb_lig/nb_col de la page (a valider auprès de Stephane Castelain pour le coefficient exact) :
+Coefficients de conversion entre coordonnees orteils et nb_lig/nb_col de la page (coefficient exact a valider aupres de Divalto) :
 
 ```
 ~ 1 ligne (nb_lig) = 8 a 9 orteils en Y

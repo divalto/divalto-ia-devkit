@@ -10,13 +10,14 @@
       "query": "Ajoute la table FamRglt dans le dictionnaire rtlfdd.dhsd. Elle a 3 champs metier : RgltFam (Nature 20, code famille), Libelle (Nature 80, designation), Actif (Nature 1, booleen actif/inactif). Valeur CE = 'A'. Base = RtlFamRglt. Index primaire sur Dos + RgltFam.",
       "files": [],
       "expected_behavior": [
-        "Genere 4 blocs [CHAMP] : RgltFam, Libelle, Actif, UFamRglt",
-        "Positions sans trou : Ce1(1,1) Dos(2,8) RgltFam(10,20) Libelle(30,80) Actif(110,1) UserCr(111,20) UserMo(131,20) UserTrace(151,28) UFamRglt(179,500)",
-        "Taille totale = 678",
+        "Demande le login DIVA du developpeur et le passe en --user : le script REFUSE sans, et plus aucune ligne Version= ne porte 'Claude'",
+        "Genere 3 blocs [CHAMP] : RgltFam, Libelle, Actif -- PAS de container U : la demande n'en reclame pas, et l'absence est le defaut (convention pour une table dont l'integrateur est proprietaire)",
+        "Positions sans trou : Ce1(1,1) Dos(2,8) RgltFam(10,20) Libelle(30,80) Actif(110,1) UserCr(111,20) UserMo(131,20) UserCrDh(151,14) UserMoDh(165,14)",
+        "Taille totale = 178",
         "Bloc [BASE] avec prefixe Rtl : RtlFamRglt, Fichier=RTLFAMRGLT.dhfi",
         "Index_A avec CLE=RtlFamRglt,A,Ce1,2,A,n,1,n et champs Dos(1) + RgltFam(9)",
         "Ligne INDEXL : Nom=RtlFamRglt,FamRglt,Index_A,0",
-        "Validation : 0 erreurs, 0 warnings"
+        "Validation : 0 erreurs. DICT03 remonte en warning et non en erreur (absence deliberee du container U, portee par summary.u_field = null)"
       ]
     },
     {
@@ -27,10 +28,11 @@
       "query": "Ajoute la table ArtFam dans gtfdd.dhsd avec des types varies : ArtFam (Nature 20), Libelle (Nature 80), DateCr (Nature D8), DateMo (Nature D8), Coeff (Nature 6,2), MntMax (Nature 13,D0), NbRef (Nature 11,0). Valeur CE = 'B'. Base = GtfArtFam. Index A sur Dos+ArtFam, Index B sur Dos+Libelle. Reserve distributeur 1000 octets.",
       "files": [],
       "expected_behavior": [
+        "Demande le login DIVA du developpeur et le passe en --user",
         "Genere 8 blocs [CHAMP] : ArtFam, Libelle, DateCr, DateMo, Coeff, MntMax, NbRef, UArtFam",
         "Nature D8 = 8 octets, 6,2 = 6 octets, 13,D0 = 13 octets, 11,0 = 11 octets",
-        "Positions contigues sans trou, Taille coherente",
-        "U-field UArtFam avec Nature=1000 et Flags n,1,o,o,n,n,n,n,o",
+        "Positions contigues sans trou, Taille coherente (Taille=1223 avec le container U)",
+        "Container U demande explicitement (--u-field-size 1000, car la requete dit 'Reserve distributeur 1000 octets') : UArtFam avec Nature=1000 et Flags n,1,o,o,n,n,n,n,o -- sans cette option il n'y aurait aucun container",
         "Base GtfArtFam avec prefixe Gtf, Fichier=GTFARTFAM.dhfi",
         "2 index avec positions cumulees dans les champs d'index",
         "Validation : 0 erreurs"
@@ -45,10 +47,10 @@
       "files": [],
       "expected_behavior": [
         "Utilise validate_dhsd.py avec --path et --table Art",
-        "Verifie D01/D02 : positions contigues sans trou",
-        "Verifie D03 : UArt present",
-        "Verifie D04 : tous les champs declares",
-        "Verifie D05/D06 : encodage ISO-8859-1 + CRLF",
+        "Verifie DICT01/DICT02 : positions contigues sans trou",
+        "Verifie DICT03 : UArt present",
+        "Verifie DICT04 : tous les champs declares",
+        "Verifie DICT05/DICT06 : encodage ISO-8859-1 + CRLF",
         "Rapport JSON avec le resultat de validation"
       ]
     },
@@ -61,14 +63,14 @@
       "files": [],
       "expected_behavior": [
         "Utilise generate_surcharge_field.py avec --output (mode creation)",
-        "Verifie via le parser que la table T143 a un container UT143 dans son [CHAMPS] (sinon D15 -> table non surchargeable)",
-        "Recopie les metadonnees [TABLE]+[BASE] du standard pour les blocs [TABLEU]+[BASEU] (garantit D14)",
+        "Verifie via le parser que la table T143 a un container UT143 dans son [CHAMPS] (sinon DICT15 -> table non surchargeable)",
+        "Recopie les metadonnees [TABLE]+[BASE] du standard pour les blocs [TABLEU]+[BASEU] (garantit DICT14)",
         "Genere un bloc [BASEU] pour CHAQUE base concernee (cas multi-bases : un meme T-prefix peut etre ancre sur 2 bases en parallele)",
         "Calcule offset_in_container = 1 (premier champ de surcharge)",
         "Calcule capacity_remaining = capacite(UT143) - taille(5,0=5 octets)",
         "Ecrit le fichier en ISO-8859-1 + CRLF avec [Dictionnaire] header + [CHAMP] global + [CHAMPR]/[CHAMPL] + [TABLEU] + [BASEU] x N",
         "Sortie JSON status=ok avec file, mode=create, field, container, offset_in_container, capacity_remaining, table_metadata_source, bases_metadata_source",
-        "Validation post-ecriture via validate_dhsd.py --dhsd-standard : 0 erreurs (D14/D15/D16 verts)"
+        "Validation post-ecriture via validate_dhsd.py --dhsd-standard : 0 erreurs (DICT14/DICT15/DICT16 verts)"
       ]
     },
     {
@@ -102,7 +104,7 @@
         "Met a jour la seule ligne Nature= du [CHAMP] global (pas de Taille= a toucher, la taille derive de Nature)",
         "Re-propage : dans CHAQUE [TABLE]/[CHAMPS] contenant Lib, decale de +10 les champs de position superieure et augmente Taille de +10 ; dans CHAQUE [INDEX]/[CHAMPS], decale les offsets cumules en aval",
         "Ecrit en ISO-8859-1 + CRLF avec backup .bak",
-        "Valide chaque table touchee via validate_dhsd en mode migration : 0 erreur D01/D02",
+        "Valide chaque table touchee via validate_dhsd en mode migration : 0 erreur DICT01/DICT02",
         "Round-trip (50 -> 40) restitue le fichier d'origine a l'octet pres"
       ]
     },
@@ -119,7 +121,7 @@
         "Decale de +2 les champs entre le champ et le Filler ; reduit le Filler de 2 ; ne touche pas aux champs apres le Filler",
         "Taille de la table INCHANGEE (record byte-compatible, pas de reconstruction ISAM)",
         "Si une table concernee n'a pas de Filler suffisant -> erreur explicite, aucune ecriture",
-        "Validation mode migration : 0 erreur D01/D02"
+        "Validation mode migration : 0 erreur DICT01/DICT02"
       ]
     },
     {
@@ -131,9 +133,82 @@
       "files": [],
       "expected_behavior": [
         "Utilise validate_dhsd.py --path --table <Table> --migration",
-        "Sans --migration : D03 (U-field absent) est une erreur -> valid=false",
-        "Avec --migration : D03 devient un warning (etat preexistant non bloquant) -> valid=true si D01/D02/D05/D06 sont propres",
-        "Les regles D01 (chevauchement) et D02 (trou) restent des erreurs : le signal d'une modif de positions n'est pas noye"
+        "Sans --migration : DICT03 (U-field absent) est une erreur -> valid=false",
+        "Avec --migration : DICT03 devient un warning (etat preexistant non bloquant) -> valid=true si DICT01/DICT02/DICT05/DICT06 sont propres",
+        "Les regles DICT01 (chevauchement) et DICT02 (trou) restent des erreurs : le signal d'une modif de positions n'est pas noye"
+      ]
+    },
+    {
+      "id": "case-9-compare-versions",
+      "skills": [
+        "managing-diva-dictionaries"
+      ],
+      "query": "Je monte un client de version ERP et je viens de recevoir le nouveau standard. Quelles tables du dictionnaire ont change de taille, et qu'est-ce que je dois faire de mon specifique ?",
+      "files": [],
+      "expected_behavior": [
+        "Utilise compare_dhsd_versions.py --from <ancien .dhsd> --to <nouveau .dhsd>",
+        "Ne compte PAS les champs : le critere est la Taille= du bloc [TABLE] (le comptage se trompe dans les deux sens)",
+        "Repond que le specifique utilisant les tables listees dans `incompatibles` DOIT etre recompile -- obligatoire, pas optionnel : un objet compile memorise la taille des tables",
+        "Cite le symptome runtime si on ne le fait pas : \"enregistrement deja alloue avec la taille X par le module Y\"",
+        "N'alerte PAS sur les tables de `compatibles_champs_ajoutes` : le standard a consomme son propre Filler, la taille est stable, rien a faire",
+        "Ne propose JAMAIS de corriger le dictionnaire standard : sources protegees, non recompilables cote partenaire -> une anomalie se remonte a Divalto",
+        "Si `containers_u_modifies` signale une capacite REDUITE : le qualifie d'anomalie a remonter a Divalto (une zone U reste stable ou s'agrandit)"
+      ]
+    },
+    {
+      "id": "case-10-base-existante",
+      "skills": [
+        "managing-diva-dictionaries"
+      ],
+      "query": "Ajoute une table de trace dans mon dictionnaire specifique. Le fichier physique existe deja : la base est deja declaree et porte deja une autre table. Je ne veux ni champs d'audit ni reserve distributeur.",
+      "files": [],
+      "expected_behavior": [
+        "Demande le login DIVA du developpeur (--user) : obligatoire, aucune valeur par defaut",
+        "generate_dhsd_block.py avec --no-audit ; ne passe PAS --u-field-size (0 est le defaut)",
+        "Genere quand meme Ce1 : une table peut exister sans discriminateur, mais en prevoir un fait partie des bonnes pratiques",
+        "insert_dhsd_blocks.py avec --attach-to-base <NomBase> : AUCUN bloc [BASE] n'est cree",
+        "La table est RATTACHEE a la base existante par une ligne Nom=<table>,0 inseree au rang alphabetique du [TABLES] de cette base -- se contenter de ne pas creer le [BASE] laisserait la table orpheline",
+        "Le nom passe a --attach-to-base doit etre celui que referencent les blocs generes (CLE= / [INDEXL]) : sinon le script refuse, sans rien ecrire",
+        "Si la table est deja rattachee, ou la base introuvable : erreur et fichier INCHANGE",
+        "Validation post-insertion : DICT03 n'est pas une erreur (absence deliberee du container U)"
+      ]
+    },
+    {
+      "id": "case-11-ajout-champ-table-persistee",
+      "skills": [
+        "managing-diva-dictionaries",
+        "syncing-diva-sql"
+      ],
+      "files": [],
+      "query": "J'ai besoin d'ajouter un champ code de tolerance sur une table qui existe deja dans mon dictionnaire specifique. Comment je procede ?",
+      "expected_behavior": [
+        "Ne propose PAS de recreer la table ni de passer par une surcharge : la table est dans le dictionnaire du partenaire",
+        "Demande le login DIVA (--user) : obligatoire",
+        "Enumere les 5 lignes obligatoires du bloc [CHAMP] : Version, Nom, Gel, Nature, Flags",
+        "Precise que DateM est FACULTATIF pour un nouveau champ et n'en invente pas un",
+        "Recommande de placer le champ en FIN de table : au milieu, tous les champs en aval se decalent dans la table ET dans chaque index",
+        "DECIDE si une synchro SQL est necessaire, en verifiant si la table figure dans le [TABLES] d'une [BASE] -- et non sur la presence de NomOdbc",
+        "Si la table est rattachee a une base : annonce dictionnaire -> compilation -> synchro SQL (syncing-diva-sql), sinon la colonne existe au dico mais pas en base et l'erreur arrive a la premiere ecriture",
+        "Si la table n'est rattachee a aucune base (structure de travail en memoire) : dit explicitement qu'AUCUNE synchro n'est requise",
+        "Rappelle de ne jamais editer le .dhsd avec un script maison (mode texte Python -> CRLF convertis en LF a la lecture)",
+        "Valide apres coup : DICT01 (chevauchement) et DICT02 (trou) sont les regles qui attrapent un recalcul casse"
+      ]
+    },
+    {
+      "id": "case-12-table-inseree",
+      "skills": [
+        "managing-diva-dictionaries"
+      ],
+      "files": [],
+      "query": "J'ai ajoute un champ en surcharge sur une table de base, et il apparait tout seul dans une table d'affichage que je n'ai pas touchee. Pourquoi, et est-ce que je risque quelque chose ?",
+      "expected_behavior": [
+        "Identifie le mecanisme TableInsere= : la table d'affichage embarque l'integralite de l'enregistrement de la table de base dans une fenetre d'octets figee",
+        "Explique que la directive vit DANS le [CHAMPS] et que les champs propres de l'hote commencent apres la fenetre",
+        "Explique pourquoi la propagation est automatique : le container U de la table inseree est a l'interieur de sa Taille=, donc a l'interieur de la fenetre",
+        "Repond que le partenaire ne risque RIEN dans ce cas : ajouter un champ dans le container U ne change pas la Taille= de la table inseree",
+        "Nomme le SEUL scenario de collision : un changement de version qui fait grandir la Taille= de la table inseree, car la fenetre n'a aucune marge",
+        "Renvoie a compare_dhsd_versions.py pour detecter ce cas avant de compiler",
+        "Ne pretend PAS documenter une syntaxe source equivalente ($) : elle n'est pas verifiee"
       ]
     }
   ]

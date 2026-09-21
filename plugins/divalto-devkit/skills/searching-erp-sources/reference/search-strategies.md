@@ -22,10 +22,10 @@ Le parseur (phase 1) identifie `domaine_pressenti` via mots-cles ("Retail", "fac
 
 Si `domain_scope=all` ou que le domaine est inconnu, la racine ERP est scannee entierement (avec bornes).
 
-## Strategie 1bis -- Cartographie de nommage des sources standard (R-020)
+## Strategie 1bis -- Cartographie de nommage des sources standard
 
 Avant de conclure « pas de source standard », viser le bon **prefixe de fichier**. Chercher
-`gti*` au lieu de `gtt*` fait rater le traitement et mene a une conclusion fausse (R-020). Le
+`gti*` au lieu de `gtt*` fait rater le traitement et mene a une conclusion fausse. Le
 nom d'une source suit le schema **`PP` `T` `NNN`** (sans espaces) :
 
 ```
@@ -77,7 +77,7 @@ dictionnaires**, le `u` est ajoute en **fin de basename** (`ccee032.dhsf` -> `cc
 binaire ; la derniere lettre reprend le type (`.dhsp`/`.dhop` programme, `.dhsf`/`.dhof` masque,
 `.dhsi`/`.dhoi` include, `.dhsq`/`.dhoq` recordsql, `.dhsd`/`.dhfd` dictionnaire).
 
-> **Discipline (R-020)** : viser module (pos 1-2) **+** type (pos 3). En cas de doute sur le
+> **Discipline** : viser module (pos 1-2) **+** type (pos 3). En cas de doute sur le
 > type, **grep large** sur le prefixe module (`gt*`, `cc*`) plutot que sur un seul prefixe ; ne
 > **jamais** conclure « pas de source » sur un seul prefixe rate. Cette convention est **stable**
 > -- documentee ici pour fonctionner **meme `diva-mcp` indisponible** (mode degrade).
@@ -136,9 +136,9 @@ Voir `x13-impact-patterns.md` pour le detail des patterns de detection.
 
 ## Cascade si pas assez de resultats
 
-Actuellement : pas de cascade automatique. Si le scope domaine retourne < 5 confirmes, le LLM orchestrateur peut relancer manuellement au CP4 avec `--domain-scope all`.
+Actuellement : pas de cascade automatique. Si le scope domaine retourne < 5 confirmes, le LLM orchestrateur peut relancer manuellement, a son checkpoint de perimetre, avec `--domain-scope all`.
 
-Amelioration future (non MVP) : cascade automatique. Inscrit au BACKLOG.
+Amelioration future (non MVP) : cascade automatique. Inscrit.
 
 ## Pourquoi pas ripgrep ?
 
@@ -149,7 +149,7 @@ Amelioration future (non MVP) : cascade automatique. Inscrit au BACKLOG.
 
 Pour le MVP, Python suffit avec les bornes imposees.
 
-## Verifier une clause existante avant de developper (filtre TRA, R-023)
+## Verifier une clause existante avant de developper (filtre TRA)
 
 Pour une demande de type « ajouter un filtre dans un TRA / un zoom », chercher d'abord si la
 **clause existe deja** dans le `.dhsq` standard (ex. une case `<Champ>_Equal_<X>`) avant de
@@ -158,7 +158,7 @@ via `UseClause` : une `UseClause` a **un seul parametre** est compatible avec un
 **pas** avec un `Between` (qui en exige deux). Selon les cas : aucun developpement (clause deja
 exposee) ou simple surcharge. Mecanique des clauses RecordSql : cf. `generating-recordsql`.
 
-## Graphe de code en retard : toujours verifier en local (R-067)
+## Graphe de code en retard : toujours verifier en local
 
 Le graphe `diva-mcp` (`search_code`, `get_call_graph`) indexe une **revision donnee** du standard
 et peut **retarder** sur les ouvertures recentes : un service pack peut introduire une procedure

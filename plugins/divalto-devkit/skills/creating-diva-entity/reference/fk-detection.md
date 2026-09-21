@@ -38,7 +38,7 @@ Attendre validation explicite de la liste finale de FK avant de lancer les gener
 ## Propagation aux etapes suivantes
 
 La liste des FK validees est memorisee pour etre propagee :
-- Etape 3 (`generating-objet-metier`) : parametre `--fk CHAMP:TARGET[:ZOOM]` repetable (cf. FK-02)
-- Etape 5ter (`dhsf_add_fk.py`) : memes `--fk` pour enrichir le masque (cf. FK-03)
+- Etape 3 (`generating-objet-metier`) : parametre `--fk CHAMP:TARGET[:ZOOM]` repetable (cf. FK-01)
+- Etape 5ter (`dhsf_add_fk.py`) : memes `--fk` pour enrichir le masque (cf. FK-02)
 
-Si aucune FK n'est detectee ni declaree, passer directement a l'etape 2 (generation sans FK -- retrocompat pre-FK-02).
+Si aucune FK n'est detectee ni declaree, passer directement a l'etape 2 (generation sans FK -- retrocompatibilite avec les objets crees avant le support des FK).

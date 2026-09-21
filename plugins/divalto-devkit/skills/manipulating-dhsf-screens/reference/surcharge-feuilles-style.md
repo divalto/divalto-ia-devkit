@@ -7,7 +7,7 @@
 - Placement dans le projet
 - Cas d'usage (override, extension, modification)
 - Implication pour `wstyle` des composants
-- Questions ouvertes a Stephane Castelain
+- Questions ouvertes -- a remonter a Divalto
 
 ---
 
@@ -111,7 +111,7 @@ Voir [reading-isam-files](../../reading-isam-files/SKILL.md) pour lire un `.dhfi
 
 ---
 
-## Questions ouvertes a Stephane Castelain
+## Questions ouvertes -- a remonter a Divalto
 
 - **Priorite override** : empiriquement, la surcharge ecrase-t-elle le standard pour une meme clef ? Ou comportement different (merge, refus...) ?
 - **Detection des conflits** : xwin7 signale-t-il les surcharges de styles standards (warning au build) ?

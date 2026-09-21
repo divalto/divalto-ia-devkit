@@ -12,12 +12,13 @@
 - P8 -- Ordre d'initialisation des globales
 - P9 -- Surcharge (OverWrittenBy) dans un sous-projet
 - P10 -- Moulinette / traitement de nuit pas execute
+- P11 -- Filtre date dynamique d'un traitement (MPVAR)
 - Comment enrichir ce catalogue
 
 ---
 
-Catalogue des **patterns de causes** recurrents pour les questions fonctionnelles
-UC-110. Chaque pattern propose :
+Catalogue des **patterns de causes** recurrents pour les questions fonctionnelles.
+Chaque pattern propose :
 - une **signature** (symptome + declencheur)
 - les **symboles techniques** a chercher
 - le **diagnostic verifiable** (ce que le demandeur doit regarder)
@@ -208,17 +209,41 @@ procedure `*_Ap` qui n'est plus declenchee si le contexte existe deja en memoire
 **Cause** : la tache planifiee (scheduler ou batch) n'a pas tourne / a echoue /
 a ete desactivee.
 
-**Symboles** : `.dhst` (taches planifiees), `.log` de moulinettes, `mo<entite>.dhsp`.
+**Symboles** : `.dhst` (taches planifiees), `mo<entite>.dhsp`, `ferror.log`, table `M8`.
 
 **Diagnostic** :
-1. Verifier le scheduler Divalto
-2. Consulter les logs
+1. Verifier le scheduler Divalto (tache active ? derniere execution ?)
+2. **`ferror.log`** (erreurs techniques / crash sans IHM) : chemin par defaut
+   `C:\Divalto\DivaltoLog\ferror.log`, **configurable** via `ServeurLog` dans `divalto.ini`.
+   1er reflexe pour un process automatique sans interface qui echoue silencieusement.
+3. **Table SQL `M8`** (livre de bord, entite `LIVREDEBORD` / `A5DD.DHSD`) : erreurs
+   **metier**, filtrer `NIVALERTE IN (1,3)`. Complement de `ferror.log` (technique).
+   (Connexion SQL resolue par `understanding-integrator-workspace`, pas ici.)
+
+---
+
+## P11 -- Filtre date dynamique d'un traitement (MPVAR)
+
+**Signature** : "mon traitement auto ne prend pas les bonnes dates", "la plage de dates
+semble decalee ou vide", "pourtant j'ai bien saisi une date".
+
+**Cause** : le critere date du traitement n'est pas une date figee mais une **formule
+dynamique** (plage glissante) stockee dans **MPVAR**, evaluee a l'execution.
+
+**Symboles** : `MPVAR`, formule date -> fonction native `Hdate([date],[op_jour],[op_mois],[op_annee])`.
+
+**Diagnostic** :
+1. Verifier dans MPVAR si le critere date est une formule (dynamique) plutot qu'une date saisie.
+2. Rejouer la formule a la date d'execution reelle du traitement.
+   Prudence : la fonction de formule -- parfois nommee `FctDate` en remontee terrain --
+   n'est pas confirmable sur le graphe ; seule `Hdate` l'est. Raisonner sur le **mecanisme**,
+   pas sur une signature figee.
 
 ---
 
 ## Comment enrichir ce catalogue
 
-Apres chaque nouveau cas UC-110 resolu avec succes :
+Apres chaque nouvelle question resolue avec succes :
 1. Identifier le pattern (Pn) ou en creer un nouveau
 2. Ajouter un exemple reel (ticket, chat, date)
 3. Affiner le diagnostic et les symboles si besoin

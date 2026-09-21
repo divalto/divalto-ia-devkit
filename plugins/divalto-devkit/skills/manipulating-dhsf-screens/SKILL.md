@@ -12,6 +12,7 @@ Manipulation complete des fichiers masque ecran Divalto (.dhsf) : parsing struct
 ### Structure et surcharge
 
 - **Structure d'un .dhsf** : [reference/dhsf-structure.md](reference/dhsf-structure.md) -- les 8 sections d'un masque, convention de nommage universelle (`e` en position 3), section `[diva]` qui contient du code DIVA executable.
+- **Mesures du corpus** : [reference/mesures-corpus.json](reference/mesures-corpus.json) -- le releve **date** des chiffres cites par les pages (composants, `esp_si_zero`, `param_case`, `col_depl`, chaine des pages), avec ce qui est mesure, ce qui vient d'un retour terrain, et ce qui reste **non etabli**.
 - **Surcharge masque** : [reference/dhsf-overwrite-pattern.md](reference/dhsf-overwrite-pattern.md) -- pattern `<base>u.dhsf`, 3 proprietes a ajouter + 2 a modifier dans `[masque]`, compagnon `_base.dhsf`, mecanique `[diva]`/`[diva_base]`, edition en place vs ajout, integration avec `.dhps` de surcharge.
 
 ### Composants graphiques (1 fichier par composant)
@@ -22,12 +23,16 @@ Manipulation complete des fichiers masque ecran Divalto (.dhsf) : parsing struct
 - **Element graphique pur** : [reference/composant-cadre.md](reference/composant-cadre.md) -- 19 valeurs `nature=`, `nature=vide` defaut implicite, `epaisseur=0` invisible, couleurs canoniques (piege `TRAIT_SIMPLE`=blanc), tri auto par surface
 - **Image fixe** : [reference/composant-bitmap-constante.md](reference/composant-bitmap-constante.md) -- 2 niveaux de referencement, 8 valeurs `actionbitmap=`, surcharges non exposees AGL
 - **Image dynamique** : [reference/composant-bitmap-variable.md](reference/composant-bitmap-variable.md) -- champ DIVA contient le chemin du fichier, pattern multi-dimensions, contraintes `saisie=non`
+- **Texte multiligne** : [reference/composant-rich-edit.md](reference/composant-rich-edit.md) -- 7e type de composant : grammaire de `[rich_edit]`/`[param_rich_edit]`, les 4 cles, les 7 `wstyle` avec leur frequence reelle (`RTF_NOTE` n'est que le 4e). Un `[champ]` ne fait pas de multiligne.
+- **Pages cote a cote** : [reference/composant-grille-wpf.md](reference/composant-grille-wpf.md) -- grille et panels : `grille_parent` + `[param_panel] page` (810/810), l'unite de ligne vaut **8**, et pourquoi la regle "somme des nb_lig = hauteur de grille" **ne se verifie pas** (23 % au mieux).
 
 ### Regles transverses
 
 - **DIVA case-sensitivity** : [reference/diva-case-sensitivity.md](reference/diva-case-sensitivity.md) -- DIVA insensible / SQL Divalto sensible / convention AGL lowercase
 - **Feuilles de style** : [reference/surcharge-feuilles-style.md](reference/surcharge-feuilles-style.md) -- mecanisme `fstylewpfu.dhfi`, taxonomie complete des surcharges Divalto
 - **Pilotage dynamique** : [reference/xmesetattribut-dynamique.md](reference/xmesetattribut-dynamique.md) -- `noms=` + `XmeSetAttribut`, masquer/griser/restaurer des composants au runtime, liste des attributs `AN_*` et valeurs `AV_*`
+- **Volets Ywpf** : [reference/volets-ywpf.md](reference/volets-ywpf.md) -- panneau lateral et page affichee : **trois mecanismes distincts** (`Gerer_Volet` pilote le panneau, `EcrirePageCouranteVolet` la page memorisee, `Reafficher_Volet_Spe` le reaffichage seulement). Aucun des trois, seul, ne fait apparaitre une page donnee **a l'ouverture** -- il faut la bascule active complete dans un hook post-premier-affichage, avec garde one-shot
+- **Tableaux A5PMTAB** : ce n'est pas un composant de masque -- voir le skill [`coding-a5pmtab-screens`](../coding-a5pmtab-screens/SKILL.md) (callbacks, `Creer_Parametre`, `AP_*_Tableaux`, ecrans multi-tableaux)
 
 ### Ergonomie (UX)
 
@@ -47,7 +52,7 @@ Tout masque `.dhsf` a `e` en **position 3** (regle universelle). Verification ra
 py scripts/is_dhsf_filename.py --filename gtez000_sql.dhsf
 ```
 
-Decompose le nom en `{domain, type, id, is_surcharge}`. Voir [reference/dhsf-structure.md](reference/dhsf-structure.md) section "Convention de nommage".
+Decompose le nom en `{domain, type, id, is_surcharge}`. Voir [reference/dhsf-structure.md](reference/dhsf-structure.md) section "Convention de nommage". **`is_surcharge` est une PRESOMPTION** deduite du seul suffixe `u` : un `.dhsf` ne porte aucun marqueur interne de surcharge (verifie sur 2962 fichiers), et ce script ne voit qu'un nom. Tout nom finissant par la lettre `u` est donc flague -- les 5 masques du standard X.13 dans ce cas (`a5eepersmenu`, `rceebordereau`, `rcembordereau`, `rceztreressimu`, `speewebscru`) n'en sont aucun.
 
 ## Quand utiliser ce skill
 
@@ -104,14 +109,6 @@ Parametres JSON (zoom) :
 | `titre_creation` | Titre popup creation | `"Famille a creer"` |
 | `no_libelle` | Si true, supprime les widgets Lib du masque | `true` (optionnel) |
 
-**Check SVN pre-modification** (optionnel) : avant de modifier un masque .dhsf existant, verifier les modifs locales non committees et l'activite recente pour detecter un refactor en cours.
-
-```bash
-py .claude/skills/manipulating-dhsf-screens/scripts/check_svn_recent.py     --path "{DHSF_PATH}" --limit 5 --days 30
-```
-
-Si `warning != null` ou `local_changes.has_changes=true`, signaler au collaborateur avant de poursuivre. Degradation gracieuse si SVN indispo. Voir [reference/svn-policy.md](reference/svn-policy.md).
-
 ### 3. dhsf_modify.py -- Modifications incrementales
 
 Entree : chemin .dhsf + action + parametres JSON
@@ -132,7 +129,7 @@ Actions :
 
 Chaque action met a jour automatiquement `dernier_id` et le timestamp.
 
-**`add-column` -- parametre optionnel `fl_aff` (R-015)** : controle l'etat
+**`add-column` -- parametre optionnel `fl_aff`** : controle l'etat
 d'affichage de la colonne dans `[param_colonne]`. Trois valeurs :
 
 | `fl_aff` (param) | Comportement | Ligne generee dans `[param_colonne]` |
@@ -155,37 +152,51 @@ visuellement a l'interieur du groupbox). Le mode "repositionnement
 automatique" (champs deviennent children, espacement 14 / offset 16 normes
 graphiques) reste un chantier dedie a ouvrir si necessaire.
 
-**Validation automatique post-modification** : apres chaque action modifiante (`add-field` / `add-column` / `add-page` / `add-groupbox`), le script re-parse le fichier et execute `validate_groupbox_layout()`. Le resultat est inclus dans le JSON de retour sous la cle `post_validation`. Idem pour `dhsf_add_fk.py`.
+**Validation automatique post-modification** : apres chaque action modifiante (`add-field` / `add-column` / `add-page` / `add-groupbox`), le script re-parse le fichier et execute les **deux** familles de controles, comme `--action validate` : `validate_groupbox_layout()` et `validate_page_chain()`. Le resultat est inclus dans le JSON de retour sous la cle `post_validation`. Idem pour `dhsf_add_fk.py`.
 
-5 regles issues de `reference/normes-graphiques.md` section 5 :
+**7 regles, deux familles**, que `--action validate` comme la post-validation
+apres modification cumulent dans une seule liste `violations`.
 
-| Regle | Severite | Formule |
-|-------|----------|---------|
-| R1 | error | `taille_groupbox >= NbLignes * espacement + 18` (borne min : espacement=10) |
-| R2 | warning | `Y(premier enfant) - Y(groupbox) >= 15` (reserve titre) |
-| R3 | warning | Entre deux groupbox consecutives sur meme X : gap >= 8 |
-| R4 | error | `max_X(obj) <= nb_col * 4` (saturation largeur, cause "clip grille") -- **exempte** les types tableau (cf. ci-dessous) |
-| R5 | error | `max_Y(obj) <= nb_lig * 14 - GRID_LIG_MARGE` (saturation hauteur) -- **exempte** les types tableau |
+- **Layout des groupbox** (`DHSF01`-`DHSF05`) -- formules de
+  `reference/normes-graphiques.md` section 5.
+- **Chaine des pages** (`DHSF06`-`DHSF07`) -- un `suiv=`/`prec=` qui designe une
+  page absente du masque.
 
-> **Exemption R4/R5 des widgets tableau (R-014/R-015)** : les types
+| Regle | Severite | Formule ou condition | Regle linter |
+|-------|----------|----------------------|--------------|
+| DHSF01 | error | `taille_groupbox >= NbLignes * espacement + 18` (borne min : espacement=10) | -- |
+| DHSF02 | warning | `Y(premier enfant) - Y(groupbox) >= 15` (reserve titre) | -- |
+| DHSF03 | warning | Entre deux groupbox consecutives sur meme X : gap >= 8 | -- |
+| DHSF04 | error | `max_X(obj) <= nb_col * 4` (saturation largeur, cause "clip grille") -- **exempte** les types tableau (cf. ci-dessous) | -- |
+| DHSF05 | error | `max_Y(obj) <= nb_lig * 14 - GRID_LIG_MARGE` (saturation hauteur) -- **exempte** les types tableau | -- |
+| DHSF06 | error | `suiv=N` designe une page N absente du masque -- compile a 0 erreur, casse a l'OUVERTURE ("page N du masque inexistante") | -- |
+| DHSF07 | error | `prec=N` designe une page N absente du masque -- meme symptome | -- |
+
+> **Exemption DHSF04/DHSF05 des widgets tableau** : les types
 > `tableau`, `arbre`, `panel_wpf`, `champ_tableau`, `multi_choix_tableau`
 > (ensemble `GRID_EXEMPT_TYPES` dans `dhsf_modify.py`) ne sont **pas** soumis a
-> R4/R5 : leur `largeur_col` est en unites de colonne, pas de grille, et les
+> DHSF04/DHSF05 : leur `largeur_col` est en unites de colonne, pas de grille, et les
 > comparer a `nb_col*4` declenchait des faux positifs massifs sur tout zoom a
 > plusieurs colonnes. Faire un `validate` **avant** modification pour figer la
-> baseline des violations pre-existantes (R-008). Cf. `reference/normes-graphiques.md`.
+> baseline des violations pre-existantes. Cf. `reference/normes-graphiques.md`.
+
+> **La colonne « Regle linter ».** Un producteur et `lint_diva.py` verifient
+> parfois la meme chose et le disent avec deux codes ; cette colonne fait le lien.
+> Ici elle est vide partout, et c'est une mesure, pas un oubli : les 83 regles du
+> linter ont ete confrontees a ces sept, aucune ne verifie la geometrie d'un masque
+> ni sa chaine de pages. Ces sept controles n'existent que dans ce skill.
 
 Format du `post_validation` :
 
 ```json
 {
   "valid": true,
-  "violations": [{"rule": "R1", "severity": "error", "page": 2, "id": 42, "type": "groupbox", "detail": "..."}],
+  "violations": [{"rule": "DHSF01", "severity": "error", "page": 2, "id": 42, "type": "groupbox", "detail": "..."}],
   "stats": {"total": 1, "errors": 1, "warnings": 0}
 }
 ```
 
-L'orchestrateur (humain ou `creating-diva-entity`) DOIT lire ce `post_validation` apres chaque modification. Les erreurs (R1/R4/R5) indiquent un layout casse qui echouera a la compilation xwin7 (erreur "Objet en dehors de la clip grille" pour R4/R5). Les warnings (R2/R3) indiquent un ecart vis-a-vis de la charte graphique -- souvent correctible mais parfois accepte en production.
+L'orchestrateur (humain ou `creating-diva-entity`) DOIT lire ce `post_validation` apres chaque modification. Les erreurs (DHSF01/DHSF04/DHSF05) indiquent un layout casse qui echouera a la compilation xwin7 (erreur "Objet en dehors de la clip grille" pour DHSF04/DHSF05). Les warnings (DHSF02/DHSF03) indiquent un ecart vis-a-vis de la charte graphique -- souvent correctible mais parfois accepte en production.
 
 ### 4. dhsf_add_fk.py -- Binding "FK par zoom standard"
 
@@ -215,7 +226,7 @@ champ FK n'est pas trouve, un warning est emis et le callback est quand meme
 genere dans `[diva]` (pour que l'utilisateur complete manuellement le
 bloc `[champ]` apres).
 
-Ce script fonctionne avec `generating-objet-metier --fk` (FK-02) pour livrer
+Ce script fonctionne avec `generating-objet-metier --fk` (FK-01) pour livrer
 les 3 couches solidaires : Module Check (dhsp) + masque structurel (dhsf [champ])
 + callback applicatif (dhsf [diva]).
 
@@ -270,7 +281,7 @@ Options :
 
 Sortie JSON : `{standard, user_mask, base_mask, date_modif_base, niveau_surcharge, proprietes_modifiees, rappels}`.
 
-Apres la generation, referencer le masque user dans `[fichiers]` d'un `.dhps` de surcharge (cf. skill `managing-diva-projects`). **Ne pas** lister dans `[sousprojets]` du `.dhpt` parent (P17). Voir [reference/dhsf-overwrite-pattern.md](reference/dhsf-overwrite-pattern.md) pour le workflow complet.
+Apres la generation, referencer le masque user dans `[fichiers]` d'un `.dhps` de surcharge (cf. skill `managing-diva-projects`). **Ne pas** lister dans `[sousprojets]` du `.dhpt` parent (PROJ17). Voir [reference/dhsf-overwrite-pattern.md](reference/dhsf-overwrite-pattern.md) pour le workflow complet.
 
 ### 6. is_dhsf_filename.py -- Verification de nom
 
@@ -280,7 +291,29 @@ Verifie qu'un nom de fichier respecte la convention masque (`e` en position 3).
 py scripts/is_dhsf_filename.py --filename gtez000_sql.dhsf
 ```
 
-Sortie JSON : `{is_mask, domain, type, id, is_surcharge, reason}`. Exit 0 si masque valide, 1 sinon. Utile en garde-fou avant operation sur un fichier inconnu.
+Sortie JSON : `{is_mask, domain, type, id, is_surcharge, is_surcharge_base, is_surcharge_avertissement, reason}`. Exit 0 si masque valide, 1 sinon. Utile en garde-fou avant operation sur un fichier inconnu.
+
+> **`is_surcharge` ne fait pas foi.** Elle est deduite du seul suffixe `u` du nom :
+> aucun `.dhsf` ne porte de marqueur interne de surcharge (verifie sur 2962 fichiers
+> reels), et ce script ne recoit qu'un nom -- il n'ouvre aucun fichier. Le champ
+> `is_surcharge_base` annonce cette base, et `is_surcharge_avertissement` (present
+> uniquement quand la presomption est positive) nomme les contre-exemples mesures du
+> standard et **comment confirmer autrement** : emplacement du fichier en zone
+> specifique, ou en-tete du `.dhps` qui le reference. A la difference des `.dhps`,
+> dont l'en-tete `xwin-s-sprojet` est autoritaire, il n'existe ici aucun meilleur
+> signal.
+
+---
+
+## Tests
+
+```
+py .claude/skills/manipulating-dhsf-screens/tests/run_all.py
+```
+
+A lancer apres toute modification de `scripts/`. La suite garde l'aveu ci-dessus :
+elle echoue si quelqu'un retire l'avertissement ou la mention de la base de
+deduction. Detail : [tests/README.md](tests/README.md).
 
 ## Workflow typique
 

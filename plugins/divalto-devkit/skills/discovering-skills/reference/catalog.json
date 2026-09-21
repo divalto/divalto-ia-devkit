@@ -1,7 +1,7 @@
 {
   "version": "2026-06-17",
-  "generated_at": "2026-06-17T00:00:00",
-  "total_skills": 38,
+  "generated_at": "2026-09-11T00:00:00",
+  "total_skills": 40,
   "workflows": [
     {
       "id": "analyze",
@@ -98,9 +98,12 @@
       "description": "Consulter les patterns avances du langage DIVA (REST, JSON, .NET, mtab, tunnels, Harmony) et appliquer les protocoles de session integrateur (identification du workspace, resolution des chemins harmony, classification standard/specifique).",
       "skills": [
         "coding-diva-advanced",
+        "coding-a5pmtab-screens",
         "understanding-integrator-workspace",
         "configuring-diva-mcp",
-        "pushing-retex-to-github"
+        "pushing-retex-to-github",
+        "querying-client-sql",
+        "discovering-skills"
       ]
     }
   ],
@@ -173,7 +176,8 @@
       "pushing-retex-to-github"
     ],
     "querying": [
-      "querying-diva-graph"
+      "querying-diva-graph",
+      "querying-client-sql"
     ],
     "reading": [
       "reading-fstyle",
@@ -204,50 +208,9 @@
     ]
   },
   "skills": {
-    "configuring-diva-mcp": {
-      "name": "configuring-diva-mcp",
-      "description": "Configure les credentials du serveur MCP diva-mcp pour le partenaire integrateur. Le plugin marketplace livre un `.mcp.json` template (URL declaree, pas de headers d'authentification). Ce skill demande interactivement les 3 elements de la cle API (site, env, ApiKey) au partenaire, construit le header `X-Api-Key` au format `<site>-<env>@<apikey>`, et patche le `.mcp.json` du plugin pour persister la config pour toutes les sessions Claude Code futures. A invoquer la premiere fois apres l'installation du plugin, ou en cas de cle expiree / 401 sur les outils `mcp__diva-mcp__*`, ou apres une mise a jour du plugin qui aurait restaure le template d'origine (perte des credentials). Triggers : \"configure diva-mcp\", \"ma cle API diva\", \"diva-mcp 401 / unauthorized\", \"diva-mcp ne marche pas\", \"premier demarrage diva-mcp\", \"renouveler ma cle diva-mcp\".",
-      "summary": "Configure les credentials du serveur MCP diva-mcp pour le partenaire integrateur.",
-      "when_to_use": "A invoquer la premiere fois apres l'installation du plugin, ou en cas de cle expiree / 401 sur les outils `mcp__diva-mcp__*`, ou apres une mise a jour du plugin qui aurait restaure le template d'origine (perte des credentials).",
-      "workflow": "reference",
-      "verb": "configuring",
-      "is_orchestrator": false,
-      "checkpoint_count": 3,
-      "scripts": [
-        "locate_mcp_json.py",
-        "write_credentials.py"
-      ],
-      "references": [
-        "credentials-format.md"
-      ],
-      "related_skills": [],
-      "prerequisites": []
-    },
-    "pushing-retex-to-github": {
-      "name": "pushing-retex-to-github",
-      "description": "Pousse automatiquement les entrees R-NNN d'un fichier RETEX-skills.md vers un depot GitHub sous forme d'issues. Parse les entrees, deduit les labels (categorie + severite), formate le corps de l'issue, et utilise `gh issue create` (GitHub CLI). Idempotent via un cache local de tracking (.retex-pushed.json) : ne recree pas une issue deja poussee, commente l'issue existante si le contenu de l'entree a change. Mode degrade si `gh` n'est pas installe ou non authentifie : log sans bloquer. A utiliser pour synchroniser son journal RETEX local avec un canal centralise (ex : repo divalto/divalto-ia-devkit). Le skill est invoque (a) automatiquement par le hook `push_retex_to_github.py` apres chaque edition de RETEX-skills.md, ou (b) manuellement pour pousser explicitement / re-synchroniser / faire un backfill.",
-      "summary": "Pousse automatiquement les entrees R-NNN d'un fichier RETEX-skills.md vers un depot GitHub sous forme d'issues.",
-      "when_to_use": "A utiliser pour synchroniser son journal RETEX local avec un canal centralise (ex : repo divalto/divalto-ia-devkit).",
-      "workflow": "reference",
-      "verb": "pushing",
-      "is_orchestrator": false,
-      "checkpoint_count": 1,
-      "scripts": [
-        "init_config.py",
-        "parse_retex_entries.py",
-        "push_entry.py",
-        "push_new_entries.py"
-      ],
-      "references": [
-        "issue-format.md",
-        "setup-gh-cli.md"
-      ],
-      "related_skills": [],
-      "prerequisites": []
-    },
     "allocating-menu-enrno": {
       "name": "allocating-menu-enrno",
-      "description": "Trouve un EnrNo libre dans le fichier menu `g3f.dhfi` d'un domaine ERP, selon la plage demandee (`standard` < 100000 reserve ERP, `custom` >= 100000 recommande pour creations utilisateur). Scan des enregistrements M2 (Ce=2) avec filtre obligatoire (piege multi-structure M0/M2, cf RETEX R-006), puis calcul max+1 dans la plage. Previent les collisions d'EnrNo lors de l'ecriture d'un nouveau choix de menu. A utiliser avant d'ecrire un enreg M2 dans `g3f.dhfi` (ou un enreg M1 de visibilite F7 dans `a5f.dhfi`) pour une entite metier custom.",
+      "description": "Trouve un EnrNo libre dans le fichier menu `g3f.dhfi` d'un domaine ERP, selon la plage demandee (`standard` < 100000 reserve ERP, `custom` >= 100000 recommande pour creations utilisateur). Scan des enregistrements M2 (Ce=2) avec filtre obligatoire (piege multi-structure M0/M2), puis calcul max+1 dans la plage. Previent les collisions d'EnrNo lors de l'ecriture d'un nouveau choix de menu. A utiliser avant d'ecrire un enreg M2 dans `g3f.dhfi` (ou un enreg M1 de visibilite F7 dans `a5f.dhfi`) pour une entite metier custom.",
       "summary": "Trouve un EnrNo libre dans le fichier menu `g3f.dhfi` d'un domaine ERP, selon la plage demandee (`standard` < 100000 reserve ERP, `custom` >= 100000 recommande pour creations utilisateur).",
       "when_to_use": "A utiliser avant d'ecrire un enreg M2 dans `g3f.dhfi` (ou un enreg M1 de visibilite F7 dans `a5f.",
       "workflow": "isam",
@@ -269,7 +232,7 @@
     },
     "allocating-zoom-numbers": {
       "name": "allocating-zoom-numbers",
-      "description": "Trouve un numero de zoom libre pour une plage donnee (ou un domaine ERP) en cross-checkant trois sources : `a5tczoom.dhsp` (constantes), `a5f.dhfi` local (enregistrements M4), `a5f.dhfi` de versionx9 (optionnel). Previent les collisions entre zooms declares et zooms reellement enregistres. A utiliser avant d'allouer un nouveau numero de zoom lors de la creation d'une entite ou d'un zoom standard.",
+      "description": "Trouve un numero de zoom libre en cross-checkant les sources enregistrees (`a5tczoom.dhsp` constantes standard, `a5f.dhfi` zooms standard, **`a5fu.dhfi` zooms specifiques/surcharge**, `a5f.dhfi` versionx9 optionnel), puis verifie le candidat par une recherche large dans les sources specifiques uniquement (occurrences remontees et etiquetees pour jugement, jamais de decision auto). Convention : un nouveau zoom specifique partenaire demarre a 90000. Previent les collisions entre zooms declares, enregistres et reellement appeles dans le code. A utiliser avant d'allouer un nouveau numero de zoom (creation d'entite ou de zoom).",
       "summary": "Trouve un numero de zoom libre pour une plage donnee (ou un domaine ERP) en cross-checkant trois sources : `a5tczoom.dhsp` (constantes), `a5f.dhfi` local (enregistrements M4), `a5f.dhfi` de versionx9 (optionnel).",
       "when_to_use": "A utiliser avant d'allouer un nouveau numero de zoom lors de la creation d'une entite ou d'un zoom standard.",
       "workflow": "isam",
@@ -279,7 +242,9 @@
       "scripts": [
         "find_free_zoom.py"
       ],
-      "references": [],
+      "references": [
+        "zoom-number-patterns.md"
+      ],
       "related_skills": [],
       "prerequisites": []
     },
@@ -291,10 +256,8 @@
       "workflow": "analyze",
       "verb": "analyzing",
       "is_orchestrator": true,
-      "checkpoint_count": 5,
-      "scripts": [
-        "svn_consult.py"
-      ],
+      "checkpoint_count": 6,
+      "scripts": [],
       "references": [
         "report-template.md",
         "workflow.md"
@@ -313,19 +276,19 @@
     },
     "assisting-functional-question": {
       "name": "assisting-functional-question",
-      "description": "Assiste un collaborateur qui pose une question fonctionnelle conversationnelle sur le standard ERP Divalto (formulations du type \"ne comprends pas pourquoi X ne marche pas\", \"il manque une info pour que Y fonctionne\", \"quand l'option Z est activee, W n'apparait plus\"). Produit une reponse **chat-ready** courte (< 40 lignes) identifiant 3 a 5 causes probables classees par probabilite, chacune avec une reference fichier:ligne dans X.13 et une action de verification concrete. Cycle court (< 5 min). Ne genere aucun fichier disque. A utiliser quand un collegue colle un message de chat, une capture d'ecran Teams/Slack, ou reformule a l'oral une question sur un parametrage ou un comportement du standard -- pas quand le collaborateur s'apprete a coder (UC-100).",
+      "description": "Assiste un collaborateur qui pose une question fonctionnelle conversationnelle sur le standard ERP Divalto (formulations du type \"ne comprends pas pourquoi X ne marche pas\", \"il manque une info pour que Y fonctionne\", \"quand l'option Z est activee, W n'apparait plus\"). Produit une reponse **chat-ready** courte (< 40 lignes) identifiant 3 a 5 causes probables classees par probabilite, chacune avec une reference fichier:ligne dans X.13 et une action de verification concrete. Cycle court (< 5 min). Ne genere aucun fichier disque. A utiliser quand un collegue colle un message de chat, une capture d'ecran Teams/Slack, ou reformule a l'oral une question sur un parametrage ou un comportement du standard -- pas quand le collaborateur s'apprete a coder (voir `analyzing-diva-request`).",
       "summary": "Assiste un collaborateur qui pose une question fonctionnelle conversationnelle sur le standard ERP Divalto (formulations du type \"ne comprends pas pourquoi X ne marche pas\", \"il manque une info pour que Y fonctionne\", \"quand l'option Z est activee, W n'apparait plus\").",
-      "when_to_use": "A utiliser quand un collegue colle un message de chat, une capture d'ecran Teams/Slack, ou reformule a l'oral une question sur un parametrage ou un comportement du standard -- pas quand le collaborateur s'apprete a coder (UC-100).",
+      "when_to_use": "A utiliser quand un collegue colle un message de chat, une capture d'ecran Teams/Slack, ou reformule a l'oral une question sur un parametrage ou un comportement du standard -- pas quand le collaborateur s'apprete a coder (voir `analyzing-diva-request`).",
       "workflow": "analyze",
       "verb": "assisting",
       "is_orchestrator": false,
-      "checkpoint_count": 0,
+      "checkpoint_count": 2,
       "scripts": [
         "translate_keywords.py"
       ],
       "references": [
         "chat-ready-format.md",
-        "golden-example-nicolas.md",
+        "golden-example.md",
         "lexique-metier-technique.md",
         "patterns-causes.md"
       ],
@@ -340,9 +303,9 @@
     },
     "binding-zoom-to-field": {
       "name": "binding-zoom-to-field",
-      "description": "Ajoute un binding \"FK par zoom standard\" a une entite metier DIVA existante (post-creation). Pour chaque FK declaree, enrichit le Module Check (.dhsp) avec `Module \"Gttmchk<cible>.dhop\"` + procedures `Check_<SRC>_Field_<CHAMP>(+_Lib)`, puis enrichit le masque (.dhsf) avec `f8=<zoom>`, `table_associee`, `diva_apres`, bouton zoom + procedure callback dans `[diva]`. A utiliser pour reproduire le workflow RETEX R-003 (ajout post-hoc de binding zoom pays/devise/... sur une entite deja creee). Pattern documente dans reference/fk-pattern.md.",
+      "description": "Ajoute un binding \"FK par zoom standard\" a une entite metier DIVA existante (post-creation). Pour chaque FK declaree, enrichit le Module Check (.dhsp) avec `Module \"Gttmchk<cible>.dhop\"` + procedures `Check_<SRC>_Field_<CHAMP>(+_Lib)`, puis enrichit le masque (.dhsf) avec `f8=<zoom>`, `table_associee`, `diva_apres`, bouton zoom + procedure callback dans `[diva]`. A utiliser pour reproduire le workflow RETEX (ajout post-hoc de binding zoom pays/devise/... sur une entite deja creee). Pattern documente dans reference/fk-pattern.md.",
       "summary": "Ajoute un binding \"FK par zoom standard\" a une entite metier DIVA existante (post-creation).",
-      "when_to_use": "A utiliser pour reproduire le workflow RETEX R-003 (ajout post-hoc de binding zoom pays/devise/..",
+      "when_to_use": "A utiliser pour reproduire le workflow RETEX (ajout post-hoc de binding zoom pays/devise/..",
       "workflow": "create",
       "verb": "binding",
       "is_orchestrator": false,
@@ -375,8 +338,7 @@
         "build_facts.py",
         "build_report.py",
         "content_types.py",
-        "facts_schema.py",
-        "svn_consult.py"
+        "facts_schema.py"
       ],
       "references": [
         "report-sections.md"
@@ -386,11 +348,34 @@
         "Jinja2 (templates)"
       ]
     },
+    "coding-a5pmtab-screens": {
+      "name": "coding-a5pmtab-screens",
+      "description": "Ecrans specifiques a tableaux A5PMTAB : callbacks DefProcInterro_* / DefProcSaisie_*, invocation par Creer_Parametre + AP_Interroger_Tableaux / AP_Saisir_Tableaux, options HMP, ecrans multi-tableaux et tableaux imbriques. A consulter des qu'un developpement met en jeu un tableau A5PMTAB -- et IMPERATIVEMENT avant d'ecrire ou de modifier la signature d'une callback : les ecarts de declaration COMPILENT et cassent a l'execution sans aucun message (tableau fige, selection de ligne perdue, boucle infinie).",
+      "summary": "Ecrans specifiques a tableaux A5PMTAB : callbacks DefProcInterro_* / DefProcSaisie_*, invocation par Creer_Parametre + AP_Interroger_Tableaux / AP_Saisir_Tableaux, options HMP, ecrans multi-tableaux et tableaux imbriques.",
+      "when_to_use": "Ecrans specifiques a tableaux A5PMTAB : callbacks DefProcInterro_* / DefProcSaisie_*, invocation par Creer_Parametre + AP_Interroger_Tableaux / AP_Saisir_Tableaux, options HMP, ecrans multi-tableaux et tableaux imbriques. A consulter des qu'un developpement met en jeu un tableau A5PMTAB -- et IMPERATIVEMENT avant d'ecrire ou de modifier la signature d'une callback : les ecarts de declaration COMPILENT et cassent a l'execution sans aucun message (tableau fige, selection de ligne perdue, boucle infinie).",
+      "workflow": "reference",
+      "verb": "coding",
+      "is_orchestrator": false,
+      "checkpoint_count": 0,
+      "scripts": [],
+      "references": [
+        "callbacks-catalogue.md",
+        "invocation.md",
+        "keywords-verifies.json",
+        "pieges-execution.md"
+      ],
+      "related_skills": [
+        "coding-diva-advanced",
+        "manipulating-dhsf-screens",
+        "generating-zoom-sql"
+      ],
+      "prerequisites": []
+    },
     "coding-diva-advanced": {
       "name": "coding-diva-advanced",
-      "description": "Reference des patterns avances du langage DIVA : HTTP/REST, JSON/XML, integration .NET, surcharge (OverWrite), module table (mtab), RecordSql avance (Reader, Collate, Paging), tunnels inter-modules (Ping/Pong), evenements Harmony. A consulter pour generer du code DIVA utilisant des fonctionnalites au-dela de la syntaxe de base.",
+      "description": "Reference des patterns avances du langage DIVA : HTTP/REST, JSON/XML, integration .NET, surcharge (OverWrite) et portee des declarations Module, module table (mtab), RecordSql avance (Reader, Collate, Paging), tunnels inter-modules et appel de programme (Ping/Pong, ProgramCall, contexte a transmettre avant le Ping), evenements Harmony. Ecriture au journal des anomalies (`*_Log_Ano`, livre de bord). Couvre aussi la syntaxe de base la ou elle piege : faux amis (ElseIf, EndFor, Str$, Round), matrice des 4 boucles et de leurs Exit/Redo, FReturn/PReturn, Beginf/Beginp, Nature=A. A consulter pour generer du code DIVA, pour diagnostiquer un mot-cle qui ne compile pas, ou un programme lance qui demarre sans son contexte metier.",
       "summary": "Reference des patterns avances du langage DIVA : HTTP/REST, JSON/XML, integration .NET, surcharge (OverWrite), module table (mtab), RecordSql avance (Reader, Collate, Paging), tunnels inter-modules (Ping/Pong), evenements Harmony.",
-      "when_to_use": "Reference des patterns avances du langage DIVA : HTTP/REST, JSON/XML, integration .NET, surcharge (OverWrite), module table (mtab), RecordSql avance (Reader, Collate, Paging), tunnels inter-modules (Ping/Pong), evenements Harmony. A consulter pour generer du code DIVA utilisant des fonctionnalites au-dela de la syntaxe de base.",
+      "when_to_use": "Reference des patterns avances du langage DIVA : HTTP/REST, JSON/XML, integration .NET, surcharge (OverWrite), module table (mtab), RecordSql avance (Reader, Collate, Paging), tunnels inter-modules (Ping/Pong), evenements Harmony. Couvre aussi la syntaxe de base la ou elle piege : faux amis (ElseIf, EndFor, Str$, Round), matrice des 4 boucles et de leurs Exit/Redo, FReturn/PReturn, Beginf/Beginp, Nature=A. A consulter pour generer du code DIVA, ou pour diagnostiquer un mot-cle qui ne compile pas.",
       "workflow": "reference",
       "verb": "coding",
       "is_orchestrator": false,
@@ -401,10 +386,14 @@
         "harmony-events.md",
         "http-rest.md",
         "json-xml.md",
+        "keywords-verifies.json",
+        "log-anomalies.md",
         "module-table.md",
         "overwrite-pattern.md",
         "recordsql-advanced.md",
-        "tunnels.md"
+        "syntaxe-de-base.md",
+        "tunnels.md",
+        "zoom-hooks-reference.md"
       ],
       "related_skills": [],
       "prerequisites": []
@@ -419,6 +408,7 @@
       "is_orchestrator": false,
       "checkpoint_count": 0,
       "scripts": [
+        "compile_project.py",
         "generate_harness.py",
         "parse_compilation.py"
       ],
@@ -431,9 +421,29 @@
         "xwin7.exe (compilateur Divalto)"
       ]
     },
+    "configuring-diva-mcp": {
+      "name": "configuring-diva-mcp",
+      "description": "Configure les credentials du serveur MCP diva-mcp pour le partenaire integrateur. Le plugin marketplace livre un `.mcp.json` template (URL declaree, pas de headers d'authentification). Ce skill demande interactivement les 3 elements de la cle API (site, env, ApiKey) au partenaire, construit le header `X-Api-Key` au format `<site>-<env>@<apikey>`, et patche le `.mcp.json` du plugin pour persister la config pour toutes les sessions Claude Code futures. A invoquer la premiere fois apres l'installation du plugin, ou en cas de cle expiree / 401 sur les outils `mcp__plugin_divalto-devkit_diva-mcp__*`, ou apres une mise a jour du plugin qui aurait restaure le template d'origine (perte des credentials). Triggers : \"configure diva-mcp\", \"ma cle API diva\", \"diva-mcp 401 / unauthorized\", \"diva-mcp ne marche pas\", \"premier demarrage diva-mcp\", \"renouveler ma cle diva-mcp\".",
+      "summary": "Configure les credentials du serveur MCP diva-mcp pour le partenaire integrateur.",
+      "when_to_use": "A invoquer la premiere fois apres l'installation du plugin, ou en cas de cle expiree / 401 sur les outils `mcp__plugin_divalto-devkit_diva-mcp__*`, ou apres une mise a jour du plugin qui aurait restaure le template d'origine (perte des credentials).",
+      "workflow": "reference",
+      "verb": "configuring",
+      "is_orchestrator": false,
+      "checkpoint_count": 4,
+      "scripts": [
+        "locate_mcp_json.py",
+        "write_credentials.py"
+      ],
+      "references": [
+        "credentials-format.md",
+        "post-install-checks.md"
+      ],
+      "related_skills": [],
+      "prerequisites": []
+    },
     "converting-diva-lectab": {
       "name": "converting-diva-lectab",
-      "description": "A utiliser quand un integrateur Divalto demande de migrer/convertir les fonctions de lecture d'un dossier de sources -- .dhsp ET masques de surcharge .dhsf/.dhsi (passer les seek_xxx en Give_xxx, convertir les Lectab, automatiser la migration des acces fichiers) | Convertit en masse les anciennes lectures DIVA (seek_xxx, Lectab) vers l'API objet metier (Give_xxx, Find_T0nn, Load_gtfdos) lors d'une migration : pour chaque appel, verifie dans l'objet metier *tmchk<entite>.dhsp du pack Std de DESTINATION que la fonction cible existe avant de convertir, sinon laisse le code intact avec un TODO. Sur les masques de surcharge, ne transforme que le bloc [diva] (jamais [diva_base], copie figee du standard). Distingue Give_ (sans no d'erreur) de Find_ (avec no d'erreur 11nn). Autonome (ni AutoConvertSrc.exe, ni diva-mcp). Complete migrating-erp-downgrade.",
+      "description": ">- Convertit en masse les anciennes fonctions de lecture DIVA (seek_xxx, Lectab) vers la nouvelle API objet metier (Give_xxx, Find_T041, Load_gtfdos) lors d'une migration Divalto. Pour chaque appel seek/Lectab, verifie dans l'objet metier *tmchk<entite>.dhsp du PACK STD DE DESTINATION que la fonction cible existe avant de convertir ; sinon laisse le code intact avec un TODO. A utiliser quand un integrateur Divalto demande de \"migrer/convertir les fonctions de lecture\", \"passer les seek_xxx en Give_xxx\", \"convertir les Lectab\", ou \"automatiser la migration des acces fichiers\" sur un dossier de sources. Traite les .dhsp ET les masques de surcharge .dhsf/.dhsi -- pour ces masques, ne transforme que le bloc [diva] (jamais [diva_base], copie figee du standard). Pour chaque seek_<entite>, decide s'il faut le GARDER (wrapper survivant dans la cible) ou le convertir, d'apres l'arbre des Objets compiles (.dhop) de la version cible. Autonome (ni AutoConvertSrc.exe, ni diva-MCP).",
       "summary": "Convertit en masse les lectures DIVA seek_xxx/Lectab vers l'API objet metier (Give_/Find_/Load_) lors d'une migration, en validant chaque cible contre l'objet metier du pack Std de destination.",
       "when_to_use": "A utiliser quand un integrateur demande de migrer/convertir les fonctions de lecture (seek_xxx en Give_xxx, Lectab) sur un dossier de sources .dhsp lors d'une migration Divalto.",
       "workflow": "migrate",
@@ -444,8 +454,8 @@
         "convert_lectures.py"
       ],
       "references": [
-        "regles.md",
-        "observations-x2-x4.md"
+        "observations-x2-x4.md",
+        "regles.md"
       ],
       "related_skills": [
         "migrating-erp-downgrade",
@@ -459,13 +469,13 @@
     },
     "creating-diva-entity": {
       "name": "creating-diva-entity",
-      "description": "Orchestre la creation de bout en bout d'une entite metier DIVA en mode collaboratif. A partir des parametres utilisateur (domaine, entite, table, champ cle, description), enchaine : calcul des noms, generation RecordSql, Module Check, Zoom SQL, bloc d'alias, validation croisee inter-fichiers, dictionnaire, compilation, ISAM et menu. Orchestration LLM avec 11 checkpoints de validation humaine — Claude s'arrete apres chaque etape significative pour expliquer et attendre le feu vert.",
+      "description": "Orchestre la creation de bout en bout d'une entite metier custom dans un domaine STANDARD du referentiel ERP (DAV, Retail, GRM...) ; un domaine maison (prefixe/dico propre au partenaire, ex. <prefixe>_) n'est pas gere (cf. section \"Portee et limites\"). A partir des parametres utilisateur (domaine, entite, table, champ cle, description), enchaine : calcul des noms, generation RecordSql, Module Check, Zoom SQL, bloc d'alias, validation croisee inter-fichiers, dictionnaire, compilation, ISAM et menu. Orchestration LLM avec 14 checkpoints de validation humaine — Claude s'arrete apres chaque etape significative pour expliquer et attendre le feu vert.",
       "summary": "Orchestre la creation de bout en bout d'une entite metier DIVA en mode collaboratif.",
       "when_to_use": "Orchestre la creation de bout en bout d'une entite metier DIVA en mode collaboratif. A partir des parametres utilisateur (domaine, entite, table, champ cle, description), enchaine : calcul des noms, generation RecordSql, Module Check, Zoom SQL, bloc d'alias, validation croisee inter-fichiers, dictionnaire, compilation, ISAM et menu. Orchestration LLM avec 11 checkpoints de validation humaine — Claude s'arrete apres chaque etape significative pour expliquer et attendre le feu vert.",
       "workflow": "create",
       "verb": "creating",
       "is_orchestrator": true,
-      "checkpoint_count": 11,
+      "checkpoint_count": 14,
       "scripts": [
         "cross_validate.py",
         "generate_alias.py"
@@ -473,10 +483,12 @@
       "references": [
         "alias-block.md",
         "champs-metier.md",
+        "cleanup-post-compilation.md",
         "entity-checklist.md",
         "fk-detection.md",
         "isam-fields.md",
         "menu-domain.md",
+        "scope-domaine-maison.md",
         "sous-projet-config.md",
         "suffix-taxonomy.md"
       ],
@@ -503,17 +515,19 @@
     },
     "discovering-skills": {
       "name": "discovering-skills",
-      "description": "Aide le collaborateur a decouvrir les skills DIVA disponibles et a comprendre leur portee. Fournit une vue panoramique (synthese des 31 skills classes par workflow : analyser / creer / modifier / manipuler fichiers / ISAM / valider / tester-documenter / reference), le detail d'un skill precis (description, quand l'utiliser, scripts, references, skills lies, prerequis, nombre de checkpoints), la recherche par mot-cle dans les descriptions et metadonnees, et le filtrage par workflow ou par verbe. A utiliser quand le collaborateur demande \"que peux-tu faire ?\", \"liste les skills disponibles\", \"explique-moi le skill X\", \"quel skill pour faire Y ?\", \"montre les skills de creation / validation / analyse\", ou toute formulation equivalente visant a explorer la boite a outils avant de lancer une tache.",
+      "description": "Point d'entree du devkit DIVA. Aide le collaborateur a decouvrir les skills disponibles et leur portee : vue panoramique par workflow (analyse / creation / modification / fichiers / ISAM / validation / test-doc / reference), detail d'un skill precis, recherche par mot-cle, filtrage par workflow ou verbe. A utiliser quand le collaborateur demande \"que peux-tu faire ?\", \"liste des skills\", \"explique-moi <X>\", \"quel skill pour faire Y ?\". Porte aussi la **discipline d'invocation** du devkit DIVA : (1) la documentation des skills (`reference/*.md`) est la source autoritaire pour toute question de convention/regle/nommage/structure -- le filesystem n'est jamais source primaire ; (2) les skills DIVA sont prioritaires sur toute commande improvisee -- si un skill couvre l'operation, l'invoquer plutot que reproduire son resultat via `find` / `grep` / `cat` ; (3) invoquer un skill charge ses instructions a EXECUTER -- Claude lance ensuite les scripts, il ne s'arrete pas a afficher le README.",
       "summary": "Aide le collaborateur a decouvrir les skills DIVA disponibles et a comprendre leur portee.",
       "when_to_use": "A utiliser quand le collaborateur demande \"que peux-tu faire ?\", \"liste les skills disponibles\", \"explique-moi le skill X\", \"quel skill pour faire Y ?\", \"montre les skills de creation / validation / analyse\", ou toute formulation equivalente visant a explorer la boite a outils avant de lancer une tache.",
-      "workflow": "unknown",
+      "workflow": "reference",
       "verb": "discovering",
       "is_orchestrator": false,
       "checkpoint_count": 0,
       "scripts": [
         "query_catalog.py"
       ],
-      "references": [],
+      "references": [
+        "catalog.json"
+      ],
       "related_skills": [
         "analyzing-diva-request",
         "creating-diva-entity",
@@ -535,7 +549,7 @@
       "workflow": "test_doc",
       "verb": "documenting",
       "is_orchestrator": false,
-      "checkpoint_count": 0,
+      "checkpoint_count": 2,
       "scripts": [
         "assemble_model.py",
         "extract_codified_values.py",
@@ -604,9 +618,12 @@
       ],
       "references": [
         "corpus-patterns.md",
+        "dhsq-overwrite-pattern.md",
         "recordsql-anti-patterns.md",
         "recordsql-api-reference.md",
+        "recordsql-downgrade-arbitration.md",
         "recordsql-structure.md",
+        "skeletons/",
         "skeletons-catalogue.md"
       ],
       "related_skills": [
@@ -646,7 +663,7 @@
     },
     "linting-diva-code": {
       "name": "linting-diva-code",
-      "description": "Analyse les fichiers source DIVA (.dhsp, .dhsq, .dhsd, .dhsf, .dhsi, .dhse, .dhpt, .dhps, .sql) et produit un rapport d'erreurs classees par severite, en verifiant la conformite aux ~100 anti-patterns connus (dont regles dictionnaire D04/D10/D11, masque E12-E19 incluant normes graphiques), aux regles de syntaxe DIVA, et aux 11 controles qualite CI (shift-left des moulinettes nightly). A utiliser pour controler la qualite du code avant compilation ou apres generation.",
+      "description": "Analyse les fichiers source DIVA (.dhsp, .dhsq, .dhsd, .dhsf, .dhsi, .dhse, .dhpt, .dhps, .sql) et produit un rapport d'erreurs classees par severite, en verifiant la conformite aux 85 anti-patterns connus (dont regles dictionnaire D04/D10/D11, masque E12-E19 incluant normes graphiques), aux regles de syntaxe DIVA, et aux 11 controles qualite CI (shift-left des moulinettes nightly). A utiliser pour controler la qualite du code avant compilation ou apres generation.",
       "summary": "Analyse les fichiers source DIVA (.dhsp, .dhsq, .dhsd, .dhsf, .dhsi, .dhse, .dhpt, .dhps, .sql) et produit un rapport d'erreurs classees par severite, en verifiant la conformite aux ~100 anti-patterns connus (dont regles dictionnaire D04/D10/D11, masque E12-E19 incluant normes graphiques), aux regles de syntaxe DIVA, et aux 11 controles qualite CI (shift-left des moulinettes nightly)",
       "when_to_use": "A utiliser pour controler la qualite du code avant compilation ou apres generation.",
       "workflow": "validate",
@@ -670,27 +687,31 @@
     },
     "managing-diva-dictionaries": {
       "name": "managing-diva-dictionaries",
-      "description": "Ajoute une table complete dans un dictionnaire Divalto (.dhsd) en generant les 5 zones obligatoires : [CHAMP] (declaration des champs), [TABLE] (structure avec positions calculees), [BASE] (fichier physique), [INDEX] (index avec positions cumulees), et [INDEXL] (mapping). Inclut le socle audit canonique (Ce1, Dos, UserCr, UserMo, UserCrDh, UserMoDh, Filler, U-field), le calcul automatique des positions sans trou, la taxonomie de suffixes typés (Dt->D8, Dh->DH, Fl->1,0...) via suggest_nature.py, et la validation de coherence D01-D14. Preserve l'encodage ISO-8859-1+CRLF. A utiliser pour declarer une nouvelle table metier dans le dictionnaire avant de generer le code.",
+      "description": "Ajoute une table complete dans un dictionnaire Divalto (.dhsd) en generant les 5 zones obligatoires : [CHAMP] (declaration des champs), [TABLE] (structure avec positions calculees), [BASE] (fichier physique), [INDEX] (index avec positions cumulees), et [INDEXL] (mapping). Inclut le socle audit canonique (Ce1, Dos, UserCr, UserMo, UserCrDh, UserMoDh, Filler, U-field), le calcul automatique des positions sans trou, la taxonomie de suffixes typés (Dt->D8, Dh->DH, Fl->1,0...) via suggest_nature.py, et la validation de coherence DICT01-DICT16. Preserve l'encodage ISO-8859-1+CRLF. A utiliser pour declarer une nouvelle table metier dans le dictionnaire avant de generer le code, ou pour modifier la Nature d'un champ existant avec recalcul automatique des positions (tables + index) lors d'un alignement de version / migration (modify_field_nature.py). Compare deux versions d'un .dhsd (Service Pack, montee de version) : quelles tables ont change de Taille=, donc quel specifique recompiler.",
       "summary": "Ajoute une table complete dans un dictionnaire Divalto (.dhsd) en generant les 5 zones obligatoires : [CHAMP] (declaration des champs), [TABLE] (structure avec positions calculees), [BASE] (fichier physique), [INDEX] (index avec positions cumulees), et [INDEXL] (mapping).",
-      "when_to_use": "A utiliser pour declarer une nouvelle table metier dans le dictionnaire avant de generer le code.",
+      "when_to_use": "A utiliser pour declarer une nouvelle table metier dans le dictionnaire avant de generer le code. A utiliser aussi apres reception d'une nouvelle version ou d'un Service Pack, pour savoir quelles tables ont change de taille et quel specifique recompiler.",
       "workflow": "files",
       "verb": "managing",
       "is_orchestrator": false,
       "checkpoint_count": 0,
       "scripts": [
-        "check_svn_recent.py",
+        "compare_dhsd_versions.py",
         "generate_dhsd_block.py",
+        "generate_surcharge_field.py",
         "insert_dhsd_blocks.py",
+        "modify_field_nature.py",
         "nature_to_size.py",
         "suggest_nature.py",
-        "svn_consult.py",
         "validate_dhsd.py"
       ],
       "references": [
+        "ajout-champ-table-existante.md",
         "dhsd-5-zones.md",
         "dhsd-anti-patterns.md",
+        "dhsd-diff-downgrade.md",
+        "dhsd-surcharge-indexes.md",
+        "dhsd-surcharge-pattern.md",
         "nature-types.md",
-        "svn-policy.md",
         "taxonomie-suffixes.md"
       ],
       "related_skills": [
@@ -699,9 +720,35 @@
       ],
       "prerequisites": []
     },
+    "managing-diva-error-messages": {
+      "name": "managing-diva-error-messages",
+      "description": "A utiliser pour lire, comparer ou gerer les messages d'erreur applicatifs DIVA (fichiers XXferr : gtferr/ccferr... standard, ou <prefixe>ferr specifique partenaire), ou quand un controle GererErreurCheck(NNN) necessite un message dedie | Lit codes et libelles via reading-isam-files (ISAM, pas de regex sur octets bruts) ; compare deux fichiers pour detecter codes ajoutes/retires/custom (arbitrage downgrade) ; documente la gestion sure (ajout via la mecanique standard IHM, jamais d'ecriture binaire ; verification --check). Norme : un XXferr standard ne se modifie jamais (lecture seule) ; le specifique partenaire est modifiable. Emplacement localise via understanding-integrator-workspace.",
+      "summary": "Lit, compare ou gere les messages d'erreur applicatifs DIVA (fichiers XXferr : gtferr/ccferr... standard, ou <prefixe>ferr specifique partenaire).",
+      "when_to_use": "A utiliser pour lire, comparer ou gerer les messages d'erreur applicatifs (XXferr), ou quand un controle GererErreurCheck(NNN) necessite un message dedie.",
+      "workflow": "isam",
+      "verb": "managing",
+      "is_orchestrator": false,
+      "checkpoint_count": 0,
+      "scripts": [
+        "manage_error_messages.py"
+      ],
+      "references": [
+        "error-message-files.md"
+      ],
+      "related_skills": [
+        "reading-isam-files",
+        "writing-isam-files",
+        "understanding-integrator-workspace",
+        "migrating-erp-downgrade",
+        "generating-objet-metier"
+      ],
+      "prerequisites": [
+        "DhxIsam64.dll (API ISAM Divalto, via reading-isam-files)"
+      ]
+    },
     "managing-diva-projects": {
       "name": "managing-diva-projects",
-      "description": "Cree et modifie les fichiers projet Divalto : .dhpt (projet principal) et .dhps (sous-projet). Genere un .dhps avec toutes les sections obligatoires ([general], [communs], [fichiers], [includes], [autres]), l'ajoute dans [sousprojets] du .dhpt parent, et valide la structure complete contre les regles P01-P16. A utiliser pour declarer un nouveau sous-projet (nouvelle entite a compiler) ou modifier les fichiers/includes d'un .dhps existant.",
+      "description": "Cree et modifie les fichiers projet Divalto : .dhpt (projet principal) et .dhps (sous-projet). Genere un .dhps avec toutes les sections obligatoires ([general], [communs], [fichiers], [includes], [autres]), l'ajoute dans [sousprojets] du .dhpt parent, et valide la structure complete contre les regles PROJ01-PROJ17. A utiliser pour declarer un nouveau sous-projet (nouvelle entite a compiler) ou modifier les fichiers/includes d'un .dhps existant.",
       "summary": "Cree et modifie les fichiers projet Divalto : .dhpt (projet principal) et .dhps (sous-projet).",
       "when_to_use": "A utiliser pour declarer un nouveau sous-projet (nouvelle entite a compiler) ou modifier les fichiers/includes d'un .dhps existant.",
       "workflow": "files",
@@ -710,16 +757,14 @@
       "checkpoint_count": 0,
       "scripts": [
         "add_to_project.py",
-        "check_svn_recent.py",
+        "cleanup_communs_from_subproject.py",
         "create_subproject.py",
-        "svn_consult.py",
         "validate_project.py"
       ],
       "references": [
         "dhps-structure.md",
         "dhpt-structure.md",
-        "project-anti-patterns.md",
-        "svn-policy.md"
+        "project-anti-patterns.md"
       ],
       "related_skills": [],
       "prerequisites": [
@@ -728,7 +773,7 @@
     },
     "manipulating-dhsf-screens": {
       "name": "manipulating-dhsf-screens",
-      "description": "Parse, genere et modifie les masques ecran Divalto (.dhsf). Parse un .dhsf en arbre structurel JSON, genere un .dhsf depuis un template (zoom SQL, ecran CRUD, simple) avec remplacement de tokens, et effectue des modifications incrementales (ajout champ, colonne, page). A utiliser quand il faut creer ou modifier un masque ecran DIVA (zoom SQL, ecran de saisie, affichage d'une entite).",
+      "description": "Parse, genere, modifie et surcharge les masques ecran Divalto (.dhsf). Parse un .dhsf en arbre structurel JSON, genere un .dhsf depuis un template (zoom SQL, ecran CRUD, simple), effectue des modifications incrementales (ajout champ, colonne, page) et scaffolde des surcharges masque (xxx_sqlu.dhsf). A utiliser quand il faut creer, modifier ou surcharger un masque ecran DIVA (zoom SQL, ecran de saisie, affichage d'une entite).",
       "summary": "Parse, genere et modifie les masques ecran Divalto (.dhsf).",
       "when_to_use": "A utiliser quand il faut creer ou modifier un masque ecran DIVA (zoom SQL, ecran de saisie, affichage d'une entite).",
       "workflow": "files",
@@ -736,16 +781,30 @@
       "is_orchestrator": false,
       "checkpoint_count": 0,
       "scripts": [
-        "check_svn_recent.py",
         "dhsf_add_fk.py",
         "dhsf_modify.py",
         "dhsf_parser.py",
         "dhsf_template.py",
-        "svn_consult.py"
+        "is_dhsf_filename.py",
+        "surcharge_mask.py"
       ],
       "references": [
+        "composant-bitmap-constante.md",
+        "composant-bitmap-variable.md",
+        "composant-cadre.md",
+        "composant-champ.md",
+        "composant-grille-wpf.md",
+        "composant-groupbox.md",
+        "composant-obj-texte.md",
+        "composant-rich-edit.md",
+        "dhsf-overwrite-pattern.md",
+        "dhsf-structure.md",
+        "diva-case-sensitivity.md",
+        "mesures-corpus.json",
         "normes-graphiques.md",
-        "svn-policy.md"
+        "surcharge-feuilles-style.md",
+        "volets-ywpf.md",
+        "xmesetattribut-dynamique.md"
       ],
       "related_skills": [
         "binding-zoom-to-field",
@@ -754,6 +813,33 @@
       ],
       "prerequisites": [
         "xwin7.exe (compilateur Divalto)"
+      ]
+    },
+    "migrating-erp-downgrade": {
+      "name": "migrating-erp-downgrade",
+      "description": "A utiliser lors de la migration du specifique d'un client d'une version ERP Divalto a une autre (rebase sur un nouveau Service Pack / version X.N), ou pour arbitrer ce qu'un downgrade conserve, rebase ou abandonne | Guide la migration de pack : ordre de compilation (bases standard d'abord, surcharges overWrite ensuite -- recompiler un standard apres sa surcharge efface les procedures fusionnees), contournement deux passes quand des dependances inter-projets ne sont pas declarees dans les .dhps, arbitrage des sources downgrade (un SP ne livre qu'un sous-ensemble des sources : croiser diff textuel, existence de l'objet compile et couplage au dictionnaire downgrade -- jamais 'supprimable' sur la seule absence de source standard), verification post-migration de l'integrite des surcharges. Complete les references downgrade de managing-diva-dictionaries et la compilation de managing-diva-projects / compiling-diva-projects.",
+      "summary": "Guide la migration du specifique d'un client entre versions ERP Divalto et l'arbitrage d'un downgrade (ordre de compilation, arbitrage des sources, integrite des surcharges overWrite).",
+      "when_to_use": "A utiliser lors de la migration du specifique d'un client d'une version ERP Divalto a une autre (rebase sur un nouveau Service Pack / version X.N), ou pour arbitrer ce qu'un downgrade conserve, rebase ou abandonne.",
+      "workflow": "migrate",
+      "verb": "migrating",
+      "is_orchestrator": false,
+      "checkpoint_count": 0,
+      "scripts": [
+        "check_overwrite_order.py"
+      ],
+      "references": [
+        "downgrade-source-arbitration.md",
+        "migration-build-order.md",
+        "montee-version-surcharge.md"
+      ],
+      "related_skills": [
+        "managing-diva-projects",
+        "managing-diva-dictionaries",
+        "compiling-diva-projects"
+      ],
+      "prerequisites": [
+        "xwin7.exe (compilateur Divalto)",
+        "acces aux objets compiles du projet (objets/) pour le verificateur overWrite"
       ]
     },
     "modifying-diva-entity": {
@@ -766,13 +852,10 @@
       "is_orchestrator": true,
       "checkpoint_count": 4,
       "scripts": [
-        "check_svn_recent.py",
-        "modify_dhsd_table.py",
-        "svn_consult.py"
+        "modify_dhsd_table.py"
       ],
       "references": [
-        "modification-checklist.md",
-        "svn-policy.md"
+        "modification-checklist.md"
       ],
       "related_skills": [
         "binding-zoom-to-field",
@@ -807,7 +890,7 @@
     },
     "parsing-diva-request": {
       "name": "parsing-diva-request",
-      "description": "Structure une demande DIVA en texte libre (user story + criteres d'acceptation, ou ticket myService d'anomalie) en JSON canonique : type de demande, titre, resume, acteurs, donnees manipulees, domaine ERP pressenti, keywords techniques et metier, CA detectes, message d'erreur. Le parseur est deterministe (regex + heuristiques), le LLM raffine la sortie au checkpoint CP1 de l'orchestrateur. A utiliser quand une demande est livree en texte libre et qu'il faut produire un JSON structure exploitable par les phases suivantes d'analyse.",
+      "description": "Structure une demande DIVA en texte libre (user story + criteres d'acceptation, ou ticket myService d'anomalie) en JSON canonique : type de demande, titre, resume, acteurs, donnees manipulees, domaine ERP pressenti, keywords techniques et metier, CA detectes, message d'erreur. Le parseur est deterministe (regex + heuristiques), le LLM raffine la sortie a l'etape de comprehension de la demande. A utiliser quand une demande est livree en texte libre et qu'il faut produire un JSON structure exploitable par les phases suivantes d'analyse.",
       "summary": "Structure une demande DIVA en texte libre (user story + criteres d'acceptation, ou ticket myService d'anomalie) en JSON canonique : type de demande, titre, resume, acteurs, donnees manipulees, domaine ERP pressenti, keywords techniques et metier, CA detectes, message d'erreur.",
       "when_to_use": "A utiliser quand une demande est livree en texte libre et qu'il faut produire un JSON structure exploitable par les phases suivantes d'analyse.",
       "workflow": "analyze",
@@ -825,6 +908,53 @@
       "related_skills": [],
       "prerequisites": []
     },
+    "pushing-retex-to-github": {
+      "name": "pushing-retex-to-github",
+      "description": "Pousse automatiquement les entrees R-NNN d'un fichier RETEX-skills.md vers un depot GitHub sous forme d'issues. Parse les entrees, deduit les labels (categorie + severite), formate le corps de l'issue, et utilise `gh issue create` (GitHub CLI). Idempotent via un cache local de tracking (.retex-pushed.json) : ne recree pas une issue deja poussee, commente l'issue existante si le contenu de l'entree a change. Mode degrade si `gh` n'est pas installe ou non authentifie : log sans bloquer. A utiliser pour synchroniser son journal RETEX local avec un canal centralise (ex : repo divalto/divalto-ia-devkit). Le skill est invoque (a) automatiquement par le hook `push_retex_to_github.py` apres chaque edition de RETEX-skills.md, ou (b) manuellement pour pousser explicitement / re-synchroniser / faire un backfill.",
+      "summary": "Pousse automatiquement les entrees R-NNN d'un fichier RETEX-skills.md vers un depot GitHub sous forme d'issues.",
+      "when_to_use": "A utiliser pour synchroniser son journal RETEX local avec un canal centralise (ex : repo divalto/divalto-ia-devkit).",
+      "workflow": "reference",
+      "verb": "pushing",
+      "is_orchestrator": false,
+      "checkpoint_count": 0,
+      "scripts": [
+        "init_config.py",
+        "parse_retex_entries.py",
+        "push_entry.py",
+        "push_new_entries.py"
+      ],
+      "references": [
+        "issue-format.md",
+        "setup-gh-cli.md"
+      ],
+      "related_skills": [],
+      "prerequisites": []
+    },
+    "querying-client-sql": {
+      "name": "querying-client-sql",
+      "description": "A utiliser des que Claude doit ecrire, debugger ou faire executer une requete SQL sur la base d'un CLIENT Divalto (interroger une table, comprendre un resultat vide, verifier un schema) | Donne les conventions d'ecriture SQL cote client -- tables et colonnes en MAJUSCULES (= nom du dictionnaire, distinct du NomOdbc local), collation binaire sensible a la casse et aux accents, schema dbo, decouverte des noms/casse reels via INFORMATION_SCHEMA -- plus un helper deterministe check_table_scope (lit T000/TABTYP) pour savoir si une table de parametrage est commune a tous les dossiers (dossier 999) ou propre a un dossier. La resolution de la connexion reste du ressort de understanding-integrator-workspace.",
+      "summary": "Conventions d'ecriture SQL cote base client Divalto + helper check_table_scope (portee commune/999 vs par-dossier via T000/TABTYP).",
+      "when_to_use": "A utiliser des que Claude doit ecrire, debugger ou faire executer une requete SQL sur la base d'un client Divalto (la resolution de connexion reste a understanding-integrator-workspace).",
+      "workflow": "reference",
+      "verb": "querying",
+      "is_orchestrator": false,
+      "checkpoint_count": 0,
+      "scripts": [
+        "check_table_scope.py"
+      ],
+      "references": [
+        "sql-client-conventions.md"
+      ],
+      "related_skills": [
+        "understanding-integrator-workspace",
+        "querying-diva-graph",
+        "syncing-diva-sql"
+      ],
+      "prerequisites": [
+        "understanding-integrator-workspace (resolution de connexion)",
+        "sqlcmd (optionnel, pour --execute)"
+      ]
+    },
     "querying-diva-graph": {
       "name": "querying-diva-graph",
       "description": "Interroge le graphe Neo4j diva-mcp (snapshot X.12 advisory) pour explorer le standard ERP Divalto. Produit une liste priorisee de candidats (programs, fonctions, tables, entites, relations) a partir d'un request.json issu du parser de demande. Toutes les sorties portent le disclaimer \"snapshot X.12\" et sont destinees a etre verifiees dans les sources X.13 par le skill searching-erp-sources. A utiliser a partir d'un `request.json` pour obtenir une liste priorisee de candidats avant verification dans les sources. Gere la degradation gracieuse si diva-mcp est indisponible (rapport avec candidates vides et `neo4j_status: unavailable`).",
@@ -839,6 +969,7 @@
       ],
       "references": [
         "cypher-recipes.md",
+        "mcp-query-pitfalls.md",
         "x12-advisory-rules.md"
       ],
       "related_skills": [
@@ -871,32 +1002,6 @@
         "DhxIsam64.dll (API ISAM Divalto)"
       ]
     },
-    "managing-diva-error-messages": {
-      "name": "managing-diva-error-messages",
-      "description": "A utiliser pour lire, comparer ou gerer les messages d'erreur applicatifs DIVA (fichiers XXferr : gtferr/ccferr... standard, ou <prefixe>ferr specifique partenaire), ou quand un controle GererErreurCheck(NNN) necessite un message dedie | Lit codes et libelles via reading-isam-files (ISAM, pas de regex sur octets bruts) ; compare deux fichiers pour detecter codes ajoutes/retires/custom (arbitrage downgrade) ; documente la gestion sure (ajout via la mecanique standard IHM, jamais d'ecriture binaire ; verification --check). Norme : un XXferr standard ne se modifie jamais (lecture seule) ; le specifique partenaire est modifiable. Emplacement localise via understanding-integrator-workspace.",
-      "summary": "Lit, compare ou gere les messages d'erreur applicatifs DIVA (fichiers XXferr : gtferr/ccferr... standard, ou <prefixe>ferr specifique partenaire).",
-      "when_to_use": "A utiliser pour lire, comparer ou gerer les messages d'erreur applicatifs (XXferr), ou quand un controle GererErreurCheck(NNN) necessite un message dedie.",
-      "workflow": "isam",
-      "verb": "managing",
-      "is_orchestrator": false,
-      "checkpoint_count": 0,
-      "scripts": [
-        "manage_error_messages.py"
-      ],
-      "references": [
-        "error-message-files.md"
-      ],
-      "related_skills": [
-        "reading-isam-files",
-        "writing-isam-files",
-        "understanding-integrator-workspace",
-        "migrating-erp-downgrade",
-        "generating-objet-metier"
-      ],
-      "prerequisites": [
-        "DhxIsam64.dll (API ISAM Divalto, via reading-isam-files)"
-      ]
-    },
     "reading-isam-files": {
       "name": "reading-isam-files",
       "description": "Lit des enregistrements dans les fichiers binaires ISAM Divalto (.dhfi) via DhxIsam64.dll (ctypes). Supporte la lecture par cle, le parcours sequentiel, les filtres et la projection de champs. A utiliser pour consulter le contenu des fichiers indexes proprietaires Divalto.",
@@ -925,7 +1030,7 @@
     },
     "reading-multichoix": {
       "name": "reading-multichoix",
-      "description": "Lit le dictionnaire des multichoix Divalto (fichier `gtfdmc.dhfi` d'un module ERP). Liste les multichoix disponibles, detaille les entrees d'un multichoix donne, et (a venir) resout les lookups Type=3 en lisant la table cible. Gere les 3 Types rencontres (1 liste fixe, 3 lookup dynamique, 4 identifiant externe). A utiliser pour consulter la definition d'une liste de choix avant de binder un champ de dictionnaire metier via `Choix=gtfdmc.dhfi` + `NomChoix=<NC>`.",
+      "description": "Lit les dictionnaires de multichoix Divalto (fichiers `XXfdmc.dhfi` d'un module ERP : `gtfdmc`, `ccfdmc`, ...). Liste les multichoix disponibles, detaille les entrees d'un multichoix donne, et (a venir) resout les lookups Type=3 en lisant la table cible. Gere les 3 Types rencontres (1 liste fixe, 3 lookup dynamique, 4 identifiant externe). A utiliser pour consulter la definition d'une liste de choix avant de binder un champ de dictionnaire metier via `Choix=<XXfdmc>.dhfi` + `NomChoix=<NC>`. Rappelle aussi la norme (ne jamais modifier un `XXfdmc` standard ; gerer son propre `XXfdmc`) et comment localiser/comparer un `XXfdmc`.",
       "summary": "Lit le dictionnaire des multichoix Divalto (fichier `gtfdmc.dhfi` d'un module ERP).",
       "when_to_use": "A utiliser pour consulter la definition d'une liste de choix avant de binder un champ de dictionnaire metier via `Choix=gtfdmc.dhfi` + `NomChoix=<NC>`.",
       "workflow": "isam",
@@ -946,8 +1051,8 @@
     },
     "rendering-preaction-livrable": {
       "name": "rendering-preaction-livrable",
-      "description": "Rend le livrable final d'une analyse pre-action UC-100 a partir d'un facts.json. Produit un markdown unique structure en 3 couches de lecture : strategique (2 min, chef projet), tactique (15 min, dev implementeur), technique (30 min, auditeur). Autonomie documentaire stricte : aucun path absolu, aucune balise [X.12] ou [CONFIRME X.13], aucun chemin C:/ dans le livrable. Les references vivent exclusivement dans le facts.json. Un renderer deterministe (Jinja2) transforme chaque claim en fragment markdown selon sa couche et son kind. Le validator refuse tout rendu contenant un stub, une balise HTML non supportee en Mermaid, un pronom relatif apres un label, ou une ref visible. A utiliser apres build_facts.py pour produire le livrable destine au developpeur.",
-      "summary": "Rend le livrable final d'une analyse pre-action UC-100 a partir d'un facts.json.",
+      "description": "Rend le livrable final d'une analyse pre-action a partir d'un facts.json. Produit un markdown unique structure en 3 couches de lecture : strategique (2 min, chef projet), tactique (15 min, dev implementeur), technique (30 min, auditeur). Autonomie documentaire stricte : aucun path absolu, aucune balise [X.12] ou [CONFIRME X.13], aucun chemin C:/ dans le livrable. Les references vivent exclusivement dans le facts.json. Un renderer deterministe (Jinja2) transforme chaque claim en fragment markdown selon sa couche et son kind. Le validator refuse tout rendu contenant un stub, une balise HTML non supportee en Mermaid, un pronom relatif apres un label, ou une ref visible. A utiliser apres build_facts.py pour produire le livrable destine au developpeur.",
+      "summary": "Rend le livrable final d'une analyse pre-action a partir d'un facts.json.",
       "when_to_use": "A utiliser apres build_facts.py pour produire le livrable destine au developpeur.",
       "workflow": "analyze",
       "verb": "rendering",
@@ -972,7 +1077,7 @@
       "workflow": "test_doc",
       "verb": "reviewing",
       "is_orchestrator": false,
-      "checkpoint_count": 0,
+      "checkpoint_count": 2,
       "scripts": [
         "build_review.py",
         "detect_doc_contradictions.py",
@@ -984,7 +1089,9 @@
       "references": [
         "categories-erreurs.md",
         "cross-check-strategy.md",
-        "docs-corpus.md"
+        "exemple-de-cas.md",
+        "prefixes-domaine.md",
+        "referentiel-e4.md"
       ],
       "related_skills": [
         "documenting-erp"
@@ -993,8 +1100,8 @@
     },
     "searching-erp-sources": {
       "name": "searching-erp-sources",
-      "description": "Verifie l'existence des candidats Neo4j (candidates_x12.json) dans le code source X.13 standard (C:\\Developpements harmony\\Standard\\Version X.13\\) et extrait le contexte precis (fichier:ligne, procedure englobante, snippet 10-30 lignes). Source de verite : promouvoit les candidats [X.12] en [CONFIRME X.13], [DISPARU X.13] ou ajoute des decouvertes [NOUVEAU X.13]. Applique des bornes strictes (--max-matches, --max-files, --timeout) pour gerer la volumetrie ERP (~7000 fichiers). A utiliser apres querying-diva-graph (mode hybride) ou en mode direct si diva-mcp indispo.",
-      "summary": "Verifie l'existence des candidats Neo4j (candidates_x12.json) dans le code source X.13 standard (C:\\Developpements harmony\\Standard\\Version X.13\\) et extrait le contexte precis (fichier:ligne, procedure englobante, snippet 10-30 lignes).",
+      "description": "Verifie l'existence des candidats Neo4j (candidates_x12.json) dans le code source X.13 standard ({CHEMIN_ERP_STANDARD}) et extrait le contexte precis (fichier:ligne, procedure englobante, snippet 10-30 lignes). Source de verite : promouvoit les candidats [X.12] en [CONFIRME X.13], [DISPARU X.13] ou ajoute des decouvertes [NOUVEAU X.13]. Applique des bornes strictes (--max-matches, --max-files, --timeout) pour gerer la volumetrie ERP (~7000 fichiers). A utiliser apres querying-diva-graph (mode hybride) ou en mode direct si diva-mcp indispo.",
+      "summary": "Verifie l'existence des candidats Neo4j (candidates_x12.json) dans le code source X.13 standard ({CHEMIN_ERP_STANDARD}) et extrait le contexte precis (fichier:ligne, procedure englobante, snippet 10-30 lignes).",
       "when_to_use": "A utiliser apres querying-diva-graph (mode hybride) ou en mode direct si diva-mcp indispo.",
       "workflow": "analyze",
       "verb": "searching",
@@ -1002,7 +1109,6 @@
       "checkpoint_count": 0,
       "scripts": [
         "extract_context.py",
-        "svn_consult.py",
         "verify_x13.py"
       ],
       "references": [
@@ -1022,7 +1128,7 @@
       "workflow": "validate",
       "verb": "syncing",
       "is_orchestrator": false,
-      "checkpoint_count": 0,
+      "checkpoint_count": 1,
       "scripts": [
         "parse_synchro.py"
       ],
@@ -1044,7 +1150,7 @@
       "workflow": "test_doc",
       "verb": "testing",
       "is_orchestrator": false,
-      "checkpoint_count": 0,
+      "checkpoint_count": 3,
       "scripts": [],
       "references": [
         "apropos-dialog.md",
@@ -1061,6 +1167,34 @@
         "Playwright MCP (navigateur)"
       ]
     },
+    "understanding-integrator-workspace": {
+      "name": "understanding-integrator-workspace",
+      "description": "Quand utiliser : en debut de toute session sur un workspace integrateur Divalto (typiquement sous l'alias harmony /specifs/<workspace>/), avant toute lecture, copie ou generation de fichier. Particulierement critique sur un poste d'integrateur ou cohabitent systematiquement plusieurs versions de l'ERP, plusieurs bases de donnees clients et plusieurs projets d'integration -- ce sont precisement les contextes ou une copie ou lecture aveugle commence sur de mauvaises bases.",
+      "summary": "Protocole de session pour un workspace integrateur : identifie le fichier implicite, resout les chemins harmony, lit les profils du .dhpt et classifie standard/specifique.",
+      "when_to_use": "En debut de toute session sur un workspace integrateur Divalto, avant toute lecture, copie ou generation de fichier qui depend de la distinction standard/specifique.",
+      "workflow": "reference",
+      "verb": "understanding",
+      "is_orchestrator": false,
+      "checkpoint_count": 0,
+      "scripts": [
+        "check_workspace_coherence.py",
+        "find_canonical_file.py",
+        "parse_implicit.py"
+      ],
+      "references": [
+        "classification.md",
+        "harmony-paths.md",
+        "implicit-file.md",
+        "poste-memory-template.md",
+        "profile.md",
+        "sql-resolution.md"
+      ],
+      "related_skills": [
+        "reading-isam-files",
+        "writing-diva-files"
+      ],
+      "prerequisites": []
+    },
     "writing-diva-files": {
       "name": "writing-diva-files",
       "description": "Ecrit et modifie les fichiers texte Divalto (.dhsp, .dhsq, .dhsd, .dhsf, .dhpt, .dhps) en garantissant l'encodage ISO-8859-1 et les fins de ligne CRLF. Detecte et corrige les fichiers corrompus (UTF-8, LF). A utiliser des qu'un fichier Divalto doit etre cree ou modifie.",
@@ -1073,6 +1207,7 @@
       "scripts": [
         "add_zoom_constant.py",
         "convert_file.py",
+        "patch_file.py",
         "verify_encoding.py",
         "write_file.py"
       ],
@@ -1098,6 +1233,8 @@
       ],
       "references": [
         "a5f-zoom-record.md",
+        "champs-binaires.md",
+        "cible-overlay.md",
         "isam-api.md",
         "json-formats.md",
         "xmenuf-echange-zones.md"
@@ -1110,59 +1247,6 @@
         "Playwright MCP (navigateur)",
         "SQL Server (base Divalto)",
         "xwin7.exe (compilateur Divalto)"
-      ]
-    },
-    "understanding-integrator-workspace": {
-      "name": "understanding-integrator-workspace",
-      "description": "Quand utiliser : en debut de toute session sur un workspace integrateur Divalto (typiquement sous l'alias harmony /specifs/<workspace>/), avant toute lecture, copie ou generation de fichier. Particulierement critique sur un poste d'integrateur ou cohabitent systematiquement plusieurs versions de l'ERP, plusieurs bases de donnees clients et plusieurs projets d'integration -- ce sont precisement les contextes ou une copie ou lecture aveugle commence sur de mauvaises bases. Quoi faire : identifier le fichier implicite du workspace (search path declaratif), resoudre les chemins harmony (/specifs/, /sources/, /objets/, /fichiers/, /divalto/, ...) via divaltopath.cfg et fconfig, lire les profils typed du .dhpt, retrouver la connexion SQL (porte Harmony ODBC + porte ADO.NET), classifier les chemins standard / specifique avec validation utilisateur obligatoire. Evite les erreurs de version, les copies aveugles de fichiers compagnons et les generations contre une base mal identifiee.",
-      "summary": "Protocole de session pour un workspace integrateur : identifie le fichier implicite, resout les chemins harmony, lit les profils du .dhpt et classifie standard/specifique.",
-      "when_to_use": "En debut de toute session sur un workspace integrateur Divalto, avant toute lecture, copie ou generation de fichier qui depend de la distinction standard/specifique.",
-      "workflow": "reference",
-      "verb": "understanding",
-      "is_orchestrator": false,
-      "checkpoint_count": 0,
-      "scripts": [
-        "check_workspace_coherence.py",
-        "find_canonical_file.py",
-        "parse_implicit.py"
-      ],
-      "references": [
-        "classification.md",
-        "harmony-paths.md",
-        "implicit-file.md",
-        "profile.md",
-        "sql-resolution.md"
-      ],
-      "related_skills": [
-        "reading-isam-files",
-        "writing-diva-files"
-      ],
-      "prerequisites": []
-    },
-    "migrating-erp-downgrade": {
-      "name": "migrating-erp-downgrade",
-      "description": "A utiliser lors de la migration du specifique d'un client d'une version ERP Divalto a une autre (rebase sur un nouveau Service Pack / version X.N), ou pour arbitrer ce qu'un downgrade conserve, rebase ou abandonne | Guide la migration de pack : ordre de compilation (bases standard d'abord, surcharges overWrite ensuite -- recompiler un standard apres sa surcharge efface les procedures fusionnees), contournement deux passes quand des dependances inter-projets ne sont pas declarees dans les .dhps, arbitrage des sources downgrade (un SP ne livre qu'un sous-ensemble des sources : croiser diff textuel, existence de l'objet compile et couplage au dictionnaire downgrade -- jamais 'supprimable' sur la seule absence de source standard), verification post-migration de l'integrite des surcharges. Complete les references downgrade de managing-diva-dictionaries et la compilation de managing-diva-projects / compiling-diva-projects.",
-      "summary": "Guide la migration du specifique d'un client entre versions ERP Divalto et l'arbitrage d'un downgrade (ordre de compilation, arbitrage des sources, integrite des surcharges overWrite).",
-      "when_to_use": "A utiliser lors de la migration du specifique d'un client d'une version ERP Divalto a une autre (rebase sur un nouveau Service Pack / version X.N), ou pour arbitrer ce qu'un downgrade conserve, rebase ou abandonne.",
-      "workflow": "migrate",
-      "verb": "migrating",
-      "is_orchestrator": false,
-      "checkpoint_count": 0,
-      "scripts": [
-        "check_overwrite_order.py"
-      ],
-      "references": [
-        "downgrade-source-arbitration.md",
-        "migration-build-order.md"
-      ],
-      "related_skills": [
-        "managing-diva-projects",
-        "managing-diva-dictionaries",
-        "compiling-diva-projects"
-      ],
-      "prerequisites": [
-        "xwin7.exe (compilateur Divalto)",
-        "acces aux objets compiles du projet (objets/) pour le verificateur overWrite"
       ]
     }
   }

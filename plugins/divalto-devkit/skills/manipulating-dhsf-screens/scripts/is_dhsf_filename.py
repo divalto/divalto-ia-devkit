@@ -81,7 +81,24 @@ def parse_mask_filename(filename: str) -> dict:
     result["domain"] = stem[:2].lower()
     result["type"] = stem[3].lower()
     result["id"] = stem[4:]
+    # PRESOMPTION, pas un fait. Un `.dhsf` ne porte AUCUN marqueur interne de
+    # surcharge -- verifie sur 2962 fichiers reels (2438 du standard X.13 + 524
+    # d'un specifique) : zero occurrence de `overwrite`/`overwrittenby`. Le suffixe
+    # du nom est donc le seul signal disponible ici, et ce script ne voit qu'un nom
+    # (il n'ouvre aucun fichier). Consequence : tout nom finissant par la lettre `u`
+    # est flague, y compris pour des raisons purement lexicales.
     result["is_surcharge"] = stem.endswith("u")
+    result["is_surcharge_base"] = "suffixe du nom de fichier -- PRESOMPTION"
+    if result["is_surcharge"]:
+        result["is_surcharge_avertissement"] = (
+            "Deduit du SEUL suffixe 'u' : un .dhsf ne porte aucun marqueur interne "
+            "de surcharge (verifie sur 2962 fichiers). Tout nom finissant par la "
+            "lettre u est donc flague a tort -- les 5 masques du standard X.13 dans "
+            "ce cas sont a5eepersmenu, rceebordereau, rcembordereau, "
+            "rceztreressimu, speewebscru, et AUCUN n'est une surcharge. Confirmer "
+            "autrement : emplacement du fichier (zone specifique) ou en-tete du "
+            ".dhps qui le reference."
+        )
     return result
 
 

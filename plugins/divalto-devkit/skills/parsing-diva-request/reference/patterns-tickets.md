@@ -50,7 +50,7 @@ Si aucun pattern ne matche, `message_erreur: null` et `needs_clarification: true
 
 | Element | Raison |
 |---------|--------|
-| Stack trace multi-ligne complete | Hors scope du parser MVP. Le LLM peut lire la stack au CP1 |
+| Stack trace multi-ligne complete | Hors scope du parser MVP. Le LLM peut lire la stack |
 | Numero de ticket myService | Non reporte en JSON canonique. Peut etre ajoute a `keywords_techniques` manuellement |
 | Version ERP (X.13, X.12) | Non extrait -- la version courante est toujours X.13 par defaut |
 | URL d'un ticket | Non extrait |
@@ -59,13 +59,13 @@ Si aucun pattern ne matche, `message_erreur: null` et `needs_clarification: true
 
 | Situation | Comportement |
 |-----------|--------------|
-| Ticket d'anomalie reformule en user story ("En tant que... quand ca plante...") | Scoring : `feature_score=2, ticket_score=1` -> `feature`. Le LLM peut corriger au CP1 |
+| Ticket d'anomalie reformule en user story ("En tant que... quand ca plante...") | Scoring : `feature_score=2, ticket_score=1` -> `feature`. Le LLM peut corriger |
 | Copie-colle d'un mail avec multiple erreurs | Premiere erreur entre quotes capturee. Les autres a reconstituer via le LLM |
-| Stack trace sans message explicite | `message_erreur: null`, `needs_clarification: true`. Le LLM extrait lui-meme au CP1 |
+| Stack trace sans message explicite | `message_erreur: null`, `needs_clarification: true`. Le LLM extrait lui-meme |
 | Ticket sans aucun indice (juste "ca marche pas") | `type: ticket` (score >= 1), message null, `needs_clarification: true` |
 
 ## Liens avec la phase 3 (verification X.13)
 
-Le message extrait est utilise comme **keyword techniques** prioritaire dans la phase 3 : `searching-erp-sources` le cherchera textuellement dans les `.dhsp` pour localiser ou le message est emis. Voir la référence recherche ERP (interne) section "Patterns d'impact X.13".
+Le message extrait est utilise comme **keyword techniques** prioritaire dans la phase 3 : `searching-erp-sources` le cherchera textuellement dans les `.dhsp` pour localiser ou le message est emis. Voir le skill `searching-erp-sources`, page `reference/x13-impact-patterns.md`.
 
 Les messages d'erreur DIVA courants (framework, moulinettes) sont a terme documentes dans `coding-diva-advanced` ou un futur skill dedie. Ce parser ne les reconnait pas specifiquement -- tout message entre quotes est capture.

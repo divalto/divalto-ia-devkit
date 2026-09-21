@@ -95,8 +95,22 @@ candidates_x12.json  -->  verify_x13.py  -->  evidence_x13.json
 {
   "scope": {
     "erp_root": "{CHEMIN_ERP_STANDARD}",
+    "version_verifiee": "X.13",
     "domains_searched": ["Achat-Vente/source/Retail"],
+    "domain_scope_mode": "auto",
+    "cadrage": {
+      "mode_demande": "auto",
+      "cadrage_effectif": "auto",
+      "repli_sur_erp_root": false,
+      "raison_repli": null,
+      "sous_repertoires_absents": []
+    },
+    "keywords_recherches": ["Kunde", "WEEE", "DACH"],
+    "keywords_ecartes": [],
+    "keywords_non_atteints": [],
+    "couverture_keywords_complete": true,
     "files_examined": 42,
+    "matches_total": 17,
     "matches_truncated": false,
     "duration_seconds": 4.2
   },
@@ -105,7 +119,7 @@ candidates_x12.json  -->  verify_x13.py  -->  evidence_x13.json
       "from_x12": "rttzfamrglt_sql",
       "file_path": "C:\\...\\Retail\\rttzfamrglt_sql.dhsp",
       "line_range": [1, 303],
-      "status": "CONFIRME X.13",
+      "status": "CONFIRME",
       "context_sample": {
         "line": 37,
         "enclosing_block": {"kind": "procedure", "name": "Construire_ConditionSelection"},
@@ -170,6 +184,20 @@ scripts/_structural_parser.py    # Vendored from linting-diva-code (parse struct
 **Vendoring** : `_structural_parser.py` est une copie de `.claude/skills/linting-diva-code/scripts/_structural_parser.py`. Procedure de mise a jour : modifier le canonique, copier dans ce skill, verifier `md5sum` identique.
 
 ---
+
+---
+
+## Tests
+
+```
+py .claude/skills/searching-erp-sources/tests/run_all.py
+```
+
+A lancer apres toute modification de `scripts/`. Les cas gardent une propriete unique :
+**la sortie ne doit pas affirmer plus que le travail accompli**. Ils verifient que les
+mots-cles ecartes sont nommes, que le repli de cadrage est signale avec sa raison, que
+la version est declaree et jamais affirmee, et qu'un mot court ne ramene plus de bruit.
+Detail : [tests/README.md](tests/README.md).
 
 ## References
 

@@ -74,6 +74,40 @@
         "Le garde-fou matche sur la Taille (le CE n'est verifie que s'il est present : XErr/206 et XQ n'ont pas de CE)",
         "Override total disponible : --skip-dict-check"
       ]
+    },
+    {
+      "id": "case-cadrage-binaire-backup",
+      "skills": [
+        "writing-isam-files"
+      ],
+      "files": [],
+      "query": "Je dois modifier un enregistrement de menu existant : changer son ordre d'affichage de 90000 a 64120. Comment je m'y prends sans risque ?",
+      "expected_behavior": [
+        "Utilise write_isam.py --op update avec Key + KeyFields",
+        "N'a PAS besoin de pre-cadrer la valeur : le champ Ordre est Justify=right, le script cadre la valeur pour l'enregistrement, pour la cle de positionnement ET pour la verification",
+        "Annonce qu'une sauvegarde .bak est creee automatiquement avant ecriture, sur les DEUX fichiers de la paire ISAM (.dhfi ET .dhfd) -- un .dhfi seul ne permet pas de restaurer",
+        "Signale que la sauvegarde est glissante (une par execution) et rapportee dans backups[] de la sortie JSON",
+        "Si un champ Type=B figure dans la structure et n'est pas fourni : relaie le warning au lieu de l'ignorer, et n'invente aucune valeur",
+        "Ne propose pas --no-backup sans raison explicite",
+        "Recommande de fermer l'ERP avant d'ecrire dans un fichier sensible"
+      ]
+    },
+    {
+      "id": "case-overlay-cible",
+      "skills": [
+        "writing-isam-files",
+        "allocating-menu-enrno"
+      ],
+      "files": [],
+      "query": "Je dois ajouter une entree de menu pour mon zoom custom chez un client. Quel fichier je vise et comment j'evite une collision de numero ?",
+      "expected_behavior": [
+        "Repond que la cible est g3fu.dhfi (overlay specifique), JAMAIS g3f.dhfi livre par Divalto -- sinon la modification est ecrasee a la prochaine montee de version",
+        "Alloue l'EnrNo via allocating-menu-enrno en passant --file (g3f) ET --g3fu : le used-set est l'UNION des deux",
+        "Explique qu'un doublon g3f/g3fu est normal (surcharge), pas une collision",
+        "Si l'overlay n'est pas fourni, relaie l'avertissement de sortie plutot que de l'ignorer",
+        "Relaie l'avertissement de write_isam.py si la cible passee est g3f.dhfi",
+        "Ne confond PAS les deux regles : a5f/g3f ont un overlay *u ; pour les autres fichiers standard (ex. XXfdmc) le partenaire gere son PROPRE fichier, il n'y a pas d'overlay"
+      ]
     }
   ]
 }

@@ -1,4 +1,4 @@
-# Bibliotheque de squelettes RSQL (G-022)
+# Bibliotheque de squelettes RSQL
 
 Squelettes pre-configures reproduisant les 8 super-signatures X.12 identifiees dans
 `corpus-patterns.md` (section 3). Ces 8 signatures concentrent >900 RSQL du corpus X.12

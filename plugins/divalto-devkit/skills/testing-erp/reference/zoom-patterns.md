@@ -1,7 +1,5 @@
 # Patterns de zoom ERP
 
-> Reference : la référence navigation ERP (interne) section 3
-
 ## Structure commune d'un zoom
 
 ### Titre de page

@@ -74,6 +74,33 @@
           "Naviguer vers le zoom Livre (N2) et verifier (N6)"
         ]
       }
+    },
+    {
+      "name": "connexion-formulaire-absent",
+      "description": "Le shell infinity charge mais le formulaire de login n'apparait pas",
+      "prompt": "La page LCWeb s'affiche mais je ne vois pas les champs Identifiant et Mot de passe.",
+      "expected": {
+        "actions": [
+          "browser_navigate explicite vers http://localhost:8080/LCWeb/login/login.aspx",
+          "browser_snapshot pour verifier la presence du formulaire",
+          "Expliquer que c'est la page de login qui alimente le LogonUser du moteur Diva",
+          "NE PAS proposer de creer ou modifier utilisateurHtml5.txt : le portail infinity l'ignore, et le fichier contiendrait un mot de passe en clair",
+          "Signaler que la redirection automatique de /LCWeb vers login.aspx n'est PAS verifiee -- d'ou un repli, pas un changement d'URL de depart",
+          "Si la page ne repond pas du tout ou renvoie une erreur de configuration serveur (MachineToApplication), renvoyer au deploiement : hors perimetre du skill, gestes a elevation cote serveur"
+        ]
+      }
+    },
+    {
+      "name": "utilisateur-inconnu-apres-login",
+      "description": "« Utilisateur inconnu » apres une connexion acceptee",
+      "prompt": "J'ai saisi mes identifiants, l'ERP repond « utilisateur inconnu ».",
+      "expected": {
+        "actions": [
+          "Conclure que le lancement web FONCTIONNE : le probleme est au niveau Harmony (profil, environnement, identifiant)",
+          "NE PAS repartir sur le deploiement web, IIS, le pool applicatif ou le compte de service",
+          "Demander a l'utilisateur de verifier son profil et son environnement"
+        ]
+      }
     }
   ]
 }

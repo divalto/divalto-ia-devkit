@@ -106,9 +106,24 @@ Modes mutuellement exclusifs. `--variant` ou `--file` sont requis sauf pour `--r
   "taille": "10",
   "poids": "400000",
   "famille": "Arial",
+  "couleur_texte": { "r": 0, "g": 0, "b": 0 },
+  "couleur_texte_composante_4": 0,
+  "couleur_texte_brut": "  0  0  0  0",
+  "attributs_non_decodes": ["semantique_composante_4", "drapeaux_apres_famille"],
   "found": true
 }
 ```
+
+> **Taille, poids et famille ne suffisent PAS a identifier une police.** La couleur du texte
+> vit a un **offset fixe** (octet 109, 4 composantes de 3 caracteres) et non dans les tokens.
+> Sans elle, **64 des 142 Type 1** de `fstylewpf` decodaient a l'identique -- dont 24 sur le
+> seul `{8, 400000, Tahoma}`. Avec elle : **21**. Voir
+> [reference/fstyle-types.md](reference/fstyle-types.md).
+
+> **`attributs_non_decodes` dit ce que la sortie ignore.** La 4e composante vaut `0` partout et
+> sa semantique n'est **pas** etablie : elle n'est donc pas nommee « alpha ». Le champ de
+> drapeaux qui distingue les 21 collisions restantes n'est pas interprete non plus. **Un
+> decodage muet sur ses trous parait complet** -- c'est le defaut que ce lot corrige.
 
 ### `--resolve TBLART`
 
@@ -160,8 +175,15 @@ Modes mutuellement exclusifs. `--variant` ou `--file` sont requis sauf pour `--r
 | `3` | Reference i18n (`#xxx`) | `TBLART` -> `#tblart` (source pour resoudre les libelles `tbl*` des multichoix) |
 | `5` | Style global STD | 1 seul par variante, regroupe styles contextuels |
 | `6` | Cadre (border) | 6 cadres canoniques (SANS, SIMPLE, RELIEF_*, CADRE_*) |
-| `7` | Style compose | Assemblage `<police> <cadre> <couleur>` |
+| `7` | Style compose | Assemblage **positionnel** `<police> <cadre> <couleur>` -- les noms des 2e et 3e slots ne tiennent pas toujours, voir ci-dessous |
 | `9` | Contexte | `.BOUTON` / `.MENU` / `.TOOLBAR` + entrees `#tbr_xxx` |
+
+> **Type 7 : se fier au type REEL de la cible, jamais au nom du slot.** Mesure sur les
+> **235 Type 7** de `fstylewpf` : `police_ref` vise une police **235 fois sur 235**, mais
+> `cadre_ref` ne vise un cadre que **165** fois et `couleur_ref` une couleur **222** fois.
+> **Aucune reference n'est pendante** -- les 705 pointent sur un nom present. `--detail`
+> expose donc `refs_types_reels`, et `refs_hors_type_attendu` quand un slot ne tient pas son
+> nom.
 
 Detail complet + exemples empiriques dans [reference/fstyle-types.md](reference/fstyle-types.md).
 
@@ -214,5 +236,7 @@ L'ordre de resolution par defaut pour `--resolve` est `wpf,legacy,imp` (web excl
 
 - **FS-01** : localiser la ressource i18n qui resout `#tblart -> "Article"` (fichier `.lng` ou ressources XAML des DLL WPF `DH.*`). Sans cela, la resolution s'arrete a la cle i18n.
 - **FS-02** : couvrir les 8 orphelins DAV (`TBLAFF`, `TBLMAINT`, `TBLMOINS`, `TBLPLUS`, `TBLSMILEY1-3`, `TBLNOTESEQ`). Verifier : 5e fstyle non identifie, custom, ou generation dynamique.
-- **FS-03** : integrer ce skill dans `documenting-erp` (vendoring + enrichissement rendu `_(icone "TBLART", style WPF)_`). Leve le bug B feedback distributeur UC-200.
+- **FS-03** : integrer ce skill dans `documenting-erp` (vendoring + enrichissement rendu `_(icone "TBLART", style WPF)_`). Leve le defaut de rendu des libelles `tbl*` dans les livrables de documentation.
 - **FS-04** : formaliser la semantique des flags Type 3 (`001` / `000AUTOMATIQUE` observes empiriquement).
+- **FS-05** : formaliser le **champ de drapeaux** du Type 1 (octet ~123, observe `0010000000`, `0001011111`, `0.01111011`). C'est lui qui distingue les **21 styles** encore indistinguables apres le decodage de la couleur. Declare `non decode` en attendant.
+- **FS-06** : etablir la semantique de la **4e composante de couleur** du Type 1, constante a `0` sur les 142 enregistrements mesures. Ne pas la supposer equivalente au canal `a` du Type 2 sans preuve.

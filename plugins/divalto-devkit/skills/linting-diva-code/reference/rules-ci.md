@@ -20,16 +20,68 @@
 
 Regles transposees des moulinettes de controle qualite executees en CI nightly (pipeline GenererIntegration.ps1). Ces controles etaient historiquement decouverts au lendemain via mail Weasel ; ils sont desormais disponibles au moment du developpement.
 
-> Source : moulinettes de controle qualite executees en CI nightly (catalogue interne Divalto).
+> Ces regles reprennent les controles qualite que Divalto execute en CI nightly sur le standard.
 
 ---
 
 ## CI01 -- SetModuleInfo absent (moulinette 001)
 
-- **Severite** : warning
-- **Cibles** : .dhsp, .dhsi, .dhse, .dhsq, .dhsf
-- **Logique** : Verifie la presence de `SetModuleInfo` (ou `ModuleInfo` pour .dhsq) dans les 100 premieres lignes. La ligne doit faire au minimum 30 caracteres (120 pour .dhsq).
-- **Pourquoi** : Identification obligatoire du module pour la tracabilite et le versioning.
+- **Severite** : `info` -- **HORS du jeu de regles par defaut**
+- **Activation** : explicite, `--rules CI01` (eventuellement avec d'autres codes)
+- **Cibles quand activee** : `.dhsp`, `.dhsq`, `.dhsf`, `.dhsi`, `.dhse`
+
+### Ce que `SetModuleInfo` EST -- un mecanisme du langage, pas une convention d'outil
+
+`SetModuleInfo` et `ModuleInfo` sont une **paire de fonctions natives DIVA**, section
+« Modules et programmes » du manuel de reference :
+
+| Fonction | Ce qu'elle fait |
+|---|---|
+| `SetModuleInfo(info)` | positionne une information dans le module -- « des informations **qui peuvent etre lues par `ModuleInfo`** » |
+| `ModuleInfo(module)` | **retourne** ces informations pour un module charge (retour alphanumerique) |
+
+Meme famille : `ModuleVersion`, `GetModulesNames`, `GetDivaModules`.
+
+**Consequence : l'information est lue A L'EXECUTION.** Divalto s'en sert pour **afficher
+les versions des modules**. Ce n'est donc pas une trace inerte dans le source : son absence
+prive le produit de cette information.
+
+> **Correction du 2026-09-09.** Cette page affirmait que la directive « sert **uniquement**
+> a tracer les releases SVN » et que son absence « n'a **aucun effet a l'execution** ».
+> Les deux etaient faux -- verifie au graphe. Le mot-cle SVN `$Id$` est **un** contenu
+> possible de l'information, pas sa raison d'etre.
+
+### Pourquoi la regle reste hors du jeu par defaut
+
+`SetModuleInfo` n'est pas **obligatoire** : son absence ne provoque aucune erreur de
+compilation, et le standard Divalto la pose systematiquement la ou du specifique peut
+legitimement s'en passer. Sur un specifique partenaire mesure, la regle activee par defaut
+reprochait **~860 fois** un choix assume (612/700 `.dhsp`, 66/91 `.dhsq`, 185 masques).
+
+C'est donc un **audit de convention** : le partenaire qui veut que ses modules exposent
+leur version l'active et obtient un audit utile ; les autres ne voient rien.
+
+### Fenetre de recherche selon le type de fichier
+
+- **Modules de code** (`.dhsp`, `.dhsq`) : les **100 premieres lignes**. Mesure standard
+  X.13 : **0** fichier porte la directive au-dela de la ligne 100 -- la fenetre est sure.
+- **Types declaratifs** (`.dhsf`, `.dhsi`, `.dhse`) : le **fichier entier**. La description
+  du masque (`[masque]`, `[enregistrements]`, `[bloc]`) precede le bloc `[diva]`, donc
+  `SetModuleInfo` s'y trouve tres au-dela de la ligne 100 (constate aux lignes 334, 379,
+  1586). Mesure standard X.13 : **2431/2438 `.dhsf` et 798/811 `.dhsi`** la portent APRES
+  la ligne 100. La fenetre positionnelle produisait donc ~100 % de faux positifs sur les
+  masques -- **c'etait la vraie cause de #243**, pas le type de fichier. Les masques du
+  standard portent la directive a **100 %** (2438/2438 et 811/811) : les exclure aurait
+  supprime une detection legitime.
+
+- **Logique** : presence de `SetModuleInfo` (ou `ModuleInfo` pour `.dhsq`) dans la fenetre
+  ci-dessus, sur une ligne d'au moins 30 caracteres (120 pour `.dhsq`) -- le minimum
+  garantit que l'information a bien ete **renseignee** et pas laissee a l'etat de gabarit
+  non substitue (typiquement un `$Id$` nu, quand le contenu vient d'un mot-cle de
+  gestionnaire de sources).
+- **Pourquoi** : l'information est lue a l'execution par `ModuleInfo`, et Divalto s'en sert
+  pour **afficher les versions des modules**. Un module qui ne la pose pas n'expose pas
+  sa version.
 
 ## CI02 -- Procedure/Function non PUBLIC dans TT/TE (moulinette 004)
 
@@ -44,6 +96,10 @@ Regles transposees des moulinettes de controle qualite executees en CI nightly (
 - **Cibles** : .dhsp
 - **Logique** : Detecte `.WHERE.` sans appel a `AddCondition`, `AddAndCondition`, `AddOrCondition`, `RemoveCondition`, `UseClause` ou `Exists` dans les 10 lignes suivantes. Les appels directs `.Where.Equal_*()`, `.Where.NotEqual_*()`, etc. sont consideres valides.
 - **Pourquoi** : Un `.WHERE` nu cree une clause SQL vide ou un comportement imprevisible.
+- **ANGLE MORT CONNU, mesure le 2026-08-28** : CI03 se satisfait d'un **`AddAndCondition`**, qui ne fait qu'**accumuler** dans une variable. Il ne verifie **pas** qu'un `AddCondition(nom, var)` **cloture** le motif -- or c'est ce dernier, et lui seul, qui injecte la condition dans le `WHERE`. Une routine qui accumule cinq criteres et oublie l'injection finale est donc **validee par CI03** alors que sa requete part quasi non filtree, sans aucune erreur. Defaut vecu (RETEX #163).
+  - **Pourquoi la regle qui fermerait ce trou n'est pas livree.** Mesure sur le standard X.13, corps proteges exclus : **3 456** routines utilisent `AddAndCondition`, dont **223 sans aucun `AddCondition(`** dans le meme corps. Sur ces 223, **142 (64 %) accumulent dans un parametre passe par adresse** (`&ValeurCondition`) -- l'appelant injecte, c'est **legitime**. Restent **81** cas, dont une part sont des **hooks** dont le contrat est que le framework injecte. Une regle produisant 81 avertissements sur le **standard** serait fausse par construction : le standard est la reference, pas le suspect. Meme verdict que `S09` -- juste et sans prise exploitable.
+  - **Ce qu'il faut faire a la place** : le controle est **humain, a la relecture**. Compter les `AddAndCondition` et chercher **le** `AddCondition` qui les cloture -- dans la routine, ou chez l'appelant si l'accumulateur est un `&parametre`. Contrat detaille : [recordsql-advanced.md](../../coding-diva-advanced/reference/recordsql-advanced.md), section « Le contrat de la condition ».
+  - **Ne pas lire le silence de CI03 comme une validation du filtre.**
 
 ## CI04 -- Include de PC*.dhsp dans TT/TM (moulinette 020)
 
@@ -107,7 +163,7 @@ Regles transposees des moulinettes de controle qualite executees en CI nightly (
 
 | Regle | Moulinette | Severite | Cibles | Description courte |
 |-------|-----------|----------|--------|-------------------|
-| CI01 | 001 | warning | .dhsp, .dhsi, .dhse, .dhsq, .dhsf | SetModuleInfo absent |
+| CI01 | 001 | `info` **hors defaut** | .dhsp, .dhsq, .dhsf, .dhsi, .dhse | SetModuleInfo absent -- convention SVN, `--rules CI01` (#243) |
 | CI02 | 004 | error | .dhsp (TT/TE) | Procedure/Function non PUBLIC |
 | CI03 | 009 | warning | .dhsp | .WHERE sans AddCondition |
 | CI04 | 020 | error | .dhsp (TT/TM) | Include PC* interdit |

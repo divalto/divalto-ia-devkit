@@ -40,5 +40,11 @@
     "query": "Je migre ce projet de X.9 vers X.13. Verifie la doc native de XmeListInput.",
     "files": [],
     "expected_behavior": "Comme deux versions sont en jeu, Claude confirme la version cible via AskUserQuestion (X.9 installee vs X.13 cible) avant d'appeler get_native_keyword_doc. Le hook check_mcp_version laisse passer la version validee ; viser une version non validee redeclenche une confirmation."
+  },
+  {
+    "skills": ["configuring-diva-mcp"],
+    "query": "J'ai lance write_credentials.py avec ma cle. Comment etre sur qu'elle n'a pas ete corrompue au passage ?",
+    "files": [".mcp.json"],
+    "expected_behavior": "Le skill compare les 4 derniers caracteres affiches dans le champ 'header' de la sortie a la fin de la cle du partenaire (CHECKPOINT 3) ; si la terminaison differe -> cle corrompue au transport -> relancer via --apikey-stdin. C'est le seul controle fiable : aucune detection automatique n'est possible (un $ peut etre du contenu legitime de la cle, et une cle deja tronquee par le shell est indetectable une fois recue par le script). Le skill ne refuse donc jamais une cle sur la seule presence d'un $."
   }
 ]

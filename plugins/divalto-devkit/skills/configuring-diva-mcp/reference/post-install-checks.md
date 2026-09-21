@@ -64,7 +64,7 @@ Contournement constate (a adapter a la version installee) :
      "mcpServers": {
        "diva-mcp": {
          "type": "http",
-         "url": "https://mcp-diva-partner.red.divalto.com",
+         "url": "https://mcp-diva.divaltocloud.com",
          "headers": { "X-Api-Key": "<site>-<env>@<apikey>" }
        }
      }

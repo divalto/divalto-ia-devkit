@@ -1,17 +1,29 @@
 #!/usr/bin/env python3
-"""Trouve un EnrNo libre dans g3f.dhfi pour une plage donnee (standard ou custom).
+"""Trouve un EnrNo libre pour le menu, dans l'UNION du standard et de son overlay.
 
 Plages :
   - `standard` : EnrNo < 100000 (zone reservee ERP standard -- allocation deconseillee)
   - `custom`   : EnrNo >= 100000 (zone reservee customisations utilisateur, defaut recommande)
 
-La logique est simple : scan complet de la cle A de g3f.dhfi avec structure M2 (filter Ce=2
-obligatoire -- sinon l'enreg M0 au Ce=0 est decode avec des offsets errones et peut produire
-un EnrNo aberrant, cf RETEX R-006), collecte des EnrNo presents dans la plage, retour max+1.
+**Le used-set est une UNION** : `g3f.dhfi` (standard) **+ `g3fu.dhfi` (overlay
+specifique)**. Meme mecanisme que `a5f`/`a5fu` pour les zooms.
+
+Ignorer l'overlay est le defaut que ce script avait : il ne scannait que `g3f`, et
+pouvait donc rendre un EnrNo **deja pris dans l'overlay du partenaire** -- exactement la
+collision qu'il existe pour prevenir (#228). Le script voisin
+`allocating-zoom-numbers/scripts/find_free_zoom.py` faisait deja l'union ; le
+menu ne l'avait pas.
+
+Filtre `Ce=2` obligatoire sur chaque fichier -- sinon l'enreg M0 au Ce=0 est decode avec
+des offsets errones et peut produire un EnrNo aberrant.
+
+> **Doublons g3f / g3fu = normaux** : surcharger une entree de menu standard cree une
+> entree de meme EnrNo dans `g3fu`, **prioritaire**. Le used-set etant une union, le
+> doublon se fond en une seule valeur ; ce n'est pas une collision.
 
 Usage :
     py find_free_enrno.py --file "<module>/fichier/g3f.dhfi" --range custom
-    py find_free_enrno.py --file "<g3f.dhfi>" --range standard
+    py find_free_enrno.py --file "<g3f.dhfi>" --g3fu "<specifs>/g3fu.dhfi" --range custom
     py find_free_enrno.py --file "<g3f.dhfi>" --range custom --count 3
 
 Sortie JSON :
@@ -19,8 +31,8 @@ Sortie JSON :
       "free": [100001, 100002, 100003],
       "range": "custom",
       "range_bounds": [100000, 999999],
-      "sources": {"total_records": 1368, "m2_records": 1367, "m0_records": 1, "max_used_in_range": 100000},
-      "collisions": []
+      "sources": {"g3f": {...}, "g3fu": {...}, "union_used_in_range": 12, ...},
+      "avertissements": ["..."]
     }
 
 Exit codes : 0 = au moins un libre, 1 = aucun libre / aucune M2 lue, 2 = erreur.
@@ -34,7 +46,7 @@ import sys
 from pathlib import Path
 
 
-# Plages de semantique EnrNo G3F (RETEX R-005, `[A VERIFIER]` empiriquement)
+# Plages de semantique EnrNo G3F (RETEX, `[A VERIFIER]` empiriquement)
 RANGE_BOUNDS = {
     "standard": (1, 99999),       # Zone reservee ERP standard, deconseillee en allocation custom
     "custom":   (100000, 999999), # Zone customisations utilisateur (defaut recommande)
@@ -47,7 +59,7 @@ def scan_g3f_enrnos(dhfi_path, read_isam_script):
     """Scan complet de g3f.dhfi cle A avec structure M2 vendored.
 
     Returns (list_of_records_parsed, error_message_or_None).
-    Utilise filter Ce=2 pour ignorer l'enreg M0 (Ce=0) -- cf piege RETEX R-006.
+    Utilise filter Ce=2 pour ignorer l'enreg M0 (Ce=0) -- cf piege RETEX.
     """
     if not os.path.isfile(dhfi_path):
         return None, f"Fichier introuvable : {dhfi_path}"
@@ -113,9 +125,16 @@ def find_free(used_set, lo, hi, count=1):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Trouve un EnrNo libre dans g3f.dhfi (plages standard / custom, RETEX R-005)",
+        description="Trouve un EnrNo libre dans g3f.dhfi (plages standard / custom)",
     )
-    parser.add_argument("--file", required=True, help="Chemin du g3f.dhfi cible (module ERP)")
+    parser.add_argument("--file", required=True,
+                        help="Chemin du g3f.dhfi STANDARD du module ERP (lu, jamais ecrit)")
+    parser.add_argument("--g3fu", default=None,
+                        help="Chemin du g3fu.dhfi (overlay specifique du partenaire, meme "
+                             "structure M2). **A fournir des qu'il existe** : sans lui le "
+                             "used-set est incomplet et un EnrNo deja pris dans l'overlay "
+                             "peut etre propose comme libre. Les doublons g3f/g3fu sont "
+                             "normaux (surcharge) et se fondent dans l'union.")
     parser.add_argument("--range", required=True, choices=list(RANGE_BOUNDS.keys()),
                         help="Plage d'allocation : 'standard' (<100000) ou 'custom' (>=100000)")
     parser.add_argument("--count", type=int, default=1,
@@ -136,33 +155,56 @@ def main():
 
     lo, hi = RANGE_BOUNDS[args.range]
 
-    records, err = scan_g3f_enrnos(args.file, read_isam_script)
-    if err:
-        print(f"Erreur : {err}", file=sys.stderr)
-        sys.exit(2)
+    # Used-set = UNION du standard et de l'overlay. Le standard est obligatoire ;
+    # l'overlay est optionnel MAIS son absence est signalee, car elle rend le
+    # resultat incomplet sans que rien ne le dise (#228).
+    sources = {}
+    avertissements = []
+    union = set()
 
-    used_in_range = extract_enrnos(records or [], lo, hi)
-    free = find_free(used_in_range, lo, hi, count=args.count)
+    for etiquette, chemin, obligatoire in (("g3f", args.file, True),
+                                           ("g3fu", args.g3fu, False)):
+        if not chemin:
+            avertissements.append(
+                "overlay g3fu NON fourni : le used-set ne couvre que le standard. Si le "
+                "partenaire a un g3fu.dhfi, un EnrNo deja pris dedans peut etre propose "
+                "ici comme libre -- passer --g3fu <chemin>.")
+            sources[etiquette] = None
+            continue
+        records, err = scan_g3f_enrnos(chemin, read_isam_script)
+        if err:
+            if obligatoire:
+                print(f"Erreur : {err}", file=sys.stderr)
+                sys.exit(2)
+            # Un overlay illisible ne doit pas passer pour un overlay vide.
+            avertissements.append(f"overlay g3fu illisible ({err}) : used-set incomplet.")
+            sources[etiquette] = {"erreur": err}
+            continue
+        dans_plage = extract_enrnos(records or [], lo, hi)
+        union |= dans_plage
+        sources[etiquette] = {
+            "fichier": chemin,
+            "m2_records": len(records or []),
+            "enrno_parsed": sum(1 for r in (records or [])
+                                if (r.get("EnrNo") or "").strip().isdigit()),
+            "used_in_range": len(dans_plage),
+            "max_used_in_range": max(dans_plage) if dans_plage else None,
+        }
 
-    # Diagnostics : tous les EnrNo (toutes plages) pour le rapport
-    all_enrnos_parsed = 0
-    for rec in records or []:
-        val = (rec.get("EnrNo") or "").strip()
-        if val.isdigit():
-            all_enrnos_parsed += 1
+    free = find_free(union, lo, hi, count=args.count)
 
     result = {
         "file": args.file,
         "range": args.range,
         "range_bounds": [lo, hi],
         "free": free,
-        "sources": {
-            "m2_records": len(records or []),
-            "enrno_parsed": all_enrnos_parsed,
-            "used_in_range": len(used_in_range),
-            "max_used_in_range": max(used_in_range) if used_in_range else None,
-        },
-        "note": "Hypothese plages standard < 100000 / custom >= 100000 [A VERIFIER] RETEX R-005 2026-04-23",
+        "sources": sources,
+        "union_used_in_range": len(union),
+        "max_used_in_range": max(union) if union else None,
+        "avertissements": avertissements,
+        "note": "Hypothese plages standard < 100000 / custom >= 100000 [A VERIFIER -- retour terrain non reproduit]. "
+                "Le used-set est l'UNION g3f + g3fu ; les doublons entre les deux sont normaux "
+                "(surcharge) et ne sont pas des collisions.",
     }
 
     json.dump(result, sys.stdout, indent=2, ensure_ascii=False)

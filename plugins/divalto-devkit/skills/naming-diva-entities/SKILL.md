@@ -56,11 +56,25 @@ py .claude/skills/naming-diva-entities/scripts/compute_names.py \
 
 ### 3. Corriger si erreurs
 
-- **V01 (collision)** : relancer avec `--nom-vue` pour fournir un nom alternatif
-- **V02-V04 (PascalCase)** : corriger les parametres d'entree
-- **V05 (prefixe DB)** : verifier que la table appartient au domaine
-- **V07 (base vide)** : verifier le nom de table
-- **V08 (description vide)** : fournir une description
+`validate_names.py` pose un code sous la cle `rule` de chaque constat. Les voici tous,
+avec ce qu'ils signifient et ce qu'on fait quand ils tombent.
+
+| Code | Severite | Ce qui est verifie | Quoi faire |
+|------|----------|--------------------|------------|
+| `V01` | error | Non-collision entre le nom du RecordSql et celui du Record | Relancer avec `--nom-vue` pour fournir un nom alternatif |
+| `V02` | error | `NomVue` en PascalCase | Corriger le parametre d'entree |
+| `V03` | error | `entity` en PascalCase | Corriger le parametre d'entree |
+| `V04` | error | `ChampCle` en PascalCase | Corriger le parametre d'entree |
+| `V05` | warning | La table SQL commence par le prefixe DB du domaine | Verifier que la table appartient au domaine. Les prefixes SQL alternatifs historiques par domaine sont acceptes |
+| `V06` | warning | Les noms de fichiers generes ne depassent pas 40 caracteres | Raccourcir l'entite ou le nom de vue |
+| `V07` | error | `base` non vide | Verifier le nom de table |
+| `V08` | error | `description` non vide | Fournir une description |
+| `V09` | error | Coherence interne des tokens derives (`TABLE_MAJUSCULE`, `table_minuscule`, `ENTITY`, `CHAMPCLE`... face a leur source) | Ne pas editer les tokens derives a la main : les regenerer avec `compute_names.py` |
+
+> Ce skill **emet ses propres codes** : il fait partie des outils qui en produisent, au
+> meme titre que le linter et les six producteurs a prefixe. Un code emis qu'aucune page
+> n'explique est refuse a l'export -- c'est pour ca que cette table existe, et elle est
+> asservie par `tests/test_codes_regles.py`.
 
 ### 4. Utiliser les tokens
 

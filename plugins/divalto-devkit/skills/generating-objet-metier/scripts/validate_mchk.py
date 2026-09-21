@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Valide un fichier Module Check (.dhsp) selon les regles M01-M05.
+"""Valide un fichier Module Check (.dhsp) selon les regles MCHK01-MCHK07.
 
 Usage:
     py .claude/skills/generating-objet-metier/scripts/validate_mchk.py --path fichier.dhsp
@@ -31,12 +31,12 @@ def read_file_content(path):
 
 
 def check_m01(content, tokens=None):
-    """M01 — Init_Module avec Get_CheckObject_Data."""
+    """MCHK01 — Init_Module avec Get_CheckObject_Data."""
     issues = []
     has_init_module = bool(re.search(r'(?i)\bfunction\s+int\s+Init_Module\b', content))
     if not has_init_module:
         issues.append({
-            "rule": "M01",
+            "rule": "MCHK01",
             "severity": "error",
             "message": "Init_Module absent du fichier",
         })
@@ -45,7 +45,7 @@ def check_m01(content, tokens=None):
     has_get_checkobject = bool(re.search(r'(?i)Get_CheckObject_Data\s*\(', content))
     if not has_get_checkobject:
         issues.append({
-            "rule": "M01",
+            "rule": "MCHK01",
             "severity": "error",
             "message": "Init_Module ne contient pas d'appel a Get_CheckObject_Data",
         })
@@ -54,12 +54,12 @@ def check_m01(content, tokens=None):
 
 
 def check_m02(content, tokens=None):
-    """M02 — Record INIT initialise dans Init_Module."""
+    """MCHK02 — Record INIT initialise dans Init_Module."""
     issues = []
     has_init_call = bool(re.search(r'(?i)Initialize_\w+_New\s*\(\s*\w+_INIT\s*\)', content))
     if not has_init_call:
         issues.append({
-            "rule": "M02",
+            "rule": "MCHK02",
             "severity": "error",
             "message": "Record _INIT non initialise dans Init_Module (Initialize_*_New(*_INIT) absent)",
         })
@@ -67,7 +67,7 @@ def check_m02(content, tokens=None):
 
 
 def check_m03(content, tokens=None):
-    """M03 — Stack/UnStack OutputMode dans PostFetch."""
+    """MCHK03 — Stack/UnStack OutputMode dans PostFetch."""
     issues = []
     has_postfetch = bool(re.search(r'(?i)\b(function|procedure)\s+\w*\s*Initialize_\w+_PostFetch\b', content))
     if has_postfetch:
@@ -75,7 +75,7 @@ def check_m03(content, tokens=None):
         has_unstack = bool(re.search(r'(?i)A5_UnStack_OutputMode', content))
         if not has_stack or not has_unstack:
             issues.append({
-                "rule": "M03",
+                "rule": "MCHK03",
                 "severity": "warning",
                 "message": "PostFetch sans A5_Stack_OutputMode / A5_UnStack_OutputMode",
             })
@@ -83,12 +83,12 @@ def check_m03(content, tokens=None):
 
 
 def check_m04(content, tokens=None):
-    """M04 — OverWrittenBy present."""
+    """MCHK04 — OverWrittenBy present."""
     issues = []
     has_overwrittenby = bool(re.search(r'(?i)OverWrittenBy\s+["\']', content))
     if not has_overwrittenby:
         issues.append({
-            "rule": "M04",
+            "rule": "MCHK04",
             "severity": "warning",
             "message": "OverWrittenBy absent du fichier mchk",
         })
@@ -100,7 +100,7 @@ def check_m04(content, tokens=None):
             pattern = re.escape(expected)
             if not re.search(pattern, content, re.IGNORECASE):
                 issues.append({
-                    "rule": "M04",
+                    "rule": "MCHK04",
                     "severity": "warning",
                     "message": f"OverWrittenBy ne correspond pas au token attendu: {expected}",
                 })
@@ -108,17 +108,15 @@ def check_m04(content, tokens=None):
     return issues
 
 
-def check_m05(content, tokens=None):
-    """M05 — Encodage ISO-8859-1 + CRLF."""
-    issues = []
-    raw, _ = read_file_content.__defaults__ if hasattr(read_file_content, '__defaults__') else (None, None)
-    # On re-lit le fichier en mode binaire pour verifier l'encodage
-    # Cette verification est faite dans check_encoding separement
-    return issues
-
 
 def check_encoding(raw_bytes):
-    """Verifie l'encodage ISO-8859-1 + CRLF."""
+    """MCHK05 -- encodage ISO-8859-1 + CRLF.
+
+    C'est ICI que MCHK05 est verifiee. Une `check_m05` homonyme a longtemps vecu
+    juste au-dessus sans etre appelee -- et elle aurait leve une TypeError si on
+    l'avait cablee. Retiree : le nom de la regle est desormais sur la fonction
+    qui la porte.
+    """
     issues = []
 
     # Verifier fins de ligne CRLF
@@ -132,7 +130,7 @@ def check_encoding(raw_bytes):
 
     if lines_lf_only > 0:
         issues.append({
-            "rule": "M05",
+            "rule": "MCHK05",
             "severity": "error",
             "message": f"Fins de ligne LF detectees ({lines_lf_only} occurrences). Attendu: CRLF",
         })
@@ -140,7 +138,7 @@ def check_encoding(raw_bytes):
     # Verifier pas de BOM UTF-8
     if raw_bytes[:3] == b'\xef\xbb\xbf':
         issues.append({
-            "rule": "M05",
+            "rule": "MCHK05",
             "severity": "error",
             "message": "BOM UTF-8 detecte. Le fichier doit etre en ISO-8859-1 sans BOM",
         })
@@ -159,7 +157,7 @@ def check_encoding(raw_bytes):
                 has_utf8_multibyte = bool(re.search(b'[\xc0-\xdf][\x80-\xbf]|[\xe0-\xef][\x80-\xbf]{2}', raw_bytes))
                 if has_utf8_multibyte:
                     issues.append({
-                        "rule": "M05",
+                        "rule": "MCHK05",
                         "severity": "error",
                         "message": "Fichier encode en UTF-8 avec caracteres multi-octets. Attendu: ISO-8859-1",
                     })
@@ -206,7 +204,7 @@ def check_mandatory_functions(content, tokens=None):
 
     if missing:
         issues.append({
-            "rule": "STRUCT",
+            "rule": "MCHK06",
             "severity": "error",
             "message": f"Fonctions obligatoires manquantes: {', '.join(missing)}",
         })
@@ -227,7 +225,7 @@ def check_naming_coherence(content, tokens):
     if table_maj:
         if not re.search(r'(?i)ChkData_' + re.escape(table_maj), content):
             issues.append({
-                "rule": "NAMING",
+                "rule": "MCHK07",
                 "severity": "warning",
                 "message": f"ChkData_{table_maj} non trouve dans le fichier",
             })
@@ -236,7 +234,7 @@ def check_naming_coherence(content, tokens):
     if nom_vue:
         if not re.search(r'(?i)RS_' + re.escape(nom_vue), content):
             issues.append({
-                "rule": "NAMING",
+                "rule": "MCHK07",
                 "severity": "warning",
                 "message": f"RS_{nom_vue} non trouve dans le fichier",
             })
@@ -246,7 +244,7 @@ def check_naming_coherence(content, tokens):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Valide un fichier Module Check (.dhsp) selon les regles M01-M05"
+        description="Valide un fichier Module Check (.dhsp) selon les regles MCHK01-MCHK07"
     )
     parser.add_argument("--path", required=True,
                         help="Chemin du fichier .dhsp a valider")

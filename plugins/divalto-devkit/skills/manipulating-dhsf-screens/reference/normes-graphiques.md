@@ -23,7 +23,7 @@
 | Cle -> autres objets | `14` (16 si objet = groupe) | Offset de la cle |
 | Entre 2 groupes | `8` horizontal ou vertical | Sauf harmonie d'ecran |
 
-### Inserer un champ dans un masque existant -- pas de placement automatique (R-013)
+### Inserer un champ dans un masque existant -- pas de placement automatique
 
 L'outillage ne **place pas** les nouveaux champs : la position (`position=Y,X`) est decidee par l'integrateur. Inserer un champ a une position non alignee sur la grille existante provoque un **chevauchement graphique** au runtime WPF.
 
@@ -115,30 +115,30 @@ taille = NbLignes * 10 + 11              (sans titre, 1er bouton a Y=8 au lieu d
 Pos Y(tableau) = Pos Y(texte) + Taille(texte) + 1
 ```
 
-**Bornes de grille (regles R4/R5 du validateur)** :
+**Bornes de grille (regles DHSF04/DHSF05 du validateur)** :
 
 ```
-max_X(obj) <= nb_col * 4                  -- regle R4 (saturation largeur)
-max_Y(obj) <= nb_lig * 14 - 30            -- regle R5 (saturation hauteur)
+max_X(obj) <= nb_col * 4                  -- regle DHSF04 (saturation largeur)
+max_Y(obj) <= nb_lig * 14 - 30            -- regle DHSF05 (saturation hauteur)
 ```
 
-La borne theorique de R5 est `nb_lig * 14`, mais xwin7 echoue avec
+La borne theorique de DHSF05 est `nb_lig * 14`, mais xwin7 echoue avec
 `"Objet en dehors de la clip grille"` pour des `max_Y` bien sous ce plafond
 sur les pages avec onglet : le header + footer reservent ~30 unites non
 comptabilisees dans `nb_lig`. Empiriquement, sur une page nb_lig=25
 (theorique 350), la saturation reelle commence vers max_Y=320. La constante
 `GRID_LIG_MARGE = 30` dans `scripts/dhsf_modify.py` reflete cette marge.
 
-> **Exemption des widgets tableau (R-014, R-015)** : R4/R5 ne s'appliquent **pas**
+> **Exemption des widgets tableau** : DHSF04/DHSF05 ne s'appliquent **pas**
 > aux types de la famille tableau (`tableau`, `arbre`, `panel_wpf`, `champ_tableau`,
 > `multi_choix_tableau`). Pour ces widgets, `largeur_col` / `position_colonne` sont en
 > **unites de colonne**, pas en unites de grille -- les comparer a `nb_col * 4` produit des
 > faux positifs massifs (un zoom standard a 15 colonnes les declenche toutes alors qu'il
 > compile et tourne). `scripts/dhsf_modify.py` les exclut via l'ensemble `GRID_EXEMPT_TYPES`.
-> Si `validate` signale encore des violations R4/R5 sur ces types, ce sont des **faux positifs
+> Si `validate` signale encore des violations DHSF04/DHSF05 sur ces types, ce sont des **faux positifs
 > pre-existants** (cf. baseline ci-dessous), pas des regressions.
 
-> **Baseline avant modification (R-008)** : lancer `dhsf_modify.py --action validate`
+> **Baseline avant modification** : lancer `dhsf_modify.py --action validate`
 > **avant** d'editer un masque pour figer la liste des violations pre-existantes. On distingue
 > ainsi une regression introduite par la modification d'une violation deja presente dans le
 > standard (souvent sur des groupbox ou tableaux acceptes en production).

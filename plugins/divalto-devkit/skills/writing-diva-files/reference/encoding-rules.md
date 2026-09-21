@@ -42,15 +42,29 @@ Verifie le 2026-04-08 sur les sources ERP X.13 standard.
 
 ## Verification
 
-```bash
-# Encodage
-file --mime-encoding fichier.dhsp
-# Attendu : iso-8859-1, us-ascii, ou unknown-8bit
-# ERREUR si : utf-8
+**Voie unique : `verify_encoding.py`.** C'est lui qui porte le verdict, et il controle plus
+que l'encodage :
 
-# Fins de ligne
-file fichier.dhsp
-# Attendu : "CRLF line terminators"
+```bash
+py .claude/skills/writing-diva-files/scripts/verify_encoding.py --path fichier.dhsp
 ```
+
+| Controle | Pourquoi |
+|---|---|
+| Encodage ISO-8859-1 (pas UTF-8) | les accents deviennent illisibles pour le compilateur |
+| Fins de ligne CRLF, pas de LF nu | XWin attend du CRLF |
+| CRLF final present | son absence provoque l'**Erreur 135** a la compilation |
+| Pas de BOM UTF-8 | 3 octets parasites en tete de fichier |
+| **Aucune sequence UTF-8 residuelle** | signature d'un **mojibake** (Latin-1 double-encode) : le fichier decode en ISO-8859-1 sans erreur mais le contenu est corrompu |
+| **Aucune ligne physique > 251 caracteres** | XWin refuse d'**OUVRIR** le source (pas seulement de le compiler) |
+
+`valid: false` + exit 1 des qu'un controle echoue. Les scripts d'ecriture du skill
+(`write_file.py`, `patch_file.py`) appliquent les memes regles **avant** d'ecrire et
+re-verifient apres : leur champ `verified` signifie la meme chose que ce `valid`.
+
+> `file --mime-encoding` (outil Unix) est **absent d'un poste Windows/PowerShell nu** et ne
+> detecte ni le mojibake residuel, ni la limite des 251 caracteres, ni l'absence de CRLF
+> final : il declarerait conformes des fichiers que XWin refuse. Ne pas s'en servir comme
+> verdict.
 
 > Pieges Windows recurrents (Edit/Write, pipe PowerShell -> BOM, Python mode texte -> LF, pas de CRLF final -> Erreur 135) : voir [safe-methods.md](safe-methods.md#pieges-windows-causes-recurrentes-de-corruption).

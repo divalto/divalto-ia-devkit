@@ -16,7 +16,7 @@
         "Appelle add-field avec --name NbPages --nature 11,0 --after Libelle --backup",
         "Bloc [CHAMP] NbPages cree si nouveau (insertion alphabetique)",
         "Positions recalculees, Filler ajuste si present",
-        "Appelle validate_dhsd.py pour verification D01-D11",
+        "Appelle validate_dhsd.py pour verification DICT01-DICT11",
         "Presente CP2 avec avant/apres"
       ]
     },
@@ -73,6 +73,47 @@
         "Checkpoint CP2 avec etat final",
         "3 champs ajoutes au masque via dhsf_modify.py",
         "Checkpoint CP3, compilation + synchro CP4"
+      ]
+    },
+    {
+      "id": "case-5",
+      "skills": [
+        "modifying-diva-entity"
+      ],
+      "query": "Ajoute le champ Remise (Nature 5,0) a la table bbdet du dictionnaire de surcharge. Attention : sur cette table, Dos fait 8 octets et UserCr/UserMo 20 (pas 3/30/30).",
+      "files": [],
+      "expected_behavior": [
+        "list-fields montre les tailles REELLES deduites du layout (Dos=8, UserCr=20, UserMo=20) avec size_mismatch=true et assumed_size sur les champs standard",
+        "add-field recalcule les positions a partir des tailles REELLES (pas des tailles standard supposees 3/30/30) : les positions AVANT l'insertion sont inchangees, celles APRES decalent d'exactement la taille du nouveau champ",
+        "Aucun chevauchement ni trou (validate_dhsd 0 erreur) -- plus de corruption silencieuse (#321)",
+        "Garde-fou : refuse si la table est deja incoherente (1er champ hors position 1, ou taille negative deduite)"
+      ]
+    },
+    {
+      "id": "case-6",
+      "skills": [
+        "modifying-diva-entity"
+      ],
+      "query": "Ajoute le champ TiersR3 (Nature 20) a la table Ent, mais mon dictionnaire est une surcharge (gtfddu.dhsd).",
+      "files": [],
+      "expected_behavior": [
+        "modify_dhsd_table.py detecte que la table cible est declaree en [TABLEU] (dictionnaire de surcharge) et REFUSE (exit 1) au lieu de renvoyer 'table non trouvee'",
+        "Le message redirige vers managing-diva-dictionaries / generate_surcharge_field.py (ancrage container U<Table>, offset, [TABLEU]/[BASEU], regles DICT14/DICT15)",
+        "Ne tente PAS d'ecrire la surcharge via modify_dhsd_table.py"
+      ]
+    },
+    {
+      "id": "case-7",
+      "skills": [
+        "modifying-diva-entity"
+      ],
+      "query": "Je veux ajouter une case a cocher 'Afficher soldes' comme filtre sur un ecran. Ajoute un champ dans le dictionnaire.",
+      "files": [],
+      "expected_behavior": [
+        "En Analyse d'impact, verifie d'abord si le besoin est purement graphique/ecran (filtre, flag sans valeur metier a persister)",
+        "Si oui : propose de REUTILISER un champ generique 1,0 libre d'une table de criteres standard (G7/XQ/G3XQ) plutot que creer un champ dedie",
+        "Ne cree un nouveau champ dictionnaire que si une valeur metier doit etre persistee",
+        "Rappelle le gain : zero risque de recalcul de positions (#321)"
       ]
     }
   ]

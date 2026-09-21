@@ -20,9 +20,11 @@ Exit codes : 0 succes, 1 erreur applicative, 2 erreur d'usage.
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 
@@ -110,7 +112,13 @@ def format_body(entry: dict, source_file: str, user_email: str) -> str:
         "",
         f"_Date d'origine : {entry.get('date')}_  ",
         f"_ID local : {entry.get('id')}_  ",
-        f"_Hash : {entry.get('hash', '')[:8]}_",
+        # Hash COMPLET (40 car.) et non tronque : ce marqueur est lu par le push pour
+        # arbitrer un conflit de numerotation -- quand deux entrees portent le meme
+        # R-NNN, celle dont le hash correspond au corps de l'issue deja creee garde son
+        # numero. Un hash tronque a 8 restait exploitable, mais la comparaison exacte
+        # ne coute rien ici. Le hash ne depend que des 8 champs du RETEX : allonger ce
+        # pied de page ne modifie aucun hash et ne declenche donc aucun faux "modifie".
+        f"_Hash : {entry.get('hash', '')}_",
     ]
     body = "\n".join(parts)
     # Tronquer si > 60k chars (limite GitHub ~65k)
@@ -125,6 +133,8 @@ def gh_available() -> bool:
             ["gh", "--version"],
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=5,
         )
         return r.returncode == 0
@@ -138,6 +148,8 @@ def gh_authenticated() -> bool:
             ["gh", "auth", "status"],
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=10,
         )
         return r.returncode == 0
@@ -145,12 +157,58 @@ def gh_authenticated() -> bool:
         return False
 
 
+def _run_gh_with_body(cmd_base: list, body: str):
+    """Lance `gh` en passant le corps via un fichier temporaire UTF-8 (`--body-file`).
+
+    Evite tout re-encodage du corps par le codepage de la ligne de commande Windows
+    (cause de mojibake constatee, cf. issues #279/#338/#347). Fichier ecrit en UTF-8,
+    fins de ligne \\n (rendu markdown identique), supprime dans tous les cas.
+    """
+    tmp = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            "w", suffix=".md", delete=False, encoding="utf-8", newline="\n"
+        ) as tf:
+            tf.write(body)
+            tmp = tf.name
+        cmd = cmd_base + ["--body-file", tmp]
+        return subprocess.run(
+            cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=30
+        )
+    finally:
+        if tmp:
+            try:
+                os.unlink(tmp)
+            except OSError:
+                pass
+
+
+def read_issue_labels(repo: str, issue_number: int) -> list:
+    """Relit les labels REELLEMENT poses sur l'issue.
+
+    GitHub ignore silencieusement les labels passes a la creation si le compte n'a
+    pas le droit triage/push (cf. #351) : `gh issue create --label X` sort en code 0
+    sans avertissement. On relit donc l'etat reel pour ne pas affirmer un effet non obtenu.
+    """
+    try:
+        r = subprocess.run(
+            ["gh", "issue", "view", str(issue_number), "--repo", repo,
+             "--json", "labels", "--jq", ".labels[].name"],
+            capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=15,
+        )
+        if r.returncode == 0:
+            return [x.strip() for x in r.stdout.splitlines() if x.strip()]
+    except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
+        pass
+    return []
+
+
 def create_issue(repo: str, title: str, body: str, labels: list) -> tuple:
     """Cree une issue GitHub via `gh`. Retourne (issue_number, url) ou leve."""
-    cmd = ["gh", "issue", "create", "--repo", repo, "--title", title, "--body", body]
+    cmd = ["gh", "issue", "create", "--repo", repo, "--title", title]
     for lbl in labels:
         cmd.extend(["--label", lbl])
-    r = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+    r = _run_gh_with_body(cmd, body)
     if r.returncode != 0:
         raise RuntimeError(f"gh issue create echec : {r.stderr.strip()}")
     # Sortie attendue : URL de l'issue sur la derniere ligne
@@ -164,8 +222,8 @@ def create_issue(repo: str, title: str, body: str, labels: list) -> tuple:
 
 
 def comment_issue(repo: str, issue_number: int, body: str) -> str:
-    cmd = ["gh", "issue", "comment", str(issue_number), "--repo", repo, "--body", body]
-    r = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+    cmd = ["gh", "issue", "comment", str(issue_number), "--repo", repo]
+    r = _run_gh_with_body(cmd, body)
     if r.returncode != 0:
         raise RuntimeError(f"gh issue comment echec : {r.stderr.strip()}")
     return r.stdout.strip()
@@ -221,7 +279,16 @@ def main() -> int:
             print(json.dumps({"action": "updated", "issue": args.issue, "url": None, "labels": labels}))
         else:
             issue_number, url = create_issue(repo, title, body, labels)
-            print(json.dumps({"action": "created", "issue": issue_number, "url": url, "labels": labels}))
+            applied = read_issue_labels(repo, issue_number) if issue_number else []
+            out = {"action": "created", "issue": issue_number, "url": url,
+                   "labels": applied, "labels_requested": labels}
+            missing = [lbl for lbl in labels if lbl not in applied]
+            if missing:
+                out["warning"] = (
+                    "labels demandes non appliques (compte sans droit triage/push ?) : "
+                    + ", ".join(missing)
+                )
+            print(json.dumps(out, ensure_ascii=False))
     except Exception as e:
         print(json.dumps({"action": "error", "error": str(e), "issue": None, "url": None, "labels": labels}))
         return 1

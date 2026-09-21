@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ingest_deliverable.py -- Lit un livrable UC-200 et produit un IR unifie.
+"""ingest_deliverable.py -- Lit un livrable de documentation ERP et produit un IR unifie.
 
 Extrait pour chaque entite :
 - Liste des affirmations narratives (texte + yaml_path + citations detectees + mark [A VERIFIER])
@@ -214,7 +214,7 @@ def ingest_deliverable(root: Path, entities_filter: set | None) -> dict:
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--deliverable", required=True, help="Racine du livrable UC-200 (contient module.yaml + entity/*.yaml)")
+    ap.add_argument("--deliverable", required=True, help="Racine du livrable de documentation ERP (contient module.yaml + entity/*.yaml)")
     ap.add_argument("--entities", default="all", help="'all' ou liste separee par virgule")
     ap.add_argument("--out", required=True, help="Chemin du fichier IR JSON de sortie")
     args = ap.parse_args()

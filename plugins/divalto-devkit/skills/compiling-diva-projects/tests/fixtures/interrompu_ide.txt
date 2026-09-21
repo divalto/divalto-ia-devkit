@@ -1,0 +1,7 @@
+---------------Compilation. Reconstruction de tout le projet c:/specifs/monworkspace/projets/monprojet.dhpt (25/08/2026 12:00:00)---------------
+Construction du plan de compilation
+Création/Effacement des objets
+Première passe de compilations
+</specifs/monworkspace/sources/masource1.dhsq>  version : 2021-406
+</specifs/monworkspace/sources/masource2.dhsq>  version : 2021-406
+Compilation interrompue. Erreur(s) 0   Warning(s) 0

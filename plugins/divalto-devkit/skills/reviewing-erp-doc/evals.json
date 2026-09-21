@@ -1,15 +1,14 @@
 {
   "skill": "reviewing-erp-doc",
-  "description": "4 scenarios alignes sur les scenarios BDD de UC-201 + 1 eval d'idempotence (CA13).",
+  "description": "4 scenarios de recette du skill + 1 eval d'idempotence.",
   "scenarios": [
     {
       "id": "relecture-nominale-dav",
-      "query": "Relire un livrable UC-200 pour le module DAV (5 entites CLI, FOU, ART, SOC, VRP) fraichement produit par documenting-erp.",
+      "query": "Relire un livrable de documentation pour le module DAV (5 entites CLI, FOU, ART, SOC, VRP) fraichement produit par documenting-erp.",
       "input": {
         "deliverable": "{REPERTOIRE_SORTIE}/doc-erp/DAV/",
         "erp_root": "{CHEMIN_ERP_STANDARD}",
         "schema_sql": "{CHEMIN_SCHEMA_SQL}",
-        "docs_root": "{RACINE_DOCS}",
         "entities": "all"
       },
       "expected_behavior": [
@@ -17,8 +16,8 @@
         "Execute les 7 etapes du pipeline en autonomie (ingest -> E1 -> E3 -> E4 -> prepare-E2 -> eval-E2 -> build)",
         "Produit review.md, review.json, review.stats.json sous {REPERTOIRE_SORTIE}/doc-erp/DAV/",
         "Le CP-Rapport-Final presente : nb erreurs/warnings/infos par categorie E1/E2/E3/E4, entites touchees, verdict publiable ou non, ratio de couverture du producteur",
-        "Aucun fichier du livrable UC-200 (YAML, MD, JSON) n'est modifie",
-        "Aucun fichier de docs/ n'est modifie"
+        "Aucun fichier du livrable de documentation (YAML, MD, JSON) n'est modifie",
+        "Aucun fichier hors du repertoire de sortie n'est modifie"
       ]
     },
     {
@@ -28,7 +27,6 @@
         "deliverable": "{REPERTOIRE_SORTIE}/doc-erp/DAV-plante/",
         "erp_root": "{CHEMIN_ERP_STANDARD}",
         "schema_sql": "{CHEMIN_SCHEMA_SQL}",
-        "docs_root": "{RACINE_DOCS}",
         "entities": "CLI"
       },
       "expected_behavior": [
@@ -40,18 +38,17 @@
     },
     {
       "id": "livrable-massivement-non-source",
-      "query": "Relire un livrable ou la moitie des affirmations business.* sont non sourcees et non marquees [A VERIFIER] (simule une regression CA4 de UC-200).",
+      "query": "Relire un livrable ou la moitie des affirmations business.* sont non sourcees et non marquees [A VERIFIER] (simule une regression massive de la regle de citation stricte).",
       "input": {
         "deliverable": "{REPERTOIRE_SORTIE}/doc-erp/DAV-nosource/",
         "erp_root": "{CHEMIN_ERP_STANDARD}",
         "schema_sql": "{CHEMIN_SCHEMA_SQL}",
-        "docs_root": "{RACINE_DOCS}",
         "entities": "all"
       },
       "expected_behavior": [
         "E1 remonte massivement les affirmations non sourcees en severite erreur",
         "E2 n'a presque aucune paire a evaluer (peu de citations dans l'IR)",
-        "Le verdict du CP-Rapport-Final est 'regression CA4 UC-200' (pas seulement 'corrections necessaires')",
+        "Le verdict du CP-Rapport-Final est 'regression citation stricte' (pas seulement 'corrections necessaires')",
         "Le rapport liste explicitement les entites touchees"
       ]
     },
@@ -62,7 +59,6 @@
         "deliverable": "{REPERTOIRE_SORTIE}/doc-erp/DAV-propre/",
         "erp_root": "{CHEMIN_ERP_STANDARD}",
         "schema_sql": "{CHEMIN_SCHEMA_SQL}",
-        "docs_root": "{RACINE_DOCS}",
         "entities": "all"
       },
       "expected_behavior": [
@@ -78,7 +74,6 @@
         "deliverable": "{REPERTOIRE_SORTIE}/doc-erp/DAV/",
         "erp_root": "{CHEMIN_ERP_STANDARD}",
         "schema_sql": "{CHEMIN_SCHEMA_SQL}",
-        "docs_root": "{RACINE_DOCS}",
         "entities": "all"
       },
       "expected_behavior": [

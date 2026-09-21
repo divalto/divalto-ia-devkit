@@ -59,6 +59,48 @@ Les champs apres le nom sont des tokens separes par espaces. L'empirisme montre 
 
 Convention de nommage : `<FAMILLE><TAILLE>[G][BLANC|GRI|...]`.
 
+### La couleur du texte -- champ de largeur fixe, hors des tokens
+
+**Taille, poids et famille ne suffisent pas a distinguer deux polices.** Un retour terrain
+l'a montre : les 18 styles de la famille `DATA` decodaient tous en
+`{taille: 8, poids: 400000, famille: Tahoma}` alors que leurs enregistrements sont
+**tous differents**.
+
+La couleur du texte vit a un **offset fixe**, pas dans les tokens : **4 composantes de
+3 caracteres cadrees a droite, a partir de l'octet 109**, meme decoupage que le Type 2.
+
+| Style | Octets 109-120 | Couleur |
+|---|---|---|
+| `DATA` | `  0  0  0  0` | noir |
+| `DATA_10` | `255  0  0  0` | rouge |
+| `DATA_11` | `  0255  0  0` | vert |
+| `DATA_16` | `255255255  0` | blanc |
+| `DATA_8_FONCE` | `128128128  0` | gris -- et son nom dit « FONCE » |
+
+**Mesure du 2026-08-30** (`fstylewpf.dhfi`) : **142 Type 1 sur 142** portent la 4 composantes
+numeriques dans 0-255 a cet emplacement.
+
+> **La 4e composante vaut `0` sur les 142.** Sa semantique **n'est pas etablie** -- elle
+> n'est donc **pas** nommee « alpha », ce qui serait une supposition. Elle est exposee telle
+> quelle sous `couleur_texte_composante_4`.
+
+**Effet du decodage sur les collisions**, mesure avant/apres :
+
+| Variante | Type 1 | Indistinguables AVANT | APRES |
+|---|---|---|---|
+| `fstylewpf` | 142 | **64 (45 %)** | **21 (15 %)** |
+| `fstyle` (legacy) | 71 | 27 (38 %) | **3 (4 %)** |
+| `fstyleimp` | 69 | 14 (20 %) | **1 (1 %)** |
+
+### Ce qui reste NON decode, et qui est declare comme tel
+
+Les collisions restantes se distinguent par un **champ de drapeaux** vers l'octet 123
+(observe : `0010000000`, `0001011111`, `0.01111011`). Sa semantique n'est pas etablie.
+
+`--detail` expose donc `attributs_non_decodes` : **une sortie qui ne dit pas ce qu'elle
+ignore parait complete**, et c'est le defaut d'origine du retour terrain -- *« decodage
+incomplet, mais presente comme complet »*.
+
 ---
 
 ## Type 2 -- Couleur RGB
@@ -81,7 +123,7 @@ Le decodeur `_decode_type2` tente un parsing strict en 3 chars par canal ; fallb
 
 ## Type 3 -- Reference i18n
 
-**Le type central pour les libelles `tbl*` des multichoix.** Sans fstyle, les libelles `tblart`, `tblacti`, `tblnote`... apparaissent opaques dans les livrables UC-200 ; avec fstyle, on les resout en cles i18n `#tblart`, `#tblacti`, `#tblnote` -- pret a etre injecte dans la pipeline de rendu.
+**Le type central pour les libelles `tbl*` des multichoix.** Sans fstyle, les libelles `tblart`, `tblacti`, `tblnote`... apparaissent opaques dans les livrables de documentation ; avec fstyle, on les resout en cles i18n `#tblart`, `#tblacti`, `#tblnote` -- pret a etre injecte dans la pipeline de rendu.
 
 Format : `3 <NOM> #<cle_i18n> [<flags>] [<couleur>]`.
 
@@ -134,9 +176,25 @@ Le flag 2e token (`1` systematique) est reserve.
 
 ## Type 7 -- Style compose
 
-Assemblage nomme de 3 references : police (Type 1) + cadre (Type 6) + couleur (Type 2).
+Assemblage nomme de 3 references. Format : `7 <NOM> <police_ref> <cadre_ref> <couleur_ref>`.
 
-Format : `7 <NOM> <police_ref> <cadre_ref> <couleur_ref>`.
+> **Les trois slots sont POSITIONNELS, et leurs noms ne tiennent pas toujours.** Mesure du
+> 2026-08-30 sur les **235 Type 7** de `fstylewpf` :
+>
+> | Slot | Ce qu'il vise reellement |
+> |---|---|
+> | `police_ref` | Type 1 (police) -- **235 / 235** |
+> | `cadre_ref` | Type 6 **165**, Type 2 **59**, Type 1 **11** |
+> | `couleur_ref` | Type 2 **222**, Type 1 **13** |
+>
+> **Aucune reference n'est pendante** : les 705 pointent sur un nom present dans le fichier.
+> Un retour terrain avait releve `ENTETE_COLONNE_T` dont le `couleur_ref` vise
+> `ENTETE_COLONNE`, **une police** -- ce n'est pas une reference cassee, c'est le nom du
+> slot qui promet une semantique que la donnee ne porte pas dans **~25 %** des cas.
+
+`--detail` expose donc, a cote des trois references, le **type reel** de chaque cible
+(`refs_types_reels`) et, quand il differe de l'attendu, `refs_hors_type_attendu` qui le dit
+en clair. Se fier au **type reel**, jamais au nom du slot.
 
 ### Exemples
 

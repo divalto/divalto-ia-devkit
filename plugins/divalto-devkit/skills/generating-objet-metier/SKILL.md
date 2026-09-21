@@ -84,11 +84,11 @@ py .claude/skills/generating-objet-metier/scripts/validate_mchk.py \
 
 ### 3. Corriger si erreurs
 
-- **M01 (Init_Module absent)** : erreur critique, le template l'inclut automatiquement — si absent, le template est corrompu
-- **M02 (INIT non initialise)** : le template l'inclut automatiquement
-- **M03 (Stack/UnStack OutputMode)** : le template l'inclut dans PostFetch
-- **M04 (OverWrittenBy)** : le template l'inclut automatiquement
-- **M05 (encodage)** : le script ecrit en ISO-8859-1+CRLF — si erreur, utiliser le skill `writing-diva-files` pour convertir le fichier
+- **MCHK01 (Init_Module absent)** : erreur critique, le template l'inclut automatiquement — si absent, le template est corrompu
+- **MCHK02 (INIT non initialise)** : le template l'inclut automatiquement
+- **MCHK03 (Stack/UnStack OutputMode)** : le template l'inclut dans PostFetch
+- **MCHK04 (OverWrittenBy)** : le template l'inclut automatiquement
+- **MCHK05 (encodage)** : le script ecrit en ISO-8859-1+CRLF — si erreur, utiliser le skill `writing-diva-files` pour convertir le fichier
 
 ### 4. Verifier l'encodage
 
@@ -102,15 +102,15 @@ Le script `validate_mchk.py` verifie 7 categories de regles :
 
 | Regle | Severite | Quoi |
 |-------|----------|------|
-| M01 | error | `Init_Module` avec `Get_CheckObject_Data` |
-| M02 | error | Record `_INIT` initialise |
-| M03 | warning | `Stack/UnStack_OutputMode` dans PostFetch |
-| M04 | warning | `OverWrittenBy` present et coherent |
-| M05 | error | Encodage ISO-8859-1 + CRLF |
-| STRUCT | error | 22 fonctions obligatoires presentes |
-| NAMING | warning | Nommage coherent avec les tokens |
+| MCHK01 | error | `Init_Module` avec `Get_CheckObject_Data` |
+| MCHK02 | error | Record `_INIT` initialise |
+| MCHK03 | warning | `Stack/UnStack_OutputMode` dans PostFetch |
+| MCHK04 | warning | `OverWrittenBy` present et coherent |
+| MCHK05 | error | Encodage ISO-8859-1 + CRLF |
+| MCHK06 | error | 22 fonctions obligatoires presentes |
+| MCHK07 | warning | Nommage coherent avec les tokens |
 
-Avec `--tokens`, des verifications croisees supplementaires sont effectuees (M04, NAMING).
+Avec `--tokens`, des verifications croisees supplementaires sont effectuees (MCHK04, MCHK07).
 
 ---
 
@@ -130,6 +130,6 @@ Avec `--tokens`, des verifications croisees supplementaires sont effectuees (M04
 ### Interne au skill
 
 - **Structure complete d'un Module Check** : [reference/mchk-structure.md](reference/mchk-structure.md)
-- **Regles M01-M05 avec exemples** : [reference/mchk-anti-patterns.md](reference/mchk-anti-patterns.md)
+- **Regles MCHK01-MCHK07 avec exemples** : [reference/mchk-anti-patterns.md](reference/mchk-anti-patterns.md)
 - **Patterns observes dans le corpus (advisory, snapshot de fraicheur inconnue)** : [reference/corpus-patterns.md](reference/corpus-patterns.md) — taux de presence des 22 fonctions canoniques, distribution nb_fn par mchk, confirmation alignement template. **Croiser avec le filesystem X.13 avant decision.**
 

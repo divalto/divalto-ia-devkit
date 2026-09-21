@@ -29,7 +29,26 @@ WIDGET_TYPES = {
     "obj_texte", "champ", "champ_tableau", "tableau", "groupbox",
     "multi_choix", "multi_choix_tableau", "groupe_radio", "radio_bouton",
     "bouton_graphique", "arbre", "panel_wpf", "grille_wpf", "onglet_page",
+    # Ajoutes le 2026-08-30 (#260). Cette liste blanche en ignorait huit, tous
+    # presents dans le standard -- un masque qui en contient etait parse sans les voir.
+    # Nombres releves sur un corpus de 2438 masques (reference/mesures-corpus.json).
+    # TROIS d'entre eux etaient DOCUMENTES par ce skill sans etre reconnus par son propre
+    # parser : cadre, bitmap_constante, bitmap_variable.
+    "case_a_cocher",          # 6854 sous [page]
+    "cadre",                  # 2579 -- documente par composant-cadre.md
+    "bitmap_constante",       #  487 -- documente par composant-bitmap-constante.md
+    "rich_edit",              #  355 -- documente par composant-rich-edit.md
+    "bitmap_variable",        #  107 -- documente par composant-bitmap-variable.md
+    "graphe",                 #   93
+    "case_a_cocher_tableau",  #  875 sous [tableau]
+    "bitmap_variable_tab",    #   75 sous [tableau]
 }
+
+# NON ajoutes, volontairement -- voir reference/mesures-corpus.json :
+#   aide_page  : 2614 sous [page], mais c'est vraisemblablement une SECTION de page.
+#   boutons    : 34 sous [page] contre 23543 ailleurs -> sous-bloc, pas widget.
+#   la hierarchie grille_wpf (lignes_grille > ligne > cellules_ligne > cellule) demande
+# de comprendre le modele de grille : trace plutot que devine ici.
 
 # Widget types counted in the total (compatible with dhsf_info.py).
 # radio_bouton is excluded because it's a child of groupe_radio, not standalone.
@@ -37,7 +56,9 @@ COUNTED_WIDGET_TYPES = WIDGET_TYPES - {"radio_bouton"}
 
 # Container elements whose children are also widget elements
 CONTAINER_CHILDREN = {
-    "tableau": {"champ_tableau", "multi_choix_tableau"},
+    "tableau": {"champ_tableau", "multi_choix_tableau",
+                # 2026-08-30 : mesures 875 et 75 sur le corpus standard.
+                "case_a_cocher_tableau", "bitmap_variable_tab"},
     "groupe_radio": {"radio_bouton"},
 }
 
@@ -912,6 +933,14 @@ def compute_metrics(tree: dict) -> dict:
         "modules_count": len(diva.get("modules", [])),
         "toolbars_count": len(tree.get("ressources", {}).get("toolbars", [])),
         "menus_count": len(tree.get("ressources", {}).get("menus", [])),
+        # #173 : compter les ITEMS, pas seulement leurs conteneurs. Un bouton custom
+        # perdu dans un toolbar conserve laisse toolbars_count inchange -- c'est exactement
+        # ce qui s'est produit. Ce compteur est le seul qui le voie.
+        "ressources_items_count": sum(
+            len(obj.get("items", []))
+            for cle in ("toolbars", "menus")
+            for obj in tree.get("ressources", {}).get(cle, [])
+        ),
     }
 
 

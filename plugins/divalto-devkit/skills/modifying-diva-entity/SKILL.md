@@ -75,18 +75,11 @@ Selon l'operation :
 
 **Ajout** : calculer la taille du nouveau champ (`nature_to_size`), montrer quels champs seront decales, impact sur Filler/Taille.
 
+> **Avant de creer un champ dictionnaire (#322)** : si le besoin est **purement graphique/ecran** (case a cocher de filtre, flag de pilotage sans valeur metier a persister), **verifier d'abord** s'il existe un champ generique `1,0` deja libre sur une table de criteres standard (type G7 / XQ / G3XQ) reutilisable pour ce contexte -- l'utiliser directement dans le masque / le code plutot que creer un champ (gain de temps, **zero risque** de recalcul de positions). Ne creer un champ que si une **valeur metier doit etre persistee**.
+
 **Modification** : calculer le delta de taille (ancienne Nature vs nouvelle), montrer la cascade de repositionnement. Si le champ est dans un index, signaler le recalcul des positions cumulees.
 
 **Suppression** : avertir explicitement de la **perte de donnees irreversible** apres synchro SQL. Lister les index impactes.
-
-**Check SVN pre-modification** (optionnel, S-16) : si un acces SVN lecture seule est disponible, verifier l'activite recente du dictionnaire pour detecter un refactor en cours qui pourrait entrer en collision.
-
-```bash
-py .claude/skills/modifying-diva-entity/scripts/check_svn_recent.py \
-    --path "{DHSD_PATH}" --limit 5 --days 30
-```
-
-Si le JSON retourne `warning != null` (>= 2 commits recents), signaler au collaborateur et coordonner avec l'auteur avant de poursuivre. Si `svn_available=false`, continuer sans enrichissement (degradation gracieuse). Voir [reference/svn-policy.md](reference/svn-policy.md) pour la policy.
 
 > **CHECKPOINT CP1 -- Intention et impact**
 > Presenter :
@@ -97,6 +90,8 @@ Si le JSON retourne `warning != null` (>= 2 commits recents), signaler au collab
 > Attendre validation avant de modifier le dictionnaire.
 
 ### Etape 3 : Modification du dictionnaire
+
+> **Dictionnaire de SURCHARGE (`<dict>u.dhsd`)** : `modify_dhsd_table.py` ne gere que les tables standard `[TABLE]`. Sur une surcharge (table cible declaree en `[TABLEU]`), il **refuse et redirige**. Pour ajouter un champ **en surcharge** (ancrage container `U<Table>`, offset cumule, blocs `[TABLEU]`/`[BASEU]`), passer par **`managing-diva-dictionaries` / `generate_surcharge_field.py`** (regles DICT14/DICT15). Cf. [managing-diva-dictionaries/reference/dhsd-surcharge-pattern.md](../managing-diva-dictionaries/reference/dhsd-surcharge-pattern.md).
 
 **Ajout :**
 ```bash
@@ -136,7 +131,7 @@ py .claude/skills/modifying-diva-entity/scripts/modify_dhsd_table.py \
 > **CHECKPOINT CP2 -- Dictionnaire modifie**
 > Presenter :
 > - Comparaison avant/apres (positions, Taille, Filler)
-> - Resultat de validation D01-D11 (0 erreurs)
+> - Resultat de validation DICT01-DICT11 (0 erreurs)
 > - Fichier backup cree (.bak)
 > Attendre validation avant de modifier le masque.
 
@@ -161,7 +156,7 @@ py .claude/skills/manipulating-dhsf-screens/scripts/dhsf_modify.py \
 
 **Modification de Nature :** aucun changement de masque necessaire (le binding `donnee=` ne reference pas la Nature). Passer directement a l'etape 6.
 
-**Ajout FK (operation `add-fk`) :** delegue au skill `binding-zoom-to-field` (FK-05). Cette operation ne touche PAS au dictionnaire (etapes 3-4 sont skippees) ; seuls le Module Check (.dhsp) et le masque (.dhsf) sont modifies.
+**Ajout FK (operation `add-fk`) :** delegue au skill `binding-zoom-to-field` (FK-04). Cette operation ne touche PAS au dictionnaire (etapes 3-4 sont skippees) ; seuls le Module Check (.dhsp) et le masque (.dhsf) sont modifies.
 
 ```bash
 # Couche 1 : Module Check
@@ -186,16 +181,42 @@ Le champ cible doit **deja exister** dans le dictionnaire et dans le masque (sin
 
 ### Etape 6 : Compilation
 
+Compiler via **`compiling-diva-projects`** (il porte l'arbre de decision « ou compiler un
+source » et la syntaxe xwin7 a jour) -- ne PAS recopier de commande harness ici, elle derive.
+Les fichiers modifies ici appartiennent **deja** a un sous-projet : les compiler dans leur
+structure reelle, en cible.
+
 ```bash
-py .claude/skills/compiling-diva-projects/scripts/generate_harness.py \
-    --sources "{FICHIERS_MODIFIES}" --with-zdiva --with-communs
+py .claude/skills/compiling-diva-projects/scripts/compile_project.py \
+    --project "<.dhpt du workspace>" --sousproject "<sous-projet portant les fichiers modifies>" \
+    --profile "<profil du .dhpt>" --log-path "<chemin/log.txt>"
 ```
 
-Puis executer le script de compilation et parser le rapport.
+Le `.dhpt` et le sous-projet sont ceux identifies par `understanding-integrator-workspace` ;
+lister les profils avec `compile_project.py --project "<.dhpt>" --list-profiles`.
 
-### Etape 7 : Synchronisation SQL
+Retourne un JSON `{success, summary, errors, ...}` : le verdict est **deja applique** (ne pas
+le re-juger sur `Erreur(s)=0`).
 
-Suivre le workflow `syncing-diva-sql` pour mettre a jour la structure SQL.
+> **Apres une modification de structure dans un `.dhsd`** (taille, ajout/suppression de champ) :
+> `--action buildall` est **obligatoire** -- un `build` ne recompile pas le masque inchange, qui
+> garde l'ancienne taille en cache et fait echouer le runtime (cf. `compiling-diva-projects`).
+
+### Etape 7 : Synchronisation SQL -- **si la table est persistee**
+
+**Decider d'abord** : la table est-elle rattachee a une base ? C'est-a-dire son nom
+figure-t-il dans le `[TABLES]` d'un bloc `[BASE]` du dictionnaire ?
+
+| La table... | Etape 7 |
+|-------------|---------|
+| figure dans le `[TABLES]` d'une `[BASE]` -> **persistee** | **synchro SQL obligatoire**. Sans elle, la colonne existe au dictionnaire mais **pas** en base : erreur a la premiere ecriture, en runtime. |
+| ne figure dans aucun `[TABLES]` -> structure de **travail / affichage**, en memoire | **aucune synchro**. S'arreter apres la compilation. |
+
+Ce n'est pas un cas marginal : sur un dictionnaire specifique reel de 103 tables, **26
+(25 %) ne sont rattachees a aucune base**. Et **`NomOdbc` n'est pas le critere** -- il est
+facultatif et ne dit que le nom SQL a employer.
+
+Si persistee, suivre le workflow `syncing-diva-sql` pour mettre a jour la structure SQL.
 
 > **CHECKPOINT CP4 -- Compilation + synchro SQL**
 > Presenter : resultat compilation (0 erreurs ou liste), resultat synchro.

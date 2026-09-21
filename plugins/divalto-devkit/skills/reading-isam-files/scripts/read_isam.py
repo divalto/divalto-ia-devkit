@@ -35,14 +35,72 @@ import json
 import os
 import sys
 
-DLL_PATH = r"C:\divalto\sys\DhxIsam64.dll"
 ENCODING = "windows-1252"
 
+DLL_NAME = "DhxIsam64.dll"
+DEFAULT_SYS_DIR = r"C:\divalto\sys"
 
-def load_dll():
-    """Charge DhxIsam64.dll."""
+# --- Resolution du repertoire sys/ de Divalto (emplacement de DhxIsam64.dll) ---------
+# Vendoring (copie autonome) : ne PAS importer le resolveur d'un autre skill.
+# Ordre de resolution : --dll-path / --sys-dir (CLI) > env DIVALTO_SYS_DIR >
+# registre Divalto (HKLM\SOFTWARE\[WOW6432Node\]Divalto\divalto.ini\System -> CheminUl1,
+# puis \sys) > fallback C:\divalto\sys. Le chemin en dur sur C: cassait toute lecture
+# ISAM sur un poste ou Divalto est installe ailleurs (ex. K:\). Discipline registre P-C :
+# on lit UNIQUEMENT la valeur CheminUl1 sous les cles Divalto documentees.
+_DIVA_REG_SUBKEYS = [
+    r"SOFTWARE\WOW6432Node\Divalto\divalto.ini\System",
+    r"SOFTWARE\Divalto\divalto.ini\System",
+]
+
+
+def _sys_dir_from_registry():
+    """Renvoie <CheminUl1>\\sys via le registre Windows, ou None si indisponible."""
     try:
-        return ctypes.WinDLL(DLL_PATH)
+        import winreg
+    except ImportError:
+        return None
+    for subkey in _DIVA_REG_SUBKEYS:
+        try:
+            with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, subkey) as key:
+                root, _ = winreg.QueryValueEx(key, "CheminUl1")
+        except (FileNotFoundError, OSError):
+            continue
+        if root:
+            return os.path.join(root, "sys")
+    return None
+
+
+def resolve_sys_dir(explicit_sys_dir=None):
+    """Repertoire sys/ de Divalto. Override CLI (--sys-dir) honore STRICTEMENT ; sinon
+    auto-resolution best-effort : env DIVALTO_SYS_DIR > registre > fallback, en prenant
+    le 1er repertoire ou DhxIsam64.dll existe reellement."""
+    if explicit_sys_dir:
+        return explicit_sys_dir
+    dirs = []
+    env_dir = os.environ.get("DIVALTO_SYS_DIR")
+    if env_dir:
+        dirs.append(env_dir)
+    reg_dir = _sys_dir_from_registry()
+    if reg_dir:
+        dirs.append(reg_dir)
+    dirs.append(DEFAULT_SYS_DIR)
+    for d in dirs:
+        if os.path.isfile(os.path.join(d, DLL_NAME)):
+            return d
+    return dirs[-1]  # aucun existant : fallback (message d'erreur clair a l'appelant)
+
+
+def resolve_dll_path(explicit_dll=None, explicit_sys_dir=None):
+    """Chemin complet de DhxIsam64.dll. --dll-path est honore strictement."""
+    if explicit_dll:
+        return explicit_dll
+    return os.path.join(resolve_sys_dir(explicit_sys_dir), DLL_NAME)
+
+
+def load_dll(dll_path):
+    """Charge DhxIsam64.dll depuis le chemin resolu."""
+    try:
+        return ctypes.WinDLL(dll_path)
     except OSError:
         return None
 
@@ -119,7 +177,7 @@ def read_records(dll, file_path, structure, key, key_value=None, max_records=100
                      Autres valeurs officielles : b"F" (Forcee), b"R" (Reserve -- consomme la
                      table a ~1003 slots, a n'utiliser qu'en read-then-update).
 
-    Revision 2026-04-22 (R-014) : suppression des concepts `initial_mode` / `next_mode`.
+    Revision 2026-04-22 : suppression des concepts `initial_mode` / `next_mode`.
     Le parametre `mode` de la DLL est un code de reservation uniquement (pas de direction).
     Le positionnement est entierement porte par la cle dans TDF (Greater-or-Equal implicite).
     La direction inverse est encodee par 0xFF en fin de cle, pas par le mode.
@@ -219,7 +277,7 @@ def read_records(dll, file_path, structure, key, key_value=None, max_records=100
 
 
 def main():
-    # R-004 (2026-04-23) : force stdout en utf-8 pour que la sortie JSON soit lisible
+    # (2026-04-23) : force stdout en utf-8 pour que la sortie JSON soit lisible
     # par json.load(encoding="utf-8"). Sans ca, stdout est cp1252 sur Windows et les
     # accents du standard ERP (ex : "Creation", "Modele") deviennent des bytes 0xE9
     # non decodables en utf-8.
@@ -240,12 +298,17 @@ def main():
     parser.add_argument("--reverse", action="store_true", help="Parcours en sens inverse (positionne via 0xFF en fin de cle TDF)")
     parser.add_argument("--reservation", default="P", choices=["F", "P", "R"],
                         help="Code de reservation DLL (defaut P=Partage, pas de lock). F=Forcee, R=Reserve (consomme la table a ~1003 slots)")
+    parser.add_argument("--dll-path", default=None,
+                        help="Chemin explicite de DhxIsam64.dll (sinon : --sys-dir, env DIVALTO_SYS_DIR, registre Divalto, puis C:\\divalto\\sys)")
+    parser.add_argument("--sys-dir", default=None,
+                        help="Repertoire sys/ de Divalto contenant DhxIsam64.dll (override du registre)")
     args = parser.parse_args()
 
-    # Charger DLL
-    dll = load_dll()
+    # Charger DLL (chemin resolu : CLI > env > registre Divalto > fallback)
+    dll_path = resolve_dll_path(args.dll_path, args.sys_dir)
+    dll = load_dll(dll_path)
     if dll is None:
-        print(f"Erreur : DLL introuvable : {DLL_PATH}", file=sys.stderr)
+        print(f"Erreur : DLL introuvable : {dll_path}", file=sys.stderr)
         sys.exit(2)
 
     # Resoudre chemin structure

@@ -22,7 +22,7 @@ description: >
 
 ## Regle fondamentale
 
-**TOUS les fichiers texte Divalto sont en ISO-8859-1 + CRLF.** Les outils Edit et Write de Claude Code ecrivent en UTF-8 + LF — incompatible. Toujours utiliser les scripts de ce skill pour ecrire ou verifier.
+**TOUS les fichiers texte Divalto sont en ISO-8859-1 + CRLF.** Les outils Edit et Write de Claude Code ecrivent en UTF-8 + LF — incompatible. Toujours utiliser les scripts de ce skill pour ecrire ou verifier — **jamais l'outil Edit/Write, ni un script Python maison** (`bytes.replace`, patch ad-hoc) : le hook `protect_encoding` bloque Edit/Write, mais **pas** les scripts du skill (voie sanctionnée, non bloquée).
 
 Deux gestes distincts : **créer / remplacer en entier** → `write_file.py` ; **modifier en place** (préserver le reste) → `patch_file.py`. Pièges Windows fréquents (pipe PowerShell → BOM, Python mode texte → LF à la lecture, pas de CRLF final → **Erreur 135**) : voir [reference/safe-methods.md](reference/safe-methods.md).
 
@@ -39,6 +39,7 @@ Deux gestes distincts : **créer / remplacer en entier** → `write_file.py` ; *
    ```
    echo "contenu" | py .claude/skills/writing-diva-files/scripts/write_file.py --path "chemin/fichier.dhsp" --stdin
    ```
+   **Sous PowerShell**, préférer `--content-file` (contenu écrit dans un fichier UTF-8 temporaire) : évite le quoting PowerShell (guillemets absorbés), le décodage console (accents corrompus) **et** le saut de ligne final que `Get-Content -Raw` ajoute sur `--stdin`. `patch_file.py` accepte aussi `--content-file`. Un BOM de tête éventuel est strippé (`utf-8-sig`) sur `--content-file` comme sur `--stdin` ; un caractère non encodable en ISO-8859-1 (tiret cadratin, guillemet typographique…) fait **échouer proprement sans jamais tronquer la cible**.
 3. **Verifier immediatement** :
    ```
    py .claude/skills/writing-diva-files/scripts/verify_encoding.py --path "chemin/fichier.dhsp"
@@ -56,7 +57,7 @@ py .claude/skills/writing-diva-files/scripts/patch_file.py \
     --path "chemin/fichier.dhsp" --op insert --anchor "Procedure Init" --position after --content "  ; init"
 ```
 
-Opérations (`--op`) : `insert` (par `--anchor` ou `--line N` + `--position before|after`), `prepend`, `append`, `replace` (`--anchor` ou `--line-range A:B`), `delete`.
+Opérations (`--op`) : `insert` (par `--anchor` ou `--line N` + `--position before|after`), `prepend`, `append`, `replace` (`--anchor`, ou `--line N` / `--line-range A:B`), `delete` (idem). **En `replace`/`delete`, le ciblage par numéro (`--line`/`--line-range`) exige `--expect-content` / `--expect-content-file`** (le contenu actuel attendu aux lignes visées) : si le fichier a dérivé depuis la lecture (ma propre édition antérieure, ou le collaborateur dans xwin en parallèle), **refus, rien écrit** — garde-fou anti-numéro-périmé (#303). L'ancre reste la voie sûre par défaut (elle se vérifie par son texte). **Hors de cette portée** — `insert`, ou un ciblage par `--anchor` — l'option n'aurait aucun effet : `patch_file` la **refuse** explicitement plutôt que de l'ignorer en silence (une option acceptée mais inopérante fait croire à une protection inexistante). `insert` n'est volontairement pas gardé : son risque est la position, pas le contenu écrasé.
 
 Garde-fous : `--expect N` (l'ancre doit matcher exactement N lignes — défaut 1 — sinon **refus, rien écrit**), `--regex`, `--dry-run` (aperçu), `.bak` auto (caché sous Windows). CRLF final garanti + re-vérification automatique.
 
@@ -100,13 +101,33 @@ Sortie JSON : `{path, backup, original_encoding, original_line_endings, converte
 
 | Script | Role | Entree | Sortie JSON |
 |--------|------|--------|-------------|
-| `scripts/write_file.py` | Crée / réécrit un fichier en ISO-8859-1+CRLF (`.bak` auto + avertissement si écrasement) | `--path` + `--content` ou `--stdin` [+ `--no-backup`] | `{path, encoding, line_endings, bytes, backup, warning}` |
-| `scripts/patch_file.py` | **Modifie** un fichier existant (chirurgical : insert/prepend/append/replace/delete), `.bak` caché, refuse les fichiers structurés | `--path --op ...` [`--anchor`/`--line`/`--line-range` `--expect` `--dry-run`] | `{path, op, matched, lines_before, lines_after, changed, backup, verified}` |
-| `scripts/verify_encoding.py` | Verifie encodage et fins de ligne (dont BOM et CRLF final manquant) | `--path` | `{path, valid, encoding, line_endings, issues[]}` |
-| `scripts/convert_file.py` | Convertit vers ISO-8859-1+CRLF | `--path` [+ `--no-backup`] | `{path, backup, converted, verified}` |
-| `scripts/add_zoom_constant.py` | Ajoute une constante de zoom dans a5tczoom.dhsp | `--file` `--instance` `--num` `--comment` [+ `--dry-run`] | `{success, constant_name, constant_line, line_number, already_exists}` |
+| `scripts/write_file.py` | Crée / réécrit un fichier en ISO-8859-1+CRLF (`.bak` auto + avertissement si écrasement) | `--path` + `--content` / `--content-file` / `--stdin` [+ `--no-backup`] | `{path, encoding, line_endings, bytes, backup, warning}` |
+| `scripts/patch_file.py` | **Modifie** un fichier existant (chirurgical : insert/prepend/append/replace/delete), `.bak` caché, refuse les fichiers structurés | `--path --op ...` [`--anchor`/`--line`/`--line-range` `--content`/`--content-file`/`--stdin` `--expect` `--expect-content`(`-file`) `--dry-run`] | `{path, op, matched, lines_before, lines_after, changed, backup, verified}` |
+| `scripts/verify_encoding.py` | Verifie encodage et fins de ligne (dont BOM, CRLF final manquant et ligne physique > 251 caractères que XWin refuse d'ouvrir) | `--path` | `{path, valid, encoding, line_endings, issues[]}` |
+| `scripts/convert_file.py` | Convertit vers ISO-8859-1+CRLF (mojibake **franc**). Sur un mojibake **mêlé** à du Latin-1 valide : ne convertit pas, `verified:false` + `hint` (réparation chirurgicale requise) | `--path` [+ `--no-backup`] | `{path, backup, converted, verified, issues[], hint}` |
+| `scripts/add_zoom_constant.py` | Ajoute une constante de zoom dans a5tczoom.dhsp (`.bak` avant écriture, CRLF final garanti) | `--file` `--instance` `--num` `--comment` [+ `--dry-run`] | `{success, constant_name, constant_line, line_number, already_exists, backup}` |
 
 Tous les scripts : `py .claude/skills/writing-diva-files/scripts/<script>.py --help`
+
+**Tests** — les garde-fous de ce skill (anti-perte, anti-corruption) ont une suite
+exécutable, sans poste Divalto :
+
+```
+py .claude/skills/writing-diva-files/tests/run_all.py
+```
+
+À lancer après toute modification d'un script. Détail : [tests/README.md](tests/README.md).
+
+> **`verified` = `valid`.** Le champ `verified` de `write_file` / `patch_file` / `convert_file`
+> applique **les mêmes** contrôles que le `valid` de `verify_encoding.py` (ISO-8859-1, CRLF,
+> CRLF final, BOM, mojibake résiduel, ligne > 251). Il ne peut plus certifier un fichier que
+> le vérificateur du skill déclare corrompu — et le **code de sortie suit le verdict**.
+
+> **Le contenu à écrire est validé AVANT de toucher la cible.** Un caractère hors Latin-1 ou
+> une séquence de mojibake dans le contenu injecté ⇒ **refus, fichier intact** (jamais une
+> cible tronquée à 0 octet). Et si le `.bak` ne peut pas être créé, `write_file` et
+> `patch_file` **refusent d'écrire** plutôt que d'écraser sans filet — sauf `--no-backup`,
+> qui assume le risque explicitement.
 
 ---
 

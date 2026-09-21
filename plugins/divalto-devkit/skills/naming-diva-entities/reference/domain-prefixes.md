@@ -2,7 +2,7 @@
 
 Table exhaustive des prefixes utilises pour le nommage des fichiers et instances DIVA.
 
-Source : référentiel interne -- conventions de nommage (prefixes domaine complets) + référence des modules ERP.
+Préfixes de domaine ERP : le digest livré avec ce skill. La liste des modules vit dans `documenting-erp/reference/modules-erp-summary.md`.
 
 ---
 

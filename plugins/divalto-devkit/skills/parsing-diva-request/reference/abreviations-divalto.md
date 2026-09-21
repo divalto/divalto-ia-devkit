@@ -44,12 +44,12 @@ d'en-tête (`| Abréviation | ... |`) sont ignorés automatiquement.
 
 ## Historique
 
-- 2026-04-22 : création initiale (12 entrées) suite à RETEX UC-100 contremarque.
-  Source des entrées : analyse des tickets archivés `usecases/UC100-*` et
+- 2026-04-22 : création initiale (12 entrées) suite a un RETEX sur une analyse pre-action (contremarque).
+  Source des entrées : analyse de tickets d'analyse pre-action archivés et
   convention de nommage Divalto (préfixes de tables observés dans l'ERP standard).
 
 ## Évolution future (Jalon 3 F2)
 
 Le Jalon 3 du chantier F2 (catalogue métier branché) prévoit d'étoffer ce fichier
 à ≥ 20 entrées en collectant depuis `archive/` et par grep des noms de procédures
-contenant des abréviations récurrentes dans `C:\Developpements harmony\Standard\Version X.13\`.
+contenant des abréviations récurrentes dans `{CHEMIN_ERP_STANDARD}`.

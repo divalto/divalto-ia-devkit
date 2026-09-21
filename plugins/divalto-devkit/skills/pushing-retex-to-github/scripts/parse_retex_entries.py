@@ -56,9 +56,22 @@ HEADER_RE = re.compile(
 # separateur incorrect) et les signaler au lieu de les ignorer en silence.
 LOOSE_HEADER_RE = re.compile(r"^#{1,3}\s*(R-\d+)\b.*$", re.MULTILINE)
 
-# Bloc de commentaire HTML (ex : exemple de gabarit en tete de fichier) -- ignore au parsing
-# pour ne pas pousser une entree-exemple comme un vrai RETEX.
-HTML_COMMENT_RE = re.compile(r"<!--.*?-->", re.DOTALL)
+# Bloc de commentaire HTML STRUCTUREL (ex : le bloc "Exemple d'entree" livre avec le
+# template) -- ignore au parsing pour ne pas pousser une entree-exemple comme un vrai RETEX.
+#
+# Un commentaire n'est STRUCTUREL que si son ouvrant demarre une ligne. En milieu de ligne
+# c'est du texte d'auteur : une entree qui CITE `<!-- ... -->` doit garder sa citation
+# intacte (sans l'ancrage, la citation etait videe et la phrase amputee).
+#
+# Deux formes, retirees dans cet ordre :
+#   1. bloc FERME     : de l'ouvrant en debut de ligne jusqu'au premier `-->`
+#   2. bloc NON FERME : de l'ouvrant en debut de ligne jusqu'a la fin du fichier
+#
+# Sans la seconde, un ouvrant orphelin n'etait pas retire du tout : il atterrissait dans le
+# dernier champ parse, puis dans le corps de l'issue, ou -- etant un commentaire HTML jamais
+# referme -- il masquait au rendu tout ce qui suit (date, ID local, hash invisibles).
+HTML_COMMENT_BLOC_RE = re.compile(r"^[ \t]*<!--.*?-->[ \t]*\n?", re.DOTALL | re.MULTILINE)
+HTML_COMMENT_OUVERT_RE = re.compile(r"^[ \t]*<!--.*\Z", re.DOTALL | re.MULTILINE)
 
 # Champ : `- **Nom** : valeur` (multiligne possible jusqu'au prochain `- **` ou header)
 FIELD_NAMES = [
@@ -94,10 +107,17 @@ def parse_entry_body(body: str) -> dict:
     # On va chercher chaque champ par regex tolerante (accents optionnels)
     # Le champ se termine au prochain `- **` en debut de ligne, ou EOF.
     for fname in FIELD_NAMES:
-        # Tolerance accents : Categorie/Catégorie, Severite/Sévérité
+        # Tolerance accents sur le NOM du champ : Categorie/Catégorie, Severite/Sévérité,
+        # Resultat/Résultat. Sinon un en-tete accentue n'est pas reconnu -> valeur vide ->
+        # hash instable -> faux "update" et commentaires indesirables (cf. #338).
         pattern = re.compile(
             r"^-\s*\*\*\s*"
-            + re.escape(fname).replace("Categorie", r"Cat[eé]gorie").replace("Severite", r"S[eé]v[eé]rit[eé]")
+            + (
+                re.escape(fname)
+                .replace("Categorie", r"Cat[eé]gorie")
+                .replace("Severite", r"S[eé]v[eé]rit[eé]")
+                .replace("Resultat", r"R[eé]sultat")
+            )
             + r"\s*\*\*\s*:\s*(.*?)(?=^\s*-\s*\*\*|\Z)",
             re.MULTILINE | re.DOTALL,
         )
@@ -115,13 +135,16 @@ def parse_entry_body(body: str) -> dict:
 def parse_file(path: Path):
     """Parse le fichier. Retourne (entries, warnings).
 
-    - Les blocs `<!-- ... -->` sont retires avant parsing (evite de pousser un
-      exemple de gabarit comme un vrai RETEX).
+    - Les blocs de commentaire HTML **structurels** (ouvrant en debut de ligne) sont
+      retires avant parsing, qu'ils soient fermes ou non : evite de pousser un exemple
+      de gabarit comme un vrai RETEX, et evite qu'un ouvrant orphelin ne contamine le
+      dernier champ. Une citation `<!-- ... -->` en milieu de ligne est preservee.
     - Les en-tetes `R-NNN` mal formes (date manquante / separateur incorrect) sont
       remontes en warning au lieu d'etre ignores silencieusement.
     """
     raw_text = path.read_text(encoding="utf-8")
-    text = HTML_COMMENT_RE.sub("", raw_text)
+    text = HTML_COMMENT_BLOC_RE.sub("", raw_text)
+    text = HTML_COMMENT_OUVERT_RE.sub("", text)
 
     headers = list(HEADER_RE.finditer(text))
     warnings = []

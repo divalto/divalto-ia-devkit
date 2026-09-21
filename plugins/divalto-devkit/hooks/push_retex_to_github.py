@@ -9,6 +9,11 @@ Mode degrade silencieux : si `gh` est absent ou non authentifie, push_new_entrie
 log l'erreur dans .retex-push.log mais sort en code 0. Le hook lui-meme exit 0 dans
 tous les cas pour ne jamais bloquer l'utilisateur.
 
+Pre-check config (non bloquant) : si aucune `.retex-github.json` n'est resolvable
+(locale a cote du RETEX, ou globale ~/.claude/), un push serait un no-op silencieux
+-> le hook affiche un `systemMessage` a l'utilisateur ("push non configure") et ne
+lance pas de push inutile. Evite l'accumulation silencieuse d'entrees non poussees.
+
 Usage (automatique via hooks Claude Code) :
     Recoit le JSON du tool call sur stdin, exit 0 systematiquement.
 
@@ -54,6 +59,25 @@ def find_skill_script() -> Path | None:
     return None
 
 
+def config_present(retex_file_path: str) -> bool:
+    """Vrai si une config `.retex-github.json` est resolvable.
+
+    Miroir de la cascade de push_new_entries.py : config LOCALE (a cote du RETEX)
+    puis config GLOBALE (~/.claude/). Sert au pre-check non bloquant du hook (#184).
+    """
+    try:
+        if (Path(retex_file_path).parent / ".retex-github.json").exists():
+            return True
+    except OSError:
+        pass
+    try:
+        if (Path.home() / ".claude" / ".retex-github.json").exists():
+            return True
+    except OSError:
+        pass
+    return False
+
+
 def main() -> int:
     try:
         data = json.load(sys.stdin)
@@ -66,6 +90,21 @@ def main() -> int:
 
     normalized = file_path.replace("\\", "/").lower()
     if not normalized.endswith("retex-skills.md"):
+        sys.exit(0)
+
+    # #184 : pre-check config synchrone (instantane). Sans config, le push detache
+    # serait un no-op silencieux -> on previent l'utilisateur (systemMessage, non
+    # bloquant) et on ne lance pas de push inutile. json.dumps par defaut (ensure_ascii)
+    # -> accents echappes en \\uXXXX, aucun risque d'encodage sur la sortie du hook.
+    if not config_present(file_path):
+        msg = (
+            "RETEX écrit, mais le push GitHub n'est pas configuré "
+            "(.retex-github.json absent, en local comme dans ~/.claude/). "
+            "Aucune entrée n'est perdue : elles restent dans le fichier. "
+            "Pour activer l'envoi automatique, configurez le skill pushing-retex-to-github "
+            "(init_config.py)."
+        )
+        print(json.dumps({"systemMessage": msg}))
         sys.exit(0)
 
     script = find_skill_script()
