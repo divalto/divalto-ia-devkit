@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://divalto.com/schemas/dictionary/entity.schema.json",
+  "title": "Divalto Dictionary Entity (MetaTable row)",
+  "description": "Table-level metadata of a dictionary entity. The entity code is carried by the file name (e.g. `contacts.metatable.json`). Columns and indexes live as siblings under the `<code>/columns/` and `<code>/indexes/` folders.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "label": { "type": "string" },
+    "schemaTable": {
+      "type": "string",
+      "description": "Physical database table name (e.g. `sw_data_contacts`)."
+    },
+    "namespace": { "type": "string" },
+    "sqlModeCode": {
+      "type": "string",
+      "enum": ["CaseInsensitive", "CaseSensitive"]
+    },
+    "api": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "read": { "type": "boolean" },
+        "insert": { "type": "boolean" },
+        "update": { "type": "boolean" },
+        "delete": { "type": "boolean" }
+      }
+    },
+    "canNotify": { "type": "boolean" },
+    "triggerActive": { "type": "boolean" },
+    "storageType": {
+      "type": "string",
+      "enum": ["Unknown", "AllowVirtual"]
+    },
+    "translations": {
+      "type": "object",
+      "description": "Per-language label keyed by ISO code (`fr`, `en`, …).",
+      "additionalProperties": { "type": "string" }
+    }
+  }
+}

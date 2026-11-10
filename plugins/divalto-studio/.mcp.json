@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "divalto-studio": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/server/dist/mcp-server.js"]
+    }
+  }
+}

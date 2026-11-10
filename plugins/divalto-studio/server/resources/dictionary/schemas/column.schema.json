@@ -1,0 +1,88 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://divalto.com/schemas/dictionary/column.schema.json",
+  "title": "Divalto Dictionary Column (MetaColumn row)",
+  "description": "Column metadata for a dictionary entity. The column code is carried by the file name (e.g. `CodeContact.metacolumn.json`). Sparse on spé: only fields actually overridden by the spé overload are present.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemaColumn": {
+      "type": "string",
+      "description": "Physical column name. May differ from the textual code."
+    },
+    "type": { "$ref": "#/$defs/ColumnType" },
+    "length": { "type": ["integer", "null"], "minimum": 1 },
+    "server": { "$ref": "#/$defs/ServerProps" },
+    "mobile": { "$ref": "#/$defs/MobileProps" },
+    "dataTracking": { "type": "boolean" },
+    "defaultValue": { "type": ["string", "null"] },
+    "foreignEntity": {
+      "type": "string",
+      "description": "Code of the target entity — required server-side when `type === 'ForeignKey'`."
+    },
+    "searchCriteria": {
+      "type": "boolean",
+      "description": "Read-only server fact (`sw_sys_metacolumn.searchCriteria`). Never pushed."
+    },
+    "storageType": {
+      "type": "string",
+      "enum": ["Static", "Virtual"],
+      "description": "Set at creation only. Never updated."
+    },
+    "position": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Read-only display order from the server. Never pushed."
+    },
+    "translations": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    }
+  },
+  "$defs": {
+    "ColumnType": {
+      "type": "string",
+      "enum": [
+        "Unknown",
+        "Bool",
+        "Int",
+        "Double",
+        "Varchar",
+        "Text",
+        "Timestamp",
+        "Blob",
+        "BigInt",
+        "ForeignKey",
+        "PrimaryKey",
+        "MediumText",
+        "MediumBlob",
+        "DateTime",
+        "Char",
+        "NVarchar",
+        "SmallInt"
+      ]
+    },
+    "ServerProps": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "edit": { "type": "boolean" },
+        "visible": { "type": "boolean" },
+        "mask": { "type": ["string", "null"] }
+      }
+    },
+    "MobileProps": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "available": { "type": "boolean" },
+        "edit": { "type": "boolean" },
+        "visible": { "type": "boolean" },
+        "mandatory": { "type": "boolean" },
+        "length": { "type": ["integer", "null"], "minimum": 1 },
+        "mask": { "type": ["string", "null"] }
+      }
+    }
+  }
+}

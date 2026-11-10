@@ -1,0 +1,594 @@
+{
+  "elements": [
+    {
+      "type": "Texte",
+      "description": "Text label: bound field, static text, or both (renderer prefers <Texte> over <Champ> for display). Supports font, alignment, colors, number/date/text formatting, case conversion, and auto-size.",
+      "geometry": ["left", "top", "width", "height"],
+      "childTags": [
+        {
+          "tag": "Champ",
+          "meaning": "bound column/alias from the band's SELECT (or a lng:/msk:/%...% token)",
+          "valueKind": "field"
+        },
+        {
+          "tag": "Texte",
+          "meaning": "static text, may embed <lng>KEY</lng>, <msk>EXPR</msk>, or %current_page%/%total_pages% tokens",
+          "valueKind": "string"
+        },
+        {
+          "tag": "Font",
+          "meaning": "font attrs (fontFamily, size) with optional <Bold/> child",
+          "valueKind": "element",
+          "attrs": ["fontFamily", "size"],
+          "children": ["Bold"]
+        },
+        { "tag": "ContentAlignment", "meaning": "text alignment within the box", "valueKind": "enum" },
+        { "tag": "ForeColor", "meaning": "text color", "valueKind": "argbColor" },
+        { "tag": "BackColor", "meaning": "background color", "valueKind": "argbColor" },
+        {
+          "tag": "FormatNombre",
+          "meaning": "number format: .NET numeric format string, or @maskName reference",
+          "valueKind": "string"
+        },
+        {
+          "tag": "FormatDate",
+          "meaning": ".NET date format string (e.g. \"d\", \"dd/MM/yyyy\")",
+          "valueKind": "string"
+        },
+        {
+          "tag": "FormatText",
+          "meaning": "free-form text format/mask (designer-editable, no fixed enum)",
+          "valueKind": "string"
+        },
+        {
+          "tag": "FormatCasse",
+          "meaning": "case conversion applied to the resolved text (case-insensitive enum; \"None\" is valid but the designer omits the tag instead of writing it)",
+          "valueKind": "enum"
+        },
+        { "tag": "TailleAutoV", "meaning": "presence-only flag: auto height", "valueKind": "presenceFlag" },
+        { "tag": "TailleAutoH", "meaning": "presence-only flag: auto width", "valueKind": "presenceFlag" },
+        {
+          "tag": "NoWordWrap",
+          "meaning": "presence-only flag: disable word wrap (Studio persists the ABSENCE of wrap; wrap is the default)",
+          "valueKind": "presenceFlag"
+        },
+        {
+          "tag": "DirectionVerticalAsc",
+          "meaning": "presence-only flag: vertical text reading bottom-up (+90°)",
+          "valueKind": "presenceFlag"
+        },
+        {
+          "tag": "DirectionVerticalDesc",
+          "meaning": "presence-only flag: vertical text reading top-down (-90°)",
+          "valueKind": "presenceFlag"
+        },
+        { "tag": "Tabulation", "meaning": "tab spacing in points", "valueKind": "number" },
+        {
+          "tag": "Activation",
+          "meaning": "conditional-display expression (element printed only when it evaluates true)",
+          "valueKind": "string"
+        }
+      ],
+      "enums": {
+        "ContentAlignment": [
+          "TopLeft",
+          "TopCenter",
+          "TopRight",
+          "MiddleLeft",
+          "MiddleCenter",
+          "MiddleRight",
+          "BottomLeft",
+          "BottomCenter",
+          "BottomRight"
+        ],
+        "FormatCasse": ["None", "MAJUSCULE", "minuscule", "Phrase", "Mot"]
+      }
+    },
+    {
+      "type": "Image",
+      "description": "Picture bound to a field, a report resource, or a query. Fit mode via ZoomImage, alignment via ContentAlignment.",
+      "geometry": ["left", "top", "width", "height"],
+      "childTags": [
+        { "tag": "Champ", "meaning": "bound column/alias holding the image data", "valueKind": "field" },
+        { "tag": "RessourceCode", "meaning": "shared report-resource code holding the image", "valueKind": "string" },
+        { "tag": "Requete", "meaning": "query returning the image bytes", "valueKind": "string" },
+        { "tag": "ZoomImage", "meaning": "fit mode (Studio omits the tag at the Zoomée default)", "valueKind": "enum" },
+        {
+          "tag": "ContentAlignment",
+          "meaning": "image alignment within the box (used for Originale/Zoomée)",
+          "valueKind": "enum"
+        },
+        {
+          "tag": "ExporterImage",
+          "meaning": "presence-only flag: include the image when exporting",
+          "valueKind": "presenceFlag"
+        }
+      ],
+      "enums": {
+        "ZoomImage": ["Zoomée", "Etirée", "Originale"],
+        "ContentAlignment": [
+          "TopLeft",
+          "TopCenter",
+          "TopRight",
+          "MiddleLeft",
+          "MiddleCenter",
+          "MiddleRight",
+          "BottomLeft",
+          "BottomCenter",
+          "BottomRight"
+        ]
+      }
+    },
+    {
+      "type": "Forme",
+      "description": "Geometric shape (rectangle/ellipse/rounded rectangle) with border and fill.",
+      "geometry": ["left", "top", "width", "height"],
+      "childTags": [
+        { "tag": "Forme", "meaning": "shape kind", "valueKind": "enum" },
+        { "tag": "PenColor", "meaning": "border/outline color", "valueKind": "argbColor" },
+        { "tag": "PenWidth", "meaning": "border thickness in points", "valueKind": "number" },
+        {
+          "tag": "PenDashStyle",
+          "meaning": "border dash style (Studio omits the tag at the Solid default)",
+          "valueKind": "enum"
+        },
+        { "tag": "FillingColor", "meaning": "fill color", "valueKind": "argbColor" },
+        { "tag": "Roundness", "meaning": "corner radius in points (RoundedRectangle only)", "valueKind": "number" }
+      ],
+      "enums": {
+        "Forme": ["Rectangle", "Ellipse", "RoundedRectangle"],
+        "PenDashStyle": ["Solid", "Dash", "Dot", "DashDot", "DashDotDot"]
+      }
+    },
+    {
+      "type": "Ligne",
+      "description": "Straight or diagonal line. Orientation via <Type>; dash via PenDashStyle; end cap (arrow/round/…) via LineCap.",
+      "geometry": ["left", "top", "width", "height"],
+      "childTags": [
+        { "tag": "Type", "meaning": "line orientation", "valueKind": "enum" },
+        { "tag": "PenColor", "meaning": "line color", "valueKind": "argbColor" },
+        { "tag": "PenWidth", "meaning": "line thickness in points", "valueKind": "number" },
+        {
+          "tag": "PenDashStyle",
+          "meaning": "line dash style (Studio omits the tag at the Solid default)",
+          "valueKind": "enum"
+        },
+        { "tag": "LineCap", "meaning": "line end cap (Studio omits the tag at the Flat default)", "valueKind": "enum" },
+        { "tag": "BackColor", "meaning": "background color of the line's box", "valueKind": "argbColor" }
+      ],
+      "enums": {
+        "Type": ["Horizontale", "Verticale", "DiagonaleMontante", "DiagonaleDescendante", "Montante", "Descendante"],
+        "PenDashStyle": ["Solid", "Dash", "Dot", "DashDot", "DashDotDot"],
+        "LineCap": ["Flat", "Round", "Square", "Triangle", "ArrowAnchor"]
+      }
+    },
+    {
+      "type": "Check",
+      "description": "Bound boolean checkbox/mark, rendered as a shape with distinct true/false fill colors and marks.",
+      "geometry": ["left", "top", "width", "height"],
+      "childTags": [
+        { "tag": "Forme", "meaning": "shape kind", "valueKind": "enum" },
+        { "tag": "Champ", "meaning": "bound boolean column/alias", "valueKind": "field" },
+        {
+          "tag": "TexteTrue",
+          "meaning": "mark/text shown when the bound value is true (Studio default \"X\")",
+          "valueKind": "string"
+        },
+        { "tag": "TexteFalse", "meaning": "mark/text shown when the bound value is false", "valueKind": "string" },
+        {
+          "tag": "ValeurID",
+          "meaning": "fixed value the bound field is compared to for the true state",
+          "valueKind": "string"
+        },
+        {
+          "tag": "RessourceIDTrue",
+          "meaning": "report-resource id of the image shown when true",
+          "valueKind": "string"
+        },
+        {
+          "tag": "RessourceIDFalse",
+          "meaning": "report-resource id of the image shown when false",
+          "valueKind": "string"
+        },
+        { "tag": "ForeColor", "meaning": "text/mark color", "valueKind": "argbColor" },
+        { "tag": "PenColor", "meaning": "border color", "valueKind": "argbColor" },
+        { "tag": "PenWidth", "meaning": "border thickness in points", "valueKind": "number" },
+        { "tag": "PenDashStyle", "meaning": "border dash style (omitted at the Solid default)", "valueKind": "enum" },
+        { "tag": "FillingColorTrue", "meaning": "fill color when true", "valueKind": "argbColor" },
+        { "tag": "FillingColorFalse", "meaning": "fill color when false", "valueKind": "argbColor" },
+        { "tag": "Roundness", "meaning": "corner radius in points (RoundedRectangle only)", "valueKind": "number" }
+      ],
+      "enums": {
+        "Forme": ["Rectangle", "Ellipse", "RoundedRectangle"],
+        "PenDashStyle": ["Solid", "Dash", "Dot", "DashDot", "DashDotDot"]
+      }
+    },
+    {
+      "type": "BarCode",
+      "description": "Barcode/2D-code, bound to a field or a static value. QRCode and PDF417 have extra type-specific tags.",
+      "geometry": ["left", "top", "width", "height"],
+      "childTags": [
+        { "tag": "BarCodeType", "meaning": "barcode symbology", "valueKind": "enum" },
+        { "tag": "Champ", "meaning": "bound column/alias holding the encoded value", "valueKind": "field" },
+        { "tag": "Texte", "meaning": "static encoded value (used when Champ is absent)", "valueKind": "string" },
+        { "tag": "QRCodeVersion", "meaning": "QR Code version (QRCode only)", "valueKind": "string" },
+        { "tag": "QRCodeEncoding", "meaning": "QR Code encoding mode (QRCode only)", "valueKind": "string" },
+        {
+          "tag": "QRCodeErrorCorrect",
+          "meaning": "QR Code error correction level (QRCode only)",
+          "valueKind": "string"
+        },
+        { "tag": "PDF417Lines", "meaning": "PDF417 row count (PDF417 only)", "valueKind": "string" },
+        { "tag": "PDF417Columns", "meaning": "PDF417 column count (PDF417 only)", "valueKind": "string" },
+        { "tag": "PDF417ErrorCorrect", "meaning": "PDF417 error correction level (PDF417 only)", "valueKind": "string" }
+      ],
+      "enums": {
+        "BarCodeType": [
+          "EAN13",
+          "EAN8",
+          "EAN128",
+          "UPCA",
+          "UPCE",
+          "CODE39",
+          "CODE93",
+          "CODE128",
+          "ITF",
+          "CODABAR",
+          "PDF417",
+          "DataMatrix",
+          "QRCode"
+        ]
+      }
+    },
+    {
+      "type": "Chart",
+      "description": "Chart with partial designer parity (basic editing only). Series data (query + axis fields) lives nested two levels deep under <Series><Data>.",
+      "geometry": ["left", "top", "width", "height"],
+      "childTags": [
+        { "tag": "ChartType", "meaning": "chart kind (case-insensitive enum)", "valueKind": "enum" },
+        { "tag": "BackColor", "meaning": "chart background color", "valueKind": "argbColor" },
+        {
+          "tag": "Lines",
+          "meaning": "grid line style; horizontal/vertical are case-insensitive enums, color is the grid line's signed 32-bit ARGB int",
+          "valueKind": "element",
+          "attrs": ["horizontal", "vertical", "color"]
+        },
+        {
+          "tag": "Legend",
+          "meaning": "chart legend axis labels (free-form text, empty string hides the label)",
+          "valueKind": "element",
+          "attrs": ["xAxis", "yAxis"]
+        },
+        {
+          "tag": "Series",
+          "meaning": "container for the chart's data series",
+          "valueKind": "element",
+          "children": ["Data"]
+        },
+        {
+          "tag": "Series.Data",
+          "meaning": "nested <Series><Data> element carrying the series query and axis/scale field attrs",
+          "valueKind": "element",
+          "attrs": [
+            "query",
+            "querySQLite",
+            "xValueFieldName",
+            "yValueFieldName",
+            "colorFieldName",
+            "pointTextFieldName",
+            "yAxisMin",
+            "yAxisMax",
+            "yAxisStep"
+          ]
+        }
+      ],
+      "enums": {
+        "ChartType": ["Line", "Histogram"],
+        "Lines.horizontal": ["none", "dotted", "solid"],
+        "Lines.vertical": ["none", "dotted", "solid"]
+      }
+    }
+  ],
+  "bands": [
+    {
+      "type": "ReportHeader",
+      "description": "Printed once at the very start of the report.",
+      "attrs": [
+        "name",
+        "type",
+        "height",
+        "visible",
+        "requete",
+        "requeteSQLite",
+        "activation",
+        "activationSQLite",
+        "champGroup",
+        "visiblePage",
+        "repetitionHorizontaleFixedWidth"
+      ],
+      "flags": [
+        "nouvellePageAvant",
+        "nouvellePageApres",
+        "basDePage",
+        "hauteurFixe",
+        "pasSurLaPremierePage",
+        "pasSurLaDernierePage",
+        "fondSectionSuivante",
+        "repetitionHorizontale"
+      ]
+    },
+    {
+      "type": "ReportFooter",
+      "description": "Printed once at the very end of the report.",
+      "attrs": [
+        "name",
+        "type",
+        "height",
+        "visible",
+        "requete",
+        "requeteSQLite",
+        "activation",
+        "activationSQLite",
+        "champGroup",
+        "visiblePage",
+        "repetitionHorizontaleFixedWidth"
+      ],
+      "flags": [
+        "nouvellePageAvant",
+        "nouvellePageApres",
+        "basDePage",
+        "hauteurFixe",
+        "pasSurLaPremierePage",
+        "pasSurLaDernierePage",
+        "fondSectionSuivante",
+        "repetitionHorizontale"
+      ]
+    },
+    {
+      "type": "PageHeader",
+      "description": "Printed at the top of every page.",
+      "attrs": [
+        "name",
+        "type",
+        "height",
+        "visible",
+        "requete",
+        "requeteSQLite",
+        "activation",
+        "activationSQLite",
+        "champGroup",
+        "visiblePage",
+        "repetitionHorizontaleFixedWidth"
+      ],
+      "flags": [
+        "nouvellePageAvant",
+        "nouvellePageApres",
+        "basDePage",
+        "hauteurFixe",
+        "pasSurLaPremierePage",
+        "pasSurLaDernierePage",
+        "fondSectionSuivante",
+        "repetitionHorizontale"
+      ]
+    },
+    {
+      "type": "PageFooter",
+      "description": "Printed at the bottom of every page.",
+      "attrs": [
+        "name",
+        "type",
+        "height",
+        "visible",
+        "requete",
+        "requeteSQLite",
+        "activation",
+        "activationSQLite",
+        "champGroup",
+        "visiblePage",
+        "repetitionHorizontaleFixedWidth"
+      ],
+      "flags": [
+        "nouvellePageAvant",
+        "nouvellePageApres",
+        "basDePage",
+        "hauteurFixe",
+        "pasSurLaPremierePage",
+        "pasSurLaDernierePage",
+        "fondSectionSuivante",
+        "repetitionHorizontale"
+      ]
+    },
+    {
+      "type": "GroupHeader",
+      "description": "Printed once before each group of rows, keyed by champGroup.",
+      "attrs": [
+        "name",
+        "type",
+        "height",
+        "visible",
+        "requete",
+        "requeteSQLite",
+        "activation",
+        "activationSQLite",
+        "champGroup",
+        "visiblePage",
+        "repetitionHorizontaleFixedWidth"
+      ],
+      "flags": [
+        "nouvellePageAvant",
+        "nouvellePageApres",
+        "basDePage",
+        "hauteurFixe",
+        "pasSurLaPremierePage",
+        "pasSurLaDernierePage",
+        "fondSectionSuivante",
+        "repetitionHorizontale"
+      ]
+    },
+    {
+      "type": "GroupFooter",
+      "description": "Printed once after each group of rows, keyed by champGroup.",
+      "attrs": [
+        "name",
+        "type",
+        "height",
+        "visible",
+        "requete",
+        "requeteSQLite",
+        "activation",
+        "activationSQLite",
+        "champGroup",
+        "visiblePage",
+        "repetitionHorizontaleFixedWidth"
+      ],
+      "flags": [
+        "nouvellePageAvant",
+        "nouvellePageApres",
+        "basDePage",
+        "hauteurFixe",
+        "pasSurLaPremierePage",
+        "pasSurLaDernierePage",
+        "fondSectionSuivante",
+        "repetitionHorizontale"
+      ]
+    },
+    {
+      "type": "Detail",
+      "description": "Repeated once per row returned by the band's SELECT (requete).",
+      "attrs": [
+        "name",
+        "type",
+        "height",
+        "visible",
+        "requete",
+        "requeteSQLite",
+        "activation",
+        "activationSQLite",
+        "champGroup",
+        "visiblePage",
+        "repetitionHorizontaleFixedWidth"
+      ],
+      "flags": [
+        "nouvellePageAvant",
+        "nouvellePageApres",
+        "basDePage",
+        "hauteurFixe",
+        "pasSurLaPremierePage",
+        "pasSurLaDernierePage",
+        "fondSectionSuivante",
+        "repetitionHorizontale"
+      ]
+    },
+    {
+      "type": "TotalHeader",
+      "description": "Printed once before the report's aggregate/summary (totals) content, analogous to ReportHeader but for totals.",
+      "attrs": [
+        "name",
+        "type",
+        "height",
+        "visible",
+        "requete",
+        "requeteSQLite",
+        "activation",
+        "activationSQLite",
+        "champGroup",
+        "visiblePage",
+        "repetitionHorizontaleFixedWidth"
+      ],
+      "flags": [
+        "nouvellePageAvant",
+        "nouvellePageApres",
+        "basDePage",
+        "hauteurFixe",
+        "pasSurLaPremierePage",
+        "pasSurLaDernierePage",
+        "fondSectionSuivante",
+        "repetitionHorizontale"
+      ]
+    },
+    {
+      "type": "TotalFooter",
+      "description": "Printed once after the report's aggregate/summary (totals) content, analogous to ReportFooter but for totals.",
+      "attrs": [
+        "name",
+        "type",
+        "height",
+        "visible",
+        "requete",
+        "requeteSQLite",
+        "activation",
+        "activationSQLite",
+        "champGroup",
+        "visiblePage",
+        "repetitionHorizontaleFixedWidth"
+      ],
+      "flags": [
+        "nouvellePageAvant",
+        "nouvellePageApres",
+        "basDePage",
+        "hauteurFixe",
+        "pasSurLaPremierePage",
+        "pasSurLaDernierePage",
+        "fondSectionSuivante",
+        "repetitionHorizontale"
+      ]
+    }
+  ],
+  "tokens": [
+    { "token": "<lng>KEY</lng>", "meaning": "translation lookup by key, embedded inside a <Texte> static string" },
+    { "token": "<msk>EXPR</msk>", "meaning": "mask/expression token, embedded inside a <Texte> static string" },
+    { "token": "%current_page%", "meaning": "current page number at print time" },
+    { "token": "%total_pages%", "meaning": "total page count at print time" },
+    {
+      "token": "'lng:alias:column'",
+      "meaning": "SELECT column alias convention that binds a translation key to a data column (seen in band requete SQL, e.g. \"cic.translationKey AS 'lng:country:countryLabel'\")"
+    }
+  ],
+  "formats": {
+    "FormatDate": ["d", "D", "dd/MM/yyyy"],
+    "FormatNombre": ["@maskName (mask reference)", "0.00 (or other .NET numeric format string)"],
+    "FormatText": ["free-form text format/mask, no fixed enum"],
+    "Casse": ["None", "MAJUSCULE", "minuscule", "Phrase", "Mot"]
+  },
+  "etat": {
+    "attrs": [
+      "table",
+      "margeLeft",
+      "margeTop",
+      "margeRight",
+      "margeBottom",
+      "format",
+      "formatSpecifique",
+      "customLargeur",
+      "customHauteur",
+      "onePageReport",
+      "impressionViaPDF",
+      "imageDPI"
+    ],
+    "children": ["Grille", "GlobalFont", "DefautParams"],
+    "notes": [
+      "format is one of A4, A3, A5, B5, Legal, Letter, Custom; customLargeur/customHauteur (mm) only apply when format=\"Custom\".",
+      "Thermal-printer presets are stored as format=\"Custom\" + formatSpecifique=\"BLUEBAMBOO\"|\"IAPS\"|\"LINEAPRO\" with fixed customLargeur/customHauteur + margins (mm).",
+      "table binds the report to its main entity (drives the %row_ID% token).",
+      "Grille carries grilleLargeur/grilleHauteur (snap-to-grid size in points).",
+      "GlobalFont carries fontFamily/size and is the report-wide default font.",
+      "DefautParams is left lossless by the designer (round-tripped, not edited).",
+      "onePageReport and impressionViaPDF are presence/\"true\" boolean attrs, omitted when false.",
+      "imageDPI is a positive integer; omitted (not zero) when unset."
+    ]
+  },
+  "dbProps": {
+    "file": "{code}.json",
+    "fields": [
+      { "name": "label", "type": "string" },
+      { "name": "reportType", "type": "string | null" },
+      { "name": "isDefault", "type": "boolean" },
+      { "name": "exportValue", "type": "number | null" },
+      { "name": "externalDocCode", "type": "string | null" },
+      { "name": "stub", "type": "string | null" },
+      { "name": "archiveMode", "type": "number | null" },
+      { "name": "archiveVersionsNumber", "type": "number | null" },
+      { "name": "translationKey", "type": "string | null" }
+    ]
+  }
+}

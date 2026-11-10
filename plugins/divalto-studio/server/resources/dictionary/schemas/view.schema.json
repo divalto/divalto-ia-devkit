@@ -1,0 +1,32 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://divalto.com/schemas/dictionary/view.schema.json",
+  "title": "Divalto Dictionary View (MetaView row)",
+  "description": "View-level metadata. The view code is carried by the file name (e.g. `activeContacts.metaview.json`). Columns live as siblings under the `<code>/columns/` folder.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "label": { "type": "string" },
+    "name": {
+      "type": "string",
+      "description": "Physical view name in the database."
+    },
+    "description": { "type": ["string", "null"] },
+    "query": {
+      "type": "string",
+      "description": "SELECT query that defines the view."
+    },
+    "api": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "read": { "type": "boolean" }
+      }
+    },
+    "translations": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    }
+  }
+}

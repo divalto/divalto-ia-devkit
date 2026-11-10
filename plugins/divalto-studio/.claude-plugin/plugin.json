@@ -1,0 +1,8 @@
+{
+  "name": "divalto-studio",
+  "description": "Divalto Studio working rules and skills for Claude Code and GitHub Copilot",
+  "version": "0.1.0",
+  "author": { 
+	"name": "Divalto" 
+  }
+}

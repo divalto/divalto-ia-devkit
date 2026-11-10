@@ -1,0 +1,27 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Divalto translation language file",
+  "description": "Map of translation key to its value in one language. A bare string means the text is available on mobile (the default); the object form carries the mobile-exclusion flag.",
+  "type": "object",
+  "additionalProperties": {
+    "oneOf": [
+      {
+        "type": "string"
+      },
+      {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "mobileExcluded": {
+            "const": true,
+            "description": "This translated value is excluded from the mobile blobs. Absence means available on mobile."
+          }
+        },
+        "required": ["text", "mobileExcluded"],
+        "additionalProperties": false
+      }
+    ]
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"const root=(process.env.CLAUDE_PLUGIN_ROOT||'').split(String.fromCharCode(92)).join('/');require(root+'/hooks/session-start.js')\""
+          }
+        ]
+      }
+    ]
+  }
+}

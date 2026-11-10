@@ -1,0 +1,1201 @@
+{
+  "commonProperties": {
+    "description": "Proprietes de style (plus le titre d'un Card) dans la section 'common' du proposal. Chaque controle declare dans allowedCommonProperties lesquelles il supporte.",
+    "properties": [
+      { "name": "backgroundColor", "type": "string", "description": "Couleur de fond (#RRGGBB ou variable <var>)" },
+      {
+        "name": "fontName",
+        "type": "string",
+        "values": ["OpenSans-Regular", "OpenSans-SemiBold", "OpenSans-Bold"],
+        "description": "Police de caracteres"
+      },
+      { "name": "fontSize", "type": "number", "description": "Taille de la police" },
+      { "name": "textColor", "type": "string", "description": "Couleur du texte (#RRGGBB ou variable <var>)" },
+      {
+        "name": "textAlignment",
+        "type": "string",
+        "values": ["Left", "Center", "Right"],
+        "description": "Alignement du texte"
+      },
+      { "name": "cornerTopLeft", "type": "number", "description": "Rayon du coin haut-gauche" },
+      { "name": "cornerTopRight", "type": "number", "description": "Rayon du coin haut-droit" },
+      { "name": "cornerBottomLeft", "type": "number", "description": "Rayon du coin bas-gauche" },
+      { "name": "cornerBottomRight", "type": "number", "description": "Rayon du coin bas-droit" },
+      { "name": "borderThickness", "type": "number", "description": "Epaisseur de la bordure" },
+      { "name": "borderColor", "type": "string", "description": "Couleur de la bordure (hex RRGGBBAA)" },
+      {
+        "name": "semantic",
+        "type": "string",
+        "values": ["default", "base", "primary", "secondary", "tertiary", "error", "warning", "success", "info"],
+        "description": "Famille de couleurs du theme (theme semantique). Remplace textColor/backgroundColor/borderColor sur ce controle. 'default' vaut l'attribut absent : look neutre, fond transparent, texte on-app-surface, bordure fine — un Card sans famille rend surface-alt. 'base' est la famille neutre opaque, non re-seedable, identique a 'default' sur un Button. Les sept autres sont re-seedables par le theme du projet."
+      },
+      {
+        "name": "title",
+        "type": "string",
+        "description": "Card uniquement : titre affiche en haut a gauche de la Card (texte libre, balises [#...#] permises). languageKey l'emporte s'il est renseigne ; les deux vides = pas de titre. Un enfant se place a droite du titre avec proposal.parentSlot = \"header\" : voir les notes du Card."
+      },
+      {
+        "name": "fillMode",
+        "type": "string",
+        "values": ["solid", "outline", "subtle", "flat"],
+        "description": "Application de la famille semantic. Valeur encore lue depuis une configuration existante mais qui n'est plus a definir : le fill effectif d'un controle vient desormais du role de son propre theme semantic. Sur un Card, la bordure vient toujours du role outline de la famille : subtle et outline ne different que par le fond."
+      },
+      {
+        "name": "textRole",
+        "type": "string",
+        "values": ["caption", "body", "subtitle", "title", "display"],
+        "description": "Role typographique du texte (theme semantique). Remplace fontName/fontSize sur ce controle. Absent vaut 'body'."
+      },
+      {
+        "name": "bold",
+        "type": "boolean",
+        "description": "Met le texte en gras, dans la graisse que le role typographique definit."
+      }
+    ]
+  },
+  "events": [
+    { "name": "Click", "description": "Clic sur le controle" },
+    { "name": "ValueChanged", "description": "Changement de valeur (selection, saisie validee)" },
+    { "name": "DoubleClick", "description": "Double-clic sur le controle" },
+    { "name": "TextChanged", "description": "Texte modifie en temps reel (pendant la saisie)" },
+    { "name": "SelectedIndexChanged", "description": "Index de selection change (ComboBox)" },
+    { "name": "CheckStateChanged", "description": "Etat de la case a cocher change" }
+  ],
+  "activationOperators": ["IS NULL", "IS NOT NULL", "=", "!="],
+  "controls": [
+    {
+      "name": "Label",
+      "controlType": "Label",
+      "category": "Basic",
+      "description": "Affichage de texte statique ou dynamique",
+      "defaultSize": [100, 20],
+      "events": ["Click"],
+      "allowedCommonProperties": [
+        "displayMask",
+        "text",
+        "languageKey",
+        "fontName",
+        "fontSize",
+        "backgroundColor",
+        "textColor",
+        "textAlignment",
+        "cornerRadius",
+        "semantic",
+        "textRole",
+        "bold"
+      ],
+      "configProperties": [
+        { "name": "linkedControl", "type": "string", "description": "Code du controle lie (label descriptif)" },
+        { "name": "description", "type": "string", "description": "Description textuelle du label" },
+        { "name": "shadowOffsetX", "type": "number", "description": "Decalage X de l'ombre" },
+        { "name": "shadowOffsetY", "type": "number", "description": "Decalage Y de l'ombre" },
+        { "name": "blurRadius", "type": "number", "description": "Rayon de flou de l'ombre" },
+        { "name": "shadowColor", "type": "string", "description": "Couleur de l'ombre (hex RRGGBB)" }
+      ],
+      "usages": [
+        "Label de champ : fontSize 14, textAlignment Left, lie avec translationKey",
+        "Fond de zone : grande surface avec backgroundColor et cornerRadius",
+        "Compteur/total : fontSize 11-14, textAlignment Right, SemiBold",
+        "Titre de page : fontSize 20, textAlignment Center, SemiBold"
+      ]
+    },
+    {
+      "name": "TextBox",
+      "controlType": "TextBox",
+      "category": "Input",
+      "description": "Saisie de texte mono-ligne",
+      "defaultSize": [200, 30],
+      "events": ["ValueChanged", "TextChanged"],
+      "allowedCommonProperties": [
+        "displayMask",
+        "fontName",
+        "fontSize",
+        "textColor",
+        "textAlignment",
+        "backgroundColor",
+        "leftImageCode",
+        "rightImageCode",
+        "borderThickness",
+        "borderColor",
+        "cornerRadius"
+      ],
+      "configProperties": [
+        {
+          "name": "keyboardType",
+          "type": "string",
+          "values": ["Default", "Numeric", "Email", "Phone", "Url"],
+          "description": "Type de clavier mobile"
+        },
+        { "name": "inlineEdition", "type": "boolean", "description": "Edition directe sans popup" },
+        {
+          "name": "inlineEditionEventDebounce",
+          "type": "number",
+          "description": "Delai en ms avant declenchement de l'evenement en edition inline"
+        },
+        { "name": "password", "type": "boolean", "description": "Masquer la saisie" },
+        { "name": "clearButton", "type": "boolean", "description": "Bouton X pour effacer" },
+        { "name": "placeholder", "type": "string", "description": "Texte indicatif (grise)" },
+        { "name": "hideSkin", "type": "boolean", "description": "Masquer le contour du champ" },
+        {
+          "name": "displayMode",
+          "type": "string",
+          "description": "Mode d'affichage du RichTextBox, qui ecrit son Config sous la racine TextBox"
+        }
+      ]
+    },
+    {
+      "name": "TextBoxMultiline",
+      "controlType": "TextBoxMultiline",
+      "category": "Input",
+      "description": "Saisie de texte multi-lignes (commentaires, descriptions)",
+      "defaultSize": [200, 80],
+      "events": ["ValueChanged", "TextChanged"],
+      "allowedCommonProperties": [
+        "displayMask",
+        "fontName",
+        "fontSize",
+        "textColor",
+        "textAlignment",
+        "backgroundColor",
+        "leftImageCode",
+        "rightImageCode",
+        "borderThickness",
+        "borderColor",
+        "cornerRadius"
+      ],
+      "configProperties": [
+        { "name": "keyboardType", "type": "string", "values": ["Default"], "description": "Type de clavier mobile" },
+        { "name": "inlineEdition", "type": "boolean", "description": "Edition directe sans popup" },
+        {
+          "name": "inlineEditionEventDebounce",
+          "type": "number",
+          "description": "Delai en ms avant declenchement de l'evenement en edition inline"
+        },
+        { "name": "password", "type": "boolean", "description": "Masquer la saisie" },
+        { "name": "clearButton", "type": "boolean", "description": "Bouton X pour effacer" },
+        { "name": "placeholder", "type": "string", "description": "Texte indicatif (grise)" },
+        { "name": "hideSkin", "type": "boolean", "description": "Masquer le contour du champ" }
+      ]
+    },
+    {
+      "name": "ComboBox",
+      "controlType": "ComboBox",
+      "category": "Input",
+      "description": "Liste deroulante de selection",
+      "defaultSize": [200, 30],
+      "events": ["ValueChanged", "SelectedIndexChanged"],
+      "allowedCommonProperties": ["displayMask", "fontName", "fontSize", "textColor", "textAlignment"],
+      "configProperties": [
+        {
+          "name": "selectionMode",
+          "type": "string",
+          "values": ["PickerView", "TableView"],
+          "description": "Mode de presentation de la liste"
+        },
+        { "name": "emptyElement", "type": "boolean", "description": "Autoriser la selection vide" },
+        {
+          "name": "selectionQuery",
+          "type": "string",
+          "description": "Requete SQL ou script pour peupler la liste. SQL direct ou <script>Func_Name|arg1=VALUE</script>"
+        }
+      ],
+      "children": [
+        {
+          "element": "SelectionByListItem",
+          "property": "selectionItems",
+          "description": "Element statique de la liste",
+          "properties": [
+            { "name": "id", "type": "number", "description": "ID unique de l'element" },
+            { "name": "listItemCode", "type": "string", "description": "Code valeur" },
+            { "name": "listItemLabel", "type": "string", "description": "Libelle affiche" },
+            { "name": "languageKey", "type": "string", "description": "Cle de traduction" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "CheckBox",
+      "controlType": "CheckBox",
+      "category": "Input",
+      "description": "Case a cocher (booleen)",
+      "defaultSize": [200, 30],
+      "events": ["CheckStateChanged"],
+      "allowedCommonProperties": [
+        "displayMask",
+        "text",
+        "languageKey",
+        "fontName",
+        "fontSize",
+        "textColor",
+        "textAlignment"
+      ],
+      "configProperties": []
+    },
+    {
+      "name": "NumericUpDown",
+      "controlType": "NumericUpDown",
+      "category": "Input",
+      "description": "Saisie numerique avec boutons +/-",
+      "defaultSize": [120, 30],
+      "events": ["ValueChanged"],
+      "allowedCommonProperties": ["displayMask", "fontName", "fontSize", "textColor", "textAlignment"],
+      "configProperties": [
+        { "name": "minimum", "type": "string", "description": "Valeur minimum (supporte les scripts)" },
+        { "name": "maximum", "type": "string", "description": "Valeur maximum (supporte les scripts)" },
+        { "name": "increment", "type": "string", "description": "Pas d'increment (supporte les scripts)" },
+        { "name": "showDecimal", "type": "boolean", "description": "Afficher les decimales" },
+        { "name": "inlineEdition", "type": "boolean", "description": "Edition directe sans popup" },
+        {
+          "name": "inlineEditionEventDebounce",
+          "type": "number",
+          "description": "Delai en ms avant declenchement de l'evenement en edition inline"
+        },
+        { "name": "hideNumPad", "type": "boolean", "description": "Masquer le pave numerique a la saisie" },
+        { "name": "showIncrementButtons", "type": "boolean", "description": "Afficher les boutons + et -" }
+      ]
+    },
+    {
+      "name": "DateTimePicker",
+      "controlType": "DateTimePicker",
+      "category": "Input",
+      "description": "Selecteur de date et/ou heure",
+      "defaultSize": [200, 30],
+      "events": ["ValueChanged"],
+      "allowedCommonProperties": ["displayMask", "fontName", "fontSize", "textColor", "textAlignment"],
+      "configProperties": [
+        {
+          "name": "selectionMode",
+          "type": "string",
+          "values": ["Date", "DateAndTime", "Time"],
+          "description": "Mode de selection (date, date+heure, heure)"
+        }
+      ]
+    },
+    {
+      "name": "Button",
+      "controlType": "Button",
+      "category": "Action",
+      "description": "Bouton d'action",
+      "defaultSize": [120, 40],
+      "events": ["Click"],
+      "allowedCommonProperties": [
+        "text",
+        "languageKey",
+        "fontName",
+        "fontSize",
+        "textColor",
+        "textAlignment",
+        "backgroundColor",
+        "leftImageCode",
+        "rightImageCode",
+        "borderThickness",
+        "borderColor",
+        "cornerRadius",
+        "semantic"
+      ],
+      "configProperties": [
+        { "name": "imageCode", "type": "string", "description": "Code de l'icone a afficher" },
+        {
+          "name": "faIconCode",
+          "type": "string",
+          "description": "Code d'icone Font Awesome (fa-user, fas-gear). Prioritaire : s'il est renseigne, imageCode est ignore"
+        },
+        {
+          "name": "faIconColor",
+          "type": "string",
+          "values": ["default", "base", "primary", "secondary", "tertiary", "error", "warning", "success", "info"],
+          "description": "Famille de couleur semantique de l'icone. Vide = default"
+        },
+        { "name": "imageCodeHighlighted", "type": "string", "description": "Code de l'icone a l'etat appuye" },
+        {
+          "name": "faIconCodeHighlighted",
+          "type": "string",
+          "description": "Code d'icone Font Awesome a l'etat appuye. Prioritaire : s'il est renseigne, imageCodeHighlighted est ignore"
+        },
+        {
+          "name": "faIconColorHighlighted",
+          "type": "string",
+          "values": ["default", "base", "primary", "secondary", "tertiary", "error", "warning", "success", "info"],
+          "description": "Famille de couleur semantique de l'icone a l'etat appuye. Vide = default"
+        },
+        { "name": "imageCodeDisabled", "type": "string", "description": "Code de l'icone a l'etat desactive" },
+        {
+          "name": "faIconCodeDisabled",
+          "type": "string",
+          "description": "Code d'icone Font Awesome a l'etat desactive. Prioritaire : s'il est renseigne, imageCodeDisabled est ignore"
+        },
+        {
+          "name": "faIconColorDisabled",
+          "type": "string",
+          "values": ["default", "base", "primary", "secondary", "tertiary", "error", "warning", "success", "info"],
+          "description": "Famille de couleur semantique de l'icone a l'etat desactive. Vide = default"
+        },
+        { "name": "model", "type": "number", "description": "Modele de bouton (0 = defaut)" },
+        { "name": "shadowOffsetX", "type": "number", "description": "Decalage X de l'ombre" },
+        { "name": "shadowOffsetY", "type": "number", "description": "Decalage Y de l'ombre" },
+        { "name": "shadowColor", "type": "string", "description": "Couleur de l'ombre (hex RRGGBB)" },
+        { "name": "action", "type": "string", "description": "Action predefinie declenchee par le bouton" }
+      ],
+      "commonDefaults": {
+        "backgroundColor": "2F3B461A",
+        "cornerTopLeft": 4,
+        "cornerTopRight": 4,
+        "cornerBottomLeft": 4,
+        "cornerBottomRight": 4,
+        "borderThickness": 1,
+        "borderColor": "2F3B4626",
+        "textAlignment": "Left"
+      },
+      "icons": [
+        "IconHyperSearchList",
+        "IconButtonBarCode",
+        "IconButtonDelete",
+        "IconOrderBasket",
+        "IconOrderLineDuplicate",
+        "IconOrderDisplayModeCatalog",
+        "IconOrderDisplayModeProducts",
+        "IconOrderDisplayModeProductCarousel",
+        "IconInterventionNextTime",
+        "IconInterventionPauseTime",
+        "IconContextDetailGreyed",
+        "UniSearchAdvancedSearch"
+      ]
+    },
+    {
+      "name": "UniSearch",
+      "controlType": "UniSearchControl",
+      "category": "Data",
+      "description": "Liste de recherche avec colonnes configurables. Composant principal pour afficher des listes de donnees",
+      "defaultSize": [300, 200],
+      "events": ["ValueChanged", "DoubleClick"],
+      "allowedCommonProperties": [],
+      "configProperties": [
+        {
+          "name": "xmlmodel_ID",
+          "type": "number",
+          "description": "ID du modele XML de recherche (definit colonnes, requete, tri)"
+        },
+        { "name": "displayTitle", "type": "boolean", "description": "Afficher le titre de la liste" },
+        {
+          "name": "xmlModel",
+          "type": "string",
+          "description": "Code du modele UniSearch. C'est ce champ qu'un fichier porte ; xmlmodel_ID est la forme serveur"
+        }
+      ],
+      "notes": "Ancrage typique : Top, Bottom, Left, Right pour remplir l'espace. Utiliser les fonctions UNISEARCH_* et SHELL_UNISEARCH_* pour manipuler via SwingScript.",
+      "swingscriptGroup": "UniSearch"
+    },
+    {
+      "name": "ShellNode",
+      "controlType": "ShellNodeControl",
+      "category": "Navigation",
+      "description": "Noeud de navigation vers un autre ecran ou barre d'actions",
+      "defaultSize": [300, 100],
+      "events": [],
+      "allowedCommonProperties": [],
+      "configProperties": [
+        { "name": "codeAlias", "type": "string", "description": "Code de l'ecran cible" },
+        {
+          "name": "displayType",
+          "type": "string",
+          "values": ["ActionBar", "PagePanel"],
+          "description": "ActionBar = barre d'actions en bas, PagePanel = panneau embarque"
+        },
+        { "name": "codeFormnoeud", "type": "string", "description": "Code du noeud de navigation cible" }
+      ],
+      "notes": "ActionBar : anchor Bottom, Left, Right. PagePanel : position libre."
+    },
+    {
+      "name": "Tree",
+      "controlType": "Tree",
+      "category": "Data",
+      "description": "Arbre hierarchique avec noeuds et contenu",
+      "defaultSize": [300, 200],
+      "events": ["ValueChanged"],
+      "allowedCommonProperties": [],
+      "configProperties": [
+        { "name": "allowMultiSelection", "type": "boolean", "description": "Selection multiple" },
+        { "name": "isExpanded", "type": "boolean", "description": "Noeuds deployes par defaut" },
+        { "name": "nodeQuery", "type": "string", "description": "Requete SQL pour les noeuds (categories)" },
+        { "name": "nodePrimaryFieldName", "type": "string", "description": "Champ cle primaire des noeuds" },
+        { "name": "nodeParentFieldName", "type": "string", "description": "Champ parent des noeuds" },
+        {
+          "name": "nodeTranslatorDefinition",
+          "type": "string",
+          "description": "Template d'affichage des noeuds (avec <row>field</row>)"
+        },
+        { "name": "contentQuery", "type": "string", "description": "Requete SQL pour le contenu (elements)" },
+        { "name": "contentPrimaryFieldName", "type": "string", "description": "Champ cle primaire du contenu" },
+        { "name": "contentParentFieldName", "type": "string", "description": "Champ parent du contenu" },
+        { "name": "contentTranslatorDefinition", "type": "string", "description": "Template d'affichage du contenu" },
+        {
+          "name": "activateDragAndDrop",
+          "type": "boolean",
+          "description": "Autoriser le deplacement des noeuds par glisser-deposer"
+        },
+        { "name": "noAutoload", "type": "boolean", "description": "Ne pas charger l'arbre a l'ouverture de l'ecran" },
+        { "name": "mainSort", "type": "string", "description": "Tri principal : NONE, ASC ou DESC" },
+        { "name": "nodeIconFieldName", "type": "string", "description": "Colonne portant l'icone d'un noeud" },
+        {
+          "name": "contentIconFieldName",
+          "type": "string",
+          "description": "Colonne portant l'icone d'un element de contenu"
+        }
+      ],
+      "swingscriptGroup": "Arbre"
+    },
+    {
+      "name": "Maps",
+      "controlType": "Maps",
+      "category": "Data",
+      "description": "Carte geographique avec points d'interet (POI)",
+      "defaultSize": [300, 200],
+      "events": ["ValueChanged"],
+      "allowedCommonProperties": [],
+      "configProperties": [
+        {
+          "name": "mapType",
+          "type": "string",
+          "values": ["Standard", "Satellite", "Hybrid"],
+          "description": "Type de fond de carte"
+        },
+        { "name": "initialZoomLevel", "type": "number", "description": "Niveau de zoom initial" },
+        { "name": "initialLatitude", "type": "number", "description": "Latitude initiale" },
+        { "name": "initialLongitude", "type": "number", "description": "Longitude initiale" },
+        { "name": "initialAddress", "type": "string", "description": "Adresse initiale (alternative aux coordonnees)" },
+        { "name": "zoomEnabled", "type": "boolean", "description": "Autoriser le zoom" },
+        { "name": "scrollEnabled", "type": "boolean", "description": "Autoriser le scroll" },
+        {
+          "name": "userLocationImageCode",
+          "type": "string",
+          "description": "Code de l'image marquant la position de l'utilisateur"
+        },
+        {
+          "name": "routeOriginImageCode",
+          "type": "string",
+          "description": "Code de l'image du point de depart d'un itineraire"
+        },
+        {
+          "name": "routeDestinationImageCode",
+          "type": "string",
+          "description": "Code de l'image du point d'arrivee d'un itineraire"
+        },
+        {
+          "name": "trackingEnabled",
+          "type": "boolean",
+          "description": "Suivre la position de l'utilisateur en continu"
+        },
+        {
+          "name": "paramEx",
+          "type": "string",
+          "description": "Parametres additionnels passes au fournisseur de carte (cle=valeur)"
+        }
+      ],
+      "children": [
+        {
+          "element": "Serie",
+          "property": "series",
+          "description": "Serie de points d'interet (POI) sur la carte",
+          "properties": [
+            { "name": "code", "type": "string", "description": "Code unique de la serie" },
+            { "name": "codeIcon", "type": "string", "description": "Code de l'icone des marqueurs" },
+            {
+              "name": "query",
+              "type": "string",
+              "description": "Requete SQL (doit retourner poiKey, gpsLatitude, gpsLongitude, firstLine, secondLine)"
+            },
+            { "name": "fieldPrimaryKey", "type": "string", "description": "Nom de la colonne cle primaire" },
+            { "name": "fieldLatitude", "type": "string", "description": "Nom de la colonne latitude" },
+            { "name": "fieldLongitude", "type": "string", "description": "Nom de la colonne longitude" },
+            { "name": "title", "type": "string", "description": "Template titre du marqueur (avec <row>field</row>)" },
+            { "name": "subtitle", "type": "string", "description": "Template sous-titre du marqueur" },
+            { "name": "showOnLoad", "type": "boolean", "description": "Afficher au chargement" },
+            { "name": "label", "type": "string", "description": "Libelle de la serie" },
+            {
+              "name": "dynamicImageCode",
+              "type": "string",
+              "description": "Template resolvant l'icone du marqueur par ligne (avec <row>field</row>)"
+            },
+            { "name": "pinLabel", "type": "string", "description": "Texte porte par le marqueur lui-meme" },
+            {
+              "name": "disableClustering",
+              "type": "boolean",
+              "description": "Ne pas regrouper les marqueurs proches"
+            },
+            {
+              "name": "useFunction",
+              "type": "boolean",
+              "description": "Ouvrir une fonction au clic sur le marqueur, au lieu du comportement par defaut"
+            },
+            { "name": "codeConfFunction", "type": "string", "description": "Code de la fonction ouverte au clic" }
+          ],
+          "children": [
+            {
+              "element": "SerieTheme",
+              "property": "themes",
+              "description": "Theme conditionnel : change les images du marqueur quand la condition sur une colonne est vraie",
+              "properties": [
+                { "name": "serieThemeName", "type": "string", "description": "Nom du theme" },
+                { "name": "fieldName", "type": "string", "description": "Colonne testee" },
+                {
+                  "name": "operatorType",
+                  "type": "string",
+                  "description": "Operateur de comparaison (Equals, Greater, IsNull...)"
+                },
+                { "name": "activationValue", "type": "string", "description": "Valeur comparee. Reste une chaine" },
+                { "name": "leftImageCode", "type": "string", "description": "Code de l'image de gauche appliquee" },
+                {
+                  "name": "leftFaIconCode",
+                  "type": "string",
+                  "description": "Code d'icone Font Awesome de gauche. Prioritaire : s'il est renseigne, leftImageCode est ignore"
+                },
+                {
+                  "name": "leftFaIconColor",
+                  "type": "string",
+                  "values": [
+                    "default",
+                    "base",
+                    "primary",
+                    "secondary",
+                    "tertiary",
+                    "error",
+                    "warning",
+                    "success",
+                    "info"
+                  ],
+                  "description": "Famille de couleur semantique de l'icone de gauche. Vide = default"
+                },
+                { "name": "rightImageCode", "type": "string", "description": "Code de l'image de droite appliquee" },
+                {
+                  "name": "rightFaIconCode",
+                  "type": "string",
+                  "description": "Code d'icone Font Awesome de droite. Prioritaire : s'il est renseigne, rightImageCode est ignore"
+                },
+                {
+                  "name": "rightFaIconColor",
+                  "type": "string",
+                  "values": [
+                    "default",
+                    "base",
+                    "primary",
+                    "secondary",
+                    "tertiary",
+                    "error",
+                    "warning",
+                    "success",
+                    "info"
+                  ],
+                  "description": "Famille de couleur semantique de l'icone de droite. Vide = default"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "swingscriptGroup": "Maps"
+    },
+    {
+      "name": "Calendar",
+      "controlType": "Calendar",
+      "category": "Data",
+      "description": "Calendrier avec gestion d'evenements",
+      "defaultSize": [300, 200],
+      "events": ["ValueChanged"],
+      "allowedCommonProperties": [],
+      "configProperties": [
+        {
+          "name": "displayMode",
+          "type": "string",
+          "values": ["Day", "Week", "Month", "List"],
+          "description": "Mode d'affichage a l'ouverture"
+        },
+        {
+          "name": "showDisplayModeSelection",
+          "type": "boolean",
+          "description": "Laisser l'utilisateur changer de mode d'affichage"
+        },
+        { "name": "firstWorkingDay", "type": "string", "description": "Premier jour ouvre affiche (Monday..Sunday)" },
+        { "name": "lastWorkingDay", "type": "string", "description": "Dernier jour ouvre affiche (Monday..Sunday)" },
+        {
+          "name": "weekDaysNavigationInterval",
+          "type": "number",
+          "description": "Nombre de jours dont avance la navigation"
+        },
+        { "name": "dayStartTime", "type": "string", "description": "Heure de debut de journee, au format HH:mm" },
+        { "name": "dayEndTime", "type": "string", "description": "Heure de fin de journee, au format HH:mm" },
+        {
+          "name": "weekView",
+          "type": "number",
+          "description": "Presentation de la vue semaine : 0 = mosaique, 1 = colonnes"
+        }
+      ],
+      "children": [
+        {
+          "element": "TabItem",
+          "property": "tabs",
+          "description": "Onglet du calendrier : une requete d'evenements et son theme. L'ordre du tableau porte l'ordre des onglets",
+          "properties": [
+            { "name": "code", "type": "string", "description": "Code de l'onglet" },
+            { "name": "label", "type": "string", "description": "Libelle affiche sur l'onglet" },
+            { "name": "imageCode", "type": "string", "description": "Code de l'image de l'onglet" },
+            {
+              "name": "faIconCode",
+              "type": "string",
+              "description": "Code d'icone Font Awesome de l'onglet. Prioritaire : s'il est renseigne, imageCode est ignore"
+            },
+            {
+              "name": "faIconColor",
+              "type": "string",
+              "values": ["default", "base", "primary", "secondary", "tertiary", "error", "warning", "success", "info"],
+              "description": "Famille de couleur semantique de l'icone de l'onglet. Vide = default"
+            },
+            {
+              "name": "backgroundColor",
+              "type": "string",
+              "description": "Couleur de fond des evenements (hex RRGGBB)"
+            },
+            { "name": "textColor", "type": "string", "description": "Couleur du texte des evenements (hex RRGGBB)" },
+            {
+              "name": "borderColor",
+              "type": "string",
+              "description": "Couleur de bordure des evenements (hex RRGGBB)"
+            },
+            { "name": "query", "type": "string", "description": "Requete SQL retournant les evenements de l'onglet" },
+            { "name": "fieldPrimaryKey", "type": "string", "description": "Colonne cle primaire de l'evenement" },
+            { "name": "fieldStartDate", "type": "string", "description": "Colonne de la date de debut" },
+            { "name": "fieldEndDate", "type": "string", "description": "Colonne de la date de fin" },
+            {
+              "name": "fieldAllDayEvent",
+              "type": "string",
+              "description": "Colonne indiquant un evenement sur la journee entiere"
+            },
+            {
+              "name": "fieldPrivacyLevel",
+              "type": "string",
+              "description": "Colonne du niveau de confidentialite de l'evenement"
+            },
+            {
+              "name": "fieldEventColor",
+              "type": "string",
+              "description": "Colonne portant la couleur propre de l'evenement"
+            }
+          ],
+          "children": [
+            {
+              "element": "EventLine",
+              "property": "eventLines",
+              "description": "Ligne de texte affichee sur l'evenement. L'ordre du tableau porte l'ordre des lignes",
+              "properties": [
+                { "name": "lineNumber", "type": "number", "description": "Numero de la ligne sur l'evenement" },
+                {
+                  "name": "translatorDefinition",
+                  "type": "string",
+                  "description": "Template d'affichage de la ligne (avec <row>champ</row>)"
+                },
+                { "name": "fontName", "type": "string", "description": "Police de la ligne" },
+                { "name": "fontSize", "type": "number", "description": "Taille de la police de la ligne" }
+              ]
+            },
+            {
+              "element": "EventTheme",
+              "property": "eventThemes",
+              "description": "Theme conditionnel : recolore un evenement quand la condition sur une colonne est vraie",
+              "properties": [
+                { "name": "eventThemeName", "type": "string", "description": "Nom du theme" },
+                { "name": "fieldName", "type": "string", "description": "Colonne testee" },
+                {
+                  "name": "operatorType",
+                  "type": "string",
+                  "description": "Operateur de comparaison (Equals, Greater, IsNull...)"
+                },
+                { "name": "activationValue", "type": "string", "description": "Valeur comparee. Reste une chaine" },
+                {
+                  "name": "backgroundColor",
+                  "type": "string",
+                  "description": "Couleur de fond appliquee (hex RRGGBB)"
+                },
+                { "name": "borderColor", "type": "string", "description": "Couleur de bordure appliquee (hex RRGGBB)" },
+                { "name": "textColor", "type": "string", "description": "Couleur du texte appliquee (hex RRGGBB)" },
+                { "name": "imageCode", "type": "string", "description": "Code de l'image appliquee" },
+                {
+                  "name": "faIconCode",
+                  "type": "string",
+                  "description": "Code d'icone Font Awesome applique. Prioritaire : s'il est renseigne, imageCode est ignore"
+                },
+                {
+                  "name": "faIconColor",
+                  "type": "string",
+                  "values": [
+                    "default",
+                    "base",
+                    "primary",
+                    "secondary",
+                    "tertiary",
+                    "error",
+                    "warning",
+                    "success",
+                    "info"
+                  ],
+                  "description": "Famille de couleur semantique de l'icone applique. Vide = default"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "swingscriptGroup": "Calendrier"
+    },
+    {
+      "name": "Chart",
+      "controlType": "Chart",
+      "category": "Data",
+      "description": "Graphique de donnees avec series multiples. Supporte 7 types : Bar, Line, LineWithMarks, Point, PointXY, Pie, Mask",
+      "defaultSize": [300, 200],
+      "events": ["Click"],
+      "allowedCommonProperties": [
+        "displayMask",
+        "text",
+        "languageKey",
+        "fontName",
+        "fontSize",
+        "textColor",
+        "textAlignment",
+        "backgroundColor"
+      ],
+      "configProperties": [
+        { "name": "sqlQuery", "type": "string", "description": "Requete SQL pour les donnees du graphique" },
+        {
+          "name": "dataRepresentationType",
+          "type": "string",
+          "values": ["Columns", "Lines"],
+          "description": "Interpretation du jeu de resultats"
+        },
+        { "name": "autoLoad", "type": "boolean", "description": "Chargement automatique a l'affichage" },
+        { "name": "cumulateSeries", "type": "boolean", "description": "Empiler les series (cumul)" },
+        { "name": "hideLegend", "type": "boolean", "description": "Masquer la legende" }
+      ],
+      "children": [
+        {
+          "element": "Category",
+          "property": "category",
+          "description": "Definition de l'axe des categories",
+          "properties": [
+            { "name": "categoryName", "type": "string", "description": "Nom de la categorie" },
+            { "name": "columnNamePrimaryKey", "type": "string", "description": "Colonne cle primaire" },
+            { "name": "columnNameLabel", "type": "string", "description": "Colonne label" },
+            { "name": "lineIndexPrimaryKey", "type": "number", "description": "Index ligne cle (-1 = auto)" },
+            { "name": "lineIndexLabel", "type": "number", "description": "Index ligne label (-1 = auto)" },
+            { "name": "horizontalDisplay", "type": "boolean", "description": "Affichage horizontal des labels" }
+          ]
+        },
+        {
+          "element": "Serie",
+          "property": "series",
+          "description": "Serie de donnees du graphique",
+          "properties": [
+            { "name": "id", "type": "number", "description": "ID unique de la serie" },
+            { "name": "serieCode", "type": "string", "description": "Code unique de la serie" },
+            { "name": "serieName", "type": "string", "description": "Nom affiche dans la legende" },
+            {
+              "name": "chartType",
+              "type": "string",
+              "values": ["Bar", "Line", "LineWithMarks", "Point", "PointXY", "Pie", "Mask"],
+              "description": "Type de graphique"
+            },
+            {
+              "name": "drawingOrientationType",
+              "type": "string",
+              "values": ["Vertical", "Horizontal"],
+              "description": "Orientation du trace"
+            },
+            { "name": "visible", "type": "boolean", "description": "Serie visible par defaut" },
+            { "name": "columnNamePrimaryKey", "type": "string", "description": "Colonne cle primaire" },
+            { "name": "columnNameX", "type": "string", "description": "Colonne SQL pour l'axe X" },
+            { "name": "columnNameY", "type": "string", "description": "Colonne SQL pour l'axe Y" },
+            { "name": "descriptionX", "type": "string", "description": "Label de l'axe X" },
+            { "name": "descriptionY", "type": "string", "description": "Label de l'axe Y" },
+            { "name": "lineIndexX", "type": "number", "description": "Index ligne X (-1 = auto)" },
+            { "name": "lineIndexY", "type": "number", "description": "Index ligne Y (-1 = auto)" },
+            { "name": "serieColor", "type": "string", "description": "Couleur hex sans # (ex: 4FC3F7)" },
+            { "name": "dynamicColorColumnName", "type": "string", "description": "Colonne SQL pour couleur dynamique" },
+            { "name": "textColor", "type": "string", "description": "Couleur du texte hex" },
+            { "name": "fontName", "type": "string", "description": "Police des labels" },
+            { "name": "fontSize", "type": "number", "description": "Taille des labels" },
+            {
+              "name": "displayAlignmentType",
+              "type": "string",
+              "values": [
+                "TopLeft",
+                "TopCenter",
+                "TopRight",
+                "MiddleLeft",
+                "MiddleCenter",
+                "MiddleRight",
+                "BottomLeft",
+                "BottomCenter",
+                "BottomRight"
+              ],
+              "description": "Position des labels de valeur"
+            },
+            { "name": "displayValueOnClick", "type": "boolean", "description": "Afficher la valeur au clic" },
+            { "name": "showAverageX", "type": "boolean", "description": "Afficher la ligne de moyenne X" },
+            { "name": "showAverageY", "type": "boolean", "description": "Afficher la ligne de moyenne Y" },
+            { "name": "maskImageCode", "type": "string", "description": "Code image pour le type Mask" }
+          ]
+        }
+      ],
+      "swingscriptGroup": "Control.Chart"
+    },
+    {
+      "name": "PictureBox",
+      "controlType": "PictureBox",
+      "category": "Media",
+      "description": "Affichage d'image depuis la base de donnees. Charger via CONTROL_SETIMAGE() en SwingScript",
+      "defaultSize": [100, 100],
+      "events": ["Click"],
+      "allowedCommonProperties": [],
+      "configProperties": [
+        {
+          "name": "imageSizeMode",
+          "type": "string",
+          "values": ["Zoom", "Stretch", "Center"],
+          "description": "Mode de redimensionnement de l'image"
+        },
+        { "name": "imageCode", "type": "string", "description": "Code de l'image par defaut" },
+        {
+          "name": "faIconCode",
+          "type": "string",
+          "description": "Code d'icone Font Awesome par defaut. Prioritaire : s'il est renseigne, imageCode est ignore"
+        },
+        {
+          "name": "faIconColor",
+          "type": "string",
+          "values": ["default", "base", "primary", "secondary", "tertiary", "error", "warning", "success", "info"],
+          "description": "Famille de couleur semantique de l'icone par defaut. Vide = default"
+        },
+        { "name": "portraitImageCode", "type": "string", "description": "Code de l'image en mode portrait" },
+        {
+          "name": "portraitFaIconCode",
+          "type": "string",
+          "description": "Code d'icone Font Awesome en mode portrait. Prioritaire : s'il est renseigne, portraitImageCode est ignore"
+        },
+        {
+          "name": "portraitFaIconColor",
+          "type": "string",
+          "values": ["default", "base", "primary", "secondary", "tertiary", "error", "warning", "success", "info"],
+          "description": "Famille de couleur semantique de l'icone en mode portrait. Vide = default"
+        },
+        { "name": "landscapeImageCode", "type": "string", "description": "Code de l'image en mode paysage" },
+        {
+          "name": "landscapeFaIconCode",
+          "type": "string",
+          "description": "Code d'icone Font Awesome en mode paysage. Prioritaire : s'il est renseigne, landscapeImageCode est ignore"
+        },
+        {
+          "name": "landscapeFaIconColor",
+          "type": "string",
+          "values": ["default", "base", "primary", "secondary", "tertiary", "error", "warning", "success", "info"],
+          "description": "Famille de couleur semantique de l'icone en mode paysage. Vide = default"
+        },
+        { "name": "maximumZoomScale", "type": "number", "description": "Niveau de zoom maximum (0 = pas de zoom)" },
+        { "name": "imageCapInsetTop", "type": "number", "description": "Cap inset haut (9-patch)" },
+        { "name": "imageCapInsetLeft", "type": "number", "description": "Cap inset gauche" },
+        { "name": "imageCapInsetBottom", "type": "number", "description": "Cap inset bas" },
+        { "name": "imageCapInsetRight", "type": "number", "description": "Cap inset droit" }
+      ]
+    },
+    {
+      "name": "ImageEditor",
+      "controlType": "ImageEditor",
+      "category": "Media",
+      "description": "Capture et edition de photo (camera ou galerie)",
+      "defaultSize": [100, 100],
+      "events": ["ValueChanged"],
+      "allowedCommonProperties": [],
+      "configProperties": [
+        { "name": "penColor", "type": "string", "description": "Couleur du stylo (hex RRGGBB)" },
+        { "name": "penSize", "type": "number", "description": "Epaisseur du stylo" },
+        {
+          "name": "newImageBackGroundColor",
+          "type": "string",
+          "description": "Couleur de fond pour nouvelle image (hex RRGGBB)"
+        },
+        { "name": "imageSavedMaximumSize", "type": "number", "description": "Taille max de l'image sauvegardee (KB)" },
+        { "name": "imageQuality", "type": "number", "description": "Qualite de compression (0-100)" },
+        { "name": "cameraEnabled", "type": "boolean", "description": "Activer la prise de photo" },
+        { "name": "templateEnabled", "type": "boolean", "description": "Activer les templates" },
+        { "name": "colorPickerImage", "type": "string", "description": "Code image pour le selecteur de couleur" },
+        { "name": "toolboxOpened", "type": "boolean", "description": "Boite a outils ouverte par defaut" },
+        { "name": "maximumZoom", "type": "number", "description": "Niveau de zoom maximum" }
+      ]
+    },
+    {
+      "name": "Signature",
+      "controlType": "Signature",
+      "category": "Media",
+      "description": "Capture de signature tactile",
+      "defaultSize": [200, 100],
+      "events": ["ValueChanged"],
+      "allowedCommonProperties": [],
+      "configProperties": [
+        {
+          "name": "imageSavedMaximumSize",
+          "type": "number",
+          "description": "Taille max de l'image sauvegardee (pixels)"
+        },
+        { "name": "lineWidth", "type": "number", "description": "Epaisseur du trait de signature" }
+      ]
+    },
+    {
+      "name": "WebBrowser",
+      "controlType": "WebBrowser",
+      "category": "Media",
+      "description": "Contenu web embarque. Alimenter via WEBBROWSER_SETCONTENTFROMURL() ou WEBBROWSER_SETCONTENTFROMFILE()",
+      "defaultSize": [300, 200],
+      "events": [],
+      "allowedCommonProperties": [],
+      "configProperties": [],
+      "swingscriptGroup": "WebBrowser"
+    },
+    {
+      "name": "Timer",
+      "controlType": "Timer",
+      "category": "System",
+      "description": "Minuteur programmable. Non visible a l'ecran, declenche des evenements a intervalle",
+      "defaultSize": [50, 50],
+      "events": ["ValueChanged"],
+      "allowedCommonProperties": [],
+      "configProperties": [
+        { "name": "interval", "type": "number", "description": "Intervalle en secondes entre chaque declenchement" }
+      ],
+      "swingscriptGroup": "Timer"
+    },
+    {
+      "name": "DynamicFields",
+      "controlType": "DynamicFields",
+      "category": "Advanced",
+      "description": "Conteneur de champs dynamiques (generes au runtime)",
+      "defaultSize": [300, 100],
+      "events": [],
+      "allowedCommonProperties": [],
+      "configProperties": [
+        { "name": "tableName", "type": "string", "description": "Nom de la table source des champs dynamiques" },
+        { "name": "formFactor", "type": "string", "values": ["Mobile", "Tablet"], "description": "Format d'affichage" },
+        { "name": "columnNameWidth", "type": "string", "description": "Largeur de la colonne des noms de champs" }
+      ],
+      "swingscriptGroup": "DynamicFields"
+    },
+    {
+      "name": "RichTextBox",
+      "controlType": "RichTextBox",
+      "category": "Input",
+      "description": "Editeur de texte riche avec formatage",
+      "defaultSize": [200, 100],
+      "events": ["ValueChanged"],
+      "allowedCommonProperties": ["fontName", "textColor"],
+      "configProperties": [
+        {
+          "name": "displayMode",
+          "type": "string",
+          "values": ["Automatic", "RichText", "SimpleText"],
+          "description": "Mode d'affichage du texte"
+        }
+      ]
+    },
+    {
+      "name": "Separator",
+      "controlType": "Separator",
+      "category": "Layout",
+      "description": "Ligne de separation visuelle",
+      "defaultSize": [200, 2],
+      "events": [],
+      "allowedCommonProperties": [],
+      "configProperties": [
+        {
+          "name": "orientation",
+          "type": "string",
+          "values": ["Horizontal", "Vertical"],
+          "description": "Orientation de la ligne"
+        },
+        { "name": "color", "type": "string", "description": "Couleur de la ligne (hex RRGGBB)" }
+      ],
+      "notes": "Thickness et Length sont calcules a partir de Width/Height selon l'orientation (Horizontal: thickness=height, length=width)"
+    },
+    {
+      "name": "FlowLayout",
+      "controlType": "FlowLayout",
+      "category": "Layout",
+      "description": "Conteneur a disposition automatique (flow layout)",
+      "defaultSize": [300, 200],
+      "events": [],
+      "allowedCommonProperties": [],
+      "configProperties": [
+        {
+          "name": "orientation",
+          "type": "string",
+          "values": ["Horizontal", "Vertical"],
+          "description": "Direction du flux"
+        }
+      ]
+    },
+    {
+      "name": "Card",
+      "controlType": "Card",
+      "category": "Layout",
+      "description": "Conteneur : surface coloree qui regroupe d'autres controles dans la grille fluide 12 colonnes",
+      "defaultSize": [300, 200],
+      "events": [],
+      "allowedCommonProperties": ["semantic", "title", "languageKey"],
+      "configProperties": [],
+      "notes": "Uniquement sur un onglet fluide (screenMode = 'fluid'). Une Card ne declare PAS ses enfants : chaque enfant designe sa Card via proposal.parent = le `label` de la Card (insensible a la casse), jamais son code. proposal.modelVersion doit valoir 2 sur la Card et sur chaque enfant. Le `col` d'un enfant est relatif aux 12 colonnes de la Card. Pas d'imbrication de Cards. Titre : common.title (texte libre, balises [#...#] permises) ou common.languageKey (prioritaire) ; les deux vides = pas de titre. A l'execution, CONTROL_SET_VALUE(\"<label de la Card>\", \"...\") change le titre et CONTROL_GET_VALUE le renvoie ; une valeur vide masque le titre ; un titre pose par script survit au rafraichissement du formulaire. Un enfant passe dans l'en-tete de sa Card (a droite du titre, largeur naturelle) avec proposal.parentSlot = \"header\" (minuscules exactes) ; son responsive est alors ignore. Pas de slot footer : des boutons en bas = enfants ordinaires places en dernier. Voir le skill divalto-mobile-fluid-layout, reference cards.md."
+    },
+    {
+      "name": "Badge",
+      "controlType": "Badge",
+      "category": "Basic",
+      "description": "Badge de notification ou indicateur visuel",
+      "defaultSize": [30, 30],
+      "events": ["Click"],
+      "allowedCommonProperties": ["text", "languageKey", "fontName", "fontSize"],
+      "configProperties": []
+    },
+    {
+      "name": "Gauge",
+      "controlType": "Gauge",
+      "category": "Data",
+      "description": "Jauge graphique (indicateur de progression ou KPI)",
+      "defaultSize": [200, 200],
+      "events": [],
+      "allowedCommonProperties": ["backgroundColor"],
+      "configProperties": [
+        {
+          "name": "textIndicatorColor",
+          "type": "string",
+          "description": "Couleur du texte de l'indicateur (hex RRGGBB)"
+        },
+        { "name": "indicatorColor", "type": "string", "description": "Couleur de l'indicateur (hex RRGGBB)" },
+        { "name": "rangesQuery", "type": "string", "description": "Requete SQL des plages de valeurs colorees" },
+        {
+          "name": "valueFieldName",
+          "type": "string",
+          "description": "Colonne de rangesQuery portant la borne haute de la plage"
+        },
+        {
+          "name": "colorFieldName",
+          "type": "string",
+          "description": "Colonne de rangesQuery portant la couleur de la plage"
+        },
+        {
+          "name": "indicatorValue",
+          "type": "string",
+          "description": "Valeur affichee : un nombre ou un nom de colonne. Reste une chaine, jamais convertie en nombre"
+        },
+        { "name": "step", "type": "number", "description": "Pas de graduation" }
+      ]
+    },
+    {
+      "name": "MultiSelect",
+      "controlType": "MultiSelect",
+      "category": "Input",
+      "description": "Selection multiple dans une liste",
+      "defaultSize": [200, 30],
+      "events": ["ValueChanged"],
+      "allowedCommonProperties": ["text", "languageKey", "fontName", "fontSize", "textColor", "textAlignment"],
+      "configProperties": [
+        { "name": "displayMode", "type": "string", "values": ["Simple", "List"], "description": "Mode d'affichage" },
+        { "name": "sourceEntity", "type": "string", "description": "Table source des elements" },
+        { "name": "linkEntity", "type": "string", "description": "Table de liaison" },
+        { "name": "selectionQuery", "type": "string", "description": "Requete SQL pour peupler la liste" },
+        { "name": "selectedOnTop", "type": "boolean", "description": "Afficher les elements selectionnes en haut" },
+        { "name": "displayAllValues", "type": "boolean", "description": "Afficher toutes les valeurs" },
+        { "name": "onlineEdit", "type": "boolean", "description": "Edition en ligne" }
+      ]
+    },
+    {
+      "name": "VideoPlayer",
+      "controlType": "VideoPlayer",
+      "category": "Media",
+      "description": "Lecteur video embarque",
+      "defaultSize": [300, 200],
+      "events": [],
+      "allowedCommonProperties": [],
+      "configProperties": [],
+      "swingscriptGroup": "Multimedia"
+    },
+    {
+      "name": "BarcodeScanner",
+      "controlType": "BarcodeScanner",
+      "category": "Device",
+      "description": "Scanner de codes-barres integre",
+      "defaultSize": [300, 200],
+      "events": ["ValueChanged"],
+      "allowedCommonProperties": ["text", "languageKey", "fontName", "fontSize", "textAlignment"],
+      "configProperties": [
+        { "name": "imageCode", "type": "string", "description": "Code de l'icone du bouton" },
+        {
+          "name": "faIconCode",
+          "type": "string",
+          "description": "Code d'icone Font Awesome du bouton. Prioritaire : s'il est renseigne, imageCode est ignore"
+        },
+        {
+          "name": "faIconColor",
+          "type": "string",
+          "values": ["default", "base", "primary", "secondary", "tertiary", "error", "warning", "success", "info"],
+          "description": "Famille de couleur semantique de l'icone du bouton. Vide = default"
+        },
+        { "name": "imageCodeHighlighted", "type": "string", "description": "Code de l'icone a l'etat appuye" },
+        { "name": "imageCodeDisabled", "type": "string", "description": "Code de l'icone a l'etat desactive" },
+        { "name": "model", "type": "number", "description": "Modele de bouton" },
+        { "name": "showLastScanResult", "type": "boolean", "description": "Afficher le dernier resultat de scan" },
+        { "name": "allowManualInput", "type": "boolean", "description": "Autoriser la saisie manuelle du code" }
+      ],
+      "swingscriptGroup": "BARCODE"
+    }
+  ],
+  "positioning": {
+    "iphone": {
+      "screenSize": [320, 600],
+      "patterns": [
+        { "control": "Label de champ", "left": 8, "width": 304, "height": 32, "anchor": "Top, Left, Right" },
+        { "control": "Champ de saisie", "left": 8, "width": 304, "height": 32, "anchor": "Top, Left, Right" },
+        { "control": "UniSearch (plein)", "left": 0, "width": 320, "anchor": "Top, Bottom, Left, Right" },
+        {
+          "control": "ShellNode (bas)",
+          "left": 0,
+          "top": 500,
+          "width": 320,
+          "height": 100,
+          "anchor": "Bottom, Left, Right"
+        },
+        { "control": "Bouton action", "left": 8, "width": 40, "height": 40, "anchor": "Top, Left" }
+      ],
+      "verticalSpacing": 48
+    },
+    "tablet": {
+      "screenSize": [1024, 768],
+      "patterns": [
+        { "control": "Label de champ", "left": 16, "width": 150, "height": 32, "anchor": "Top, Left" },
+        { "control": "Champ de saisie", "left": 168, "width": 208, "height": 32, "anchor": "Top, Left, Right" },
+        { "control": "Zone de fond", "left": 8, "top": 8, "width": 336, "height": 392, "anchor": "Top, Left" },
+        {
+          "control": "UniSearch (plein)",
+          "left": 0,
+          "top": 112,
+          "width": 1024,
+          "height": 488,
+          "anchor": "Top, Bottom, Left, Right"
+        },
+        {
+          "control": "ShellNode (bas)",
+          "left": 0,
+          "top": 668,
+          "width": 1024,
+          "height": 100,
+          "anchor": "Bottom, Left, Right"
+        },
+        { "control": "Bouton toolbar", "width": 40, "height": 40, "top": 12, "anchor": "Top, Right" }
+      ],
+      "notes": "Layout en colonnes : 2 ou 3 zones de fond (Label avec backgroundColor) cote a cote"
+    }
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://divalto.com/schemas/dictionary/index.schema.json",
+  "title": "Divalto Dictionary Index (MetaIndex row)",
+  "description": "Index metadata for a dictionary entity. The index name is carried by the file name. `columns` references column codes (file names under the entity's `columns/` folder).",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "target": {
+      "type": "string",
+      "enum": ["Disabled", "Server", "Mobile", "Both"]
+    },
+    "columns": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          { "type": "string" },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "name": { "type": "string" },
+              "subPart": { "type": "integer", "minimum": 0 }
+            },
+            "required": ["name"]
+          }
+        ]
+      }
+    },
+    "description": { "type": ["string", "null"] }
+  }
+}

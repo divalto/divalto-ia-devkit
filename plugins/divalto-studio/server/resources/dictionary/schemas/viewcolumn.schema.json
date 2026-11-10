@@ -1,0 +1,36 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://divalto.com/schemas/dictionary/viewcolumn.schema.json",
+  "title": "Divalto Dictionary View Column (MetaViewColumn row)",
+  "description": "Column metadata for a dictionary view. The column code is carried by the file name (e.g. `Email.metaviewcolumn.json`).",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "columnName": { "type": "string" },
+    "type": {
+      "type": "string",
+      "enum": [
+        "Unknown",
+        "Bool",
+        "Int",
+        "Double",
+        "Varchar",
+        "Text",
+        "Timestamp",
+        "Blob",
+        "BigInt",
+        "ForeignKey",
+        "PrimaryKey",
+        "MediumText",
+        "MediumBlob",
+        "DateTime",
+        "Char",
+        "NVarchar",
+        "SmallInt"
+      ]
+    },
+    "visible": { "type": "boolean" },
+    "filterable": { "type": "boolean" }
+  }
+}
