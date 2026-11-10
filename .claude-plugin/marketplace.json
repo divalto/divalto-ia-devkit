@@ -7,6 +7,11 @@
       "name": "divalto-devkit",
       "source": "./plugins/divalto-devkit",
       "description": "Mandatory technical foundation for Divalto Harmony. Diva coding integrators."
+    },
+    {
+      "name": "divalto-studio",
+      "source": "./plugins/divalto-studio",
+      "description": "Divalto Studio working rules and skills for Claude Code and GitHub Copilot"
     }
   ]
 }
