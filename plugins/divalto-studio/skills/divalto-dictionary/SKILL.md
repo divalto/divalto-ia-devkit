@@ -39,7 +39,7 @@ Pour ajouter un champ ET l'afficher dans une page CRM ET le calculer, utiliser l
 > **MUST — ne modifier QUE les fichiers du périmètre d'édition actif.** Le workspace marque comme lecture seule (`files.readonlyInclude`) les fichiers de l'autre périmètre. Ce verrou est **logique** (sync VS Code + serveur), pas un droit POSIX : un `Write` qui « ne casse pas » n'est **pas** une preuve d'autorisation. Cf. le contexte permanent.
 >
 > - Périmètre spé actif (cas standard intégrateur) → écrire **uniquement** dans le dossier de la couche **active** (`Dictionary/<layerActif>/...`). Les autres couches (dont le standard) se lisent, **ne se modifient pas**.
-> - Périmètre std actif (devs framework, `divalto.enableStandardMode = true` + capability `CanModifyStandard`) → la couche active est le standard ; écrire **uniquement** dans son dossier. Les couches spé se lisent, **ne se modifient pas**.
+> - Périmètre std actif (devs R&D, `divalto.enableStandardMode = true` + capability `CanModifyStandard`) → la couche active est le standard ; écrire **uniquement** dans son dossier. Les couches spé se lisent, **ne se modifient pas**.
 > - ❌ Contourner le verrou via Bash / `fs.writeFile` direct sur un chemin read-only — l'écriture peut passer sur disque mais ne sera **pas** synchronisée et corrompt l'état local.
 >
 > Si la tâche semble exiger d'écrire dans l'autre périmètre → **arrêter et demander**. Pour une surcharge depuis le std, proposer le même chemin relatif côté spé (cf. [`references/overrides.md`](./references/overrides.md)).

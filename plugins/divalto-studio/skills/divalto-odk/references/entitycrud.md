@@ -60,16 +60,16 @@ Propriétés racine vérifiées via `get_schema_properties(schema="schema")`. Aj
 
 `EntityConfigName` relie l'EntityList à la fiche (EntityZoom) ; `Layouts` active l'EntityCrud et **doit** pointer des `.layout.json` réellement produits (§3).
 
-**Optionnel — router la liste via ODK (`OdkEntityName`).** `SchemaConfig.OdkEntityName` (nom de l'entité ODK interrogée) fait passer la **liste** de l'entité par BusinessHub/ODK au lieu du chemin SQL direct actuel ; c'est ce qui active ensuite BusinessName / query builder / colonnes calculées côté C# sur cette liste. Complémentaire à `EntityConfigName`, pas redondant : `EntityConfigName` relie liste ↔ fiche (agrégation EntityZoom), `OdkEntityName` route la requête de la liste elle-même — les deux coexistent. Ne l'ajouter que sur demande explicite, jamais par défaut sur un EntityCrud créé.
+**Optionnel — router la liste via ODK (`IsOdkEntity`).** `"IsOdkEntity": true` sur le schéma fait passer la **liste** de l'entité par BusinessHub/ODK au lieu du chemin SQL direct ; c'est ce qui active ensuite BusinessName / query builder / colonnes calculées côté C# sur cette liste. Aucun nom à saisir : l'entité ODK interrogée est le nom métier lu dans le dictionnaire depuis `TableName` (à défaut, le nom de l'entité) — une table absente du dictionnaire fait échouer la liste. Complémentaire à `EntityConfigName`, pas redondant : `EntityConfigName` relie liste ↔ fiche (agrégation EntityZoom), `IsOdkEntity` route la requête de la liste elle-même — les deux coexistent. Ne l'ajouter que sur demande explicite, jamais par défaut sur un EntityCrud créé.
 
 ```json
 {
-  "EntityConfigName": "customerAddress",
-  "OdkEntityName": "CustomerAddress"
+  "EntityConfigName": "customeraddress",
+  "IsOdkEntity": true
 }
 ```
 
-La valeur est le nom du modèle ODK exposé côté BusinessHub (ex. pilote `CustomeraddressModel` → `"CustomerAddress"`, cf. `customeraddress.schema.json` dans FW.Runtime), pas nécessairement identique casse pour casse au nom de la classe C#. Une colonne calculée reste une **colonne normale** dans `Columns` (ex. `"FullAddress": {}` sur ce même pilote, sans flag) : c'est une propriété C# du modèle, exposée comme n'importe quel champ — rien de spécifique à déclarer côté schéma. Propriété encore taguée « PoC » côté Framework Web (PR #16544) : susceptible d'évoluer.
+Une colonne calculée reste une **colonne normale** dans `Columns` (ex. `"FullAddress": {}` sur le pilote `customeraddress.schema.json` de FW.Runtime, sans flag) : c'est une propriété C# du modèle, exposée comme n'importe quel champ — rien de spécifique à déclarer côté schéma.
 
 **Schéma mutualisé — `IdField`.** Si le schéma existe déjà (EntityList présente), il est **partagé** entre la liste et la fiche. `IdField` doit pointer la PK `<TABLE>_ID` ; si l'existant pointe autre chose, **ne pas le corriger en silence** — le changer impacte aussi la liste (liens de ligne, routage `/entity/<E>/<id>`, sélection). ❌ patcher `IdField` d'un schéma partagé sans prévenir. ✅ signaler l'écart à l'utilisateur et confirmer avant de modifier.
 

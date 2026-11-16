@@ -12,12 +12,18 @@ Read this before writing any file.
 **You MUST NOT decide from filesystem permissions whether you may edit a file.**
 A file being writable by the OS — or living under the user's home directory —
 does not mean you are allowed to change it. The workspace marks files you may not
-edit as read-only (`files.readonlyInclude`). In Divalto, the standard layer is
-read-only while the active edit perimeter is the project (`spe`).
+edit as read-only (`files.readonlyInclude`). Which layer is locked depends on the
+active edit perimeter — never assume it, read `files.readonlyInclude`:
+
+- project perimeter (`spe`, the default): the standard layer is read-only;
+- standard perimeter (`std`): the project layer is read-only, and you edit the
+  standard files directly.
+
+Then:
 
 - ❌ `Write` / shell redirection into a read-only file because the OS allows it.
-- ✅ Propose the change as a project override at the same relative path in the
-  active perimeter, or stop and ask.
+- ✅ In `spe`, propose the change as a project override at the same relative path;
+  otherwise stop and ask.
 
 The lock is logical — editor plus server sync — not OS permissions. A shell write
 can succeed on disk and still be illegitimate: it will not sync. "The write did
@@ -28,7 +34,10 @@ not error" is not proof it was allowed.
 Enriching or customizing a standard entity (Contact, Customer…) with data absent
 from the standard is done through a project override: an override of the page
 (form and list) plus a `.scriptlibrary.ts` for the computation, written at the
-same relative path in the active perimeter.
+same relative path in the active perimeter. A project override (a project file
+over a standard one) exists only in the project perimeter (`spe`): in the
+standard perimeter (`std`), `specialize_file` refuses — edit the standard file
+itself.
 
 **You MUST create every override file with the `specialize_file` MCP tool.** Call
 `specialize_file({ path })` with the absolute path of the standard file, then edit

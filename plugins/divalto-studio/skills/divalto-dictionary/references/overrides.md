@@ -82,6 +82,6 @@ Aucun équivalent côté std → vraie création, donc préfixe obligatoire (ici
 Si l'utilisateur demande quelque chose qui ressemble à une modif du standard alors qu'on est en périmètre spé, **ne pas écrire dans le std**. Deux options :
 
 1. **Proposer la surcharge spé équivalente** (souvent suffisante) et l'appliquer.
-2. **Demander de basculer en périmètre std** (`divalto.toggleEditingPerimeter`) si la modif est vraiment cadrée standard (cas devs framework, capability `CanModifyStandard` requise).
+2. **Demander de basculer en périmètre std** (`divalto.toggleEditingPerimeter`) si la modif est vraiment cadrée standard (cas des développeurs R&D Divalto, capability `CanModifyStandard` requise).
 
 Ne jamais contourner le verrou logique read-only via Bash ou un Write sur un chemin std en périmètre spé.

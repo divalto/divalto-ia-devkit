@@ -5,7 +5,7 @@
 Un projet Divalto travaille dans un **périmètre d'édition actif** :
 
 - `spe` (défaut, quasi tous les intégrateurs) — on édite la surcharge projet ; le standard est en lecture seule.
-- `std` (devs framework, si `CanModifyStandard`) — on édite le standard.
+- `std` (développeurs R&D Divalto, si `CanModifyStandard`) — on édite le standard.
 
 La surcharge s'écrit **dans le périmètre actif**. Un fichier hors du périmètre actif est en lecture seule → ne pas l'écrire. **La surcharge n'est pas intrinsèquement « spé »** : la même mécanique de duplication existe **en standard** — un écran de `Common/` peut être surchargé pour un `DeviceType` donné (la résolution prend en compte le DeviceType). C'est l'autorisation du **chemin cible** qui décide, pas une règle « jamais le standard ».
 

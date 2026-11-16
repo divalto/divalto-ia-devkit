@@ -66,7 +66,7 @@ Localiser et **lire** les fichiers standard concernés sans les modifier :
 
 > **MUST — surcharger au même nom ET même extension que le standard** (cf. CLAUDE.md racine du contexte IA, section *File Naming & Uniqueness* — `.component.json`/`.page.json` partagent le même namespace, ne jamais renommer). Ex. `customerContact.id.component.json` → `customerContact.id.component.json`. Valider avec le type correspondant : `validate_divalto_file({ type: "component" })` pour un `.component.json`, `{ type: "page" }` pour un `.page.json`.
 
-> **MUST — créer le fichier de surcharge via `specialize_file`, pas un `cp`.** Pour spécialiser un fichier standard vers le périmètre actif, appeler `specialize_file({ path })` (chemin absolu du fichier standard). L'outil exécute la vraie commande déterministe de l'extension : il crée le fichier au bon chemin résolu **et** l'enregistre côté serveur. Ne **jamais** copier le fichier au shell (`cp`) — ça atterrit sur le disque mais ne synchronise pas. Ensuite, éditer le `spePath` retourné. Pour un `.scriptlibrary.ts`, l'outil génère un stub `extends Standard` — ne pas dupliquer le fichier standard.
+> **MUST — créer le fichier de surcharge via `specialize_file`, pas un `cp`.** Pour spécialiser un fichier standard vers le périmètre projet (`spe`), appeler `specialize_file({ path })` (chemin absolu du fichier standard). L'outil exécute la vraie commande déterministe de l'extension : il crée le fichier au bon chemin résolu **et** l'enregistre côté serveur. Ne **jamais** copier le fichier au shell (`cp`) — ça atterrit sur le disque mais ne synchronise pas. Ensuite, éditer le `spePath` retourné. Pour un `.scriptlibrary.ts`, l'outil génère un stub `extends Standard` — ne pas dupliquer le fichier standard.
 
 Déléguer la construction au skill [`divalto-page-ui`](../divalto-page-ui/SKILL.md), en lui passant :
 
@@ -116,7 +116,7 @@ Scénario de gating de la feature — « Score d'engagement sur Contact » : voi
 
 | Outil | Usage |
 | --- | --- |
-| `specialize_file({ path })` | Spécialise un fichier standard vers le périmètre actif (commande déterministe de l'extension, sync serveur). À utiliser au lieu d'un `cp`. |
+| `specialize_file({ path })` | Spécialise un fichier standard vers le périmètre projet (`spe`) (commande déterministe de l'extension, sync serveur). À utiliser au lieu d'un `cp`. Refuse en périmètre standard (`std`) : y éditer le standard. |
 | `get_dictionary_entity({ name })` | Contrat d'une entité (champs, types, relations) — pour lire la base et la source du calcul. |
 | `list_dictionary_entities()` | Découvrir le nom exact d'une entité. |
 | `list_components()` / `get_component_properties({ component })` | Source de vérité des composants de page (délégué à `divalto-page-ui`). |

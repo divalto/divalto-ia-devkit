@@ -943,7 +943,17 @@
           "type": "number",
           "description": "Taille max de l'image sauvegardee (pixels)"
         },
-        { "name": "lineWidth", "type": "number", "description": "Epaisseur du trait de signature" }
+        { "name": "lineWidth", "type": "number", "description": "Epaisseur du trait de signature" },
+        {
+          "name": "imageWidth",
+          "type": "number",
+          "description": "Largeur de l'image sauvegardee (pixels), avec imageHeight ; player v7"
+        },
+        {
+          "name": "imageHeight",
+          "type": "number",
+          "description": "Hauteur de l'image sauvegardee (pixels), avec imageWidth ; player v7"
+        }
       ]
     },
     {

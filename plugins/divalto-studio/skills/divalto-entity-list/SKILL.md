@@ -32,9 +32,9 @@ Plusieurs propriétés du schéma reposent sur le mécanisme SQL du moteur CRM, 
 
 Ne jamais les renseigner sur un projet ERP. `validate_divalto_file({ type: "schema", … })` invalide le fichier si l'une de ces traces y figure, et `list_schema_types` n'y expose pas le type `calculated`. À la place : une **méthode C# ODK** pour une valeur calculée ou une logique déclenchée à l'écriture, les **`DataFilters`** du schéma pour restreindre ce que la liste affiche.
 
-## Router la liste via ODK (`OdkEntityName`)
+## Router la liste via ODK (`IsOdkEntity`)
 
-Sur un projet avec la capacité ODK active, `SchemaConfig.OdkEntityName` fait passer la requête de la **liste** par BusinessHub/ODK au lieu du SQL direct — voir [`divalto-odk`](../divalto-odk/SKILL.md) (référence `entitycrud.md`) pour son usage et sa complémentarité avec `EntityConfigName` (qui relie liste ↔ fiche, un sujet distinct). Ne le renseigner que sur demande explicite.
+Sur un projet avec la capacité ODK active, `"IsOdkEntity": true` sur le schéma fait passer la requête de la **liste** par BusinessHub/ODK au lieu du SQL direct — voir [`divalto-odk`](../divalto-odk/SKILL.md) (référence `entitycrud.md`) pour son usage et sa complémentarité avec `EntityConfigName` (qui relie liste ↔ fiche, un sujet distinct). Ne le renseigner que sur demande explicite.
 
 ## Quand l'utiliser
 
@@ -53,7 +53,7 @@ Sur un projet avec la capacité ODK active, `SchemaConfig.OdkEntityName` fait pa
 
 - Schémas existants : `Glob **/*.schema.json` (souvent sous `DeviceTypes/Default/entity/utils/schema/`). Le **nom du schéma** = le nom de fichier sans `.schema.json` (qualifier `[...]` inclus).
 - Champs de la table (pour écrire `Columns` / `DataFilters`) : `list_dictionary_entities` puis `get_dictionary_entity({ name })`.
-- Surcharge d'un fichier **standard** (read-only) → override projet via `specialize_file` (cf. [divalto-crm-overload](../divalto-crm-overload/SKILL.md)) ; ne jamais éditer le standard.
+- Modifier un fichier **standard** : en périmètre projet (`spe`, standard en lecture seule) → override projet via `specialize_file` (cf. [divalto-crm-overload](../divalto-crm-overload/SKILL.md)), ne jamais éditer le standard ; en périmètre standard (`std`) → éditer le fichier standard lui-même (`specialize_file` refuse).
 
 ### 2. (Si filtrage) créer un schéma spécifique
 
@@ -128,4 +128,4 @@ Corriger toutes les erreurs avant de sauvegarder.
 | Déclarer tout le bloc `entityViews` / `entityList` alors que la vue par défaut suffit | `{ "Type": "entity", "EntityName": "<schéma>" }` suffit — le runtime déduit la vue. |
 | `entityList` / `entityViews` placé dans un `.page.json` | Se déclare dans le `.entity.json`, sous `Children`. |
 | `Columns` recodées en SQL sur l'`entityList` | Les colonnes appartiennent au **schéma** (`.schema.json`), pas à la vue. |
-| Éditer un `.schema.json` / `.entity.json` standard pour personnaliser | Override projet via `specialize_file` (cf. divalto-crm-overload). |
+| Éditer un `.schema.json` / `.entity.json` standard pour personnaliser, en périmètre projet (`spe`) | Override projet via `specialize_file` (cf. divalto-crm-overload). En périmètre standard (`std`), éditer le standard est la voie normale. |
