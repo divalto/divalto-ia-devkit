@@ -25,7 +25,7 @@
   },
   {
     "skills": ["configuring-diva-mcp"],
-    "query": "Ma cle API contient $$ (ex: ...eda55$$61558...). Configure diva-mcp.",
+    "query": "Ma cle API contient $$ (ex: ...ab12$$cd34...). Configure diva-mcp.",
     "files": [".mcp.json"],
     "expected_behavior": "Le skill passe la cle HORS argv pour eviter l'expansion shell ($$ -> PID) : via --apikey-stdin (printf '%s' '<cle>' | ...) ou --apikey-file. Il ne passe PAS --apikey \"...$$...\" sous bash. La cle ecrite dans .mcp.json contient bien $$ intact."
   },
